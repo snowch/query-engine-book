@@ -94,6 +94,35 @@ def test_no_code_is_pasted_into_a_page(page):
         )
 
 
+#: The one page that says how to run the book on your own machine. Only it gives shell commands.
+OWN_MACHINE = ROOT / "appendices" / "running_the_lab.md"
+
+
+@pytest.mark.parametrize("page", BOOK_PAGES, ids=lambda p: str(p.relative_to(ROOT)))
+def test_the_reader_needs_nothing_but_a_browser(page):
+    """Everything a page asks the reader to run, runs in the page: a panel, or a workbench. No page
+    gives a shell command or sends the reader to a desk, except the one appendix section on
+    running the book on your own machine, which keeps that out of the chapters."""
+    if page == OWN_MACHINE:
+        pytest.skip("the appendix on running the book on your own machine")
+    text = page.read_text()
+    assert not [lang for lang, _ in fences(text) if lang in ("bash", "sh", "shell", "console")], (
+        "a shell command in a page: run it in the page instead (a panel or the workbench)"
+    )
+    assert not re.search(r"\bat a desk\b", prose(text), re.I), "the book runs in the browser, not at a desk"
+
+
+@pytest.mark.parametrize("chapter", WRITTEN, ids=lambda c: c.slug)
+def test_a_chapter_with_problems_to_grade_opens_them_with_its_workbench(chapter):
+    if not (ROOT / "exercises" / f"{chapter.slug}.py").exists():
+        pytest.skip("no graded problems")
+    text = (ROOT / chapter.path).read_text()
+    section = text.split("\n## Problems\n", 1)[1].split("\n## Where to go next\n", 1)[0]
+    workbench = f"```problems\nchapter: {chapter.slug}\n```"
+    first = re.search(r"^\*\*\d+\.\d+ ", section, re.M)
+    assert workbench in section[: first.start()], "open the problems with their workbench, before the first"
+
+
 @pytest.mark.parametrize("page", BOOK_PAGES + DOCS, ids=lambda p: p.name)
 def test_no_em_dashes(page):
     assert chr(0x2014) not in page.read_text(), "STYLE.md: no em dashes"

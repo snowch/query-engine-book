@@ -2,7 +2,7 @@
 //
 // A chapter marks a panel with a fenced block in the language `lab`; tools/render.py turns it into
 // <div class="lab" data-experiment=… data-query=…> holding the JSON the build computed for it, with
-// `query_lab.report` at a desk. The panel draws that JSON at once: nothing to download.
+// `query_lab.report` when the book was built. The panel draws that JSON at once: nothing to download.
 //
 // Each panel also offers to run the same report in the reader's browser, under Pyodide
 // (runner.js), and redraws from what it returns. Run as the book ships it, the page says whether
@@ -13,6 +13,7 @@
 
 import { mountPlan } from "./plan.js";
 import { runReport } from "./runner.js";
+import { mountWorkbench } from "./workbench.js";
 
 const EXPERIMENTS = { plan: mountPlan };
 
@@ -34,7 +35,8 @@ function mount(el) {
   const draw = EXPERIMENTS[config.experiment];
   const built = el.querySelector("script.lab-data").textContent;
   const build = JSON.parse(built);
-  const key = `lab:${config.experiment}:${config.query || ""}`;
+  // Named for this book: other books share the origin, and its storage.
+  const key = `lab:${location.pathname.replace(/[^/]*$/, "")}:${config.experiment}:${config.query || ""}`;
 
   const body = document.createElement("div");
   body.className = "lab-body";
@@ -130,6 +132,16 @@ function mount(el) {
     } finally {
       run.disabled = false;
     }
+  });
+}
+
+for (const el of document.querySelectorAll(".workbench[data-chapter]")) {
+  mountWorkbench(el).catch((error) => {
+    const message = document.createElement("p");
+    message.className = "lab-error";
+    message.textContent = `The workbench could not start: ${String(error.message || error)}`;
+    el.replaceChildren(message);
+    el.dataset.ready = "error";
   });
 }
 

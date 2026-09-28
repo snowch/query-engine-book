@@ -1,38 +1,7 @@
-```text
-┌───────────────────────────┐
-│         PROJECTION        │
-│    ────────────────────   │
-│          order_id         │
-│        customer_id        │
-│         unit_price        │
-│                           │
-│         ~4000 Rows        │
-└─────────────┬─────────────┘
-┌─────────────┴─────────────┐
-│           FILTER          │
-│    ────────────────────   │
-│ (((amount / CAST(quantity │
-│  AS DOUBLE)) > 100.0) AND │
-│ (lower(status) = 'returned│
-│            '))            │
-│                           │
-│         ~4000 Rows        │
-└─────────────┬─────────────┘
-┌─────────────┴─────────────┐
-│       PARQUET_SCAN        │
-│    ────────────────────   │
-│         Function:         │
-│        PARQUET_SCAN       │
-│                           │
-│        Projections:       │
-│           status          │
-│           amount          │
-│          quantity         │
-│          order_id         │
-│        customer_id        │
-│                           │
-│        ~20000 Rows        │
-└───────────────────────────┘
-```
+| Operator | Rows out, estimated | What it does |
+|---|---:|---|
+| PROJECTION | 4,000 | Projections: `order_id, customer_id, unit_price` |
+| FILTER | 4,000 | Expression: `(((amount / CAST(quantity AS DOUBLE)) > 100.0) AND (lower(status) = 'returned'))` |
+| PARQUET_SCAN | 20,000 | Projections: `status, amount, quantity, order_id, customer_id` |
 
 *Computed by DuckDB 1.1.2 with one thread on `fixtures/orders-sorted.parquet`, at build time.*

@@ -1,9 +1,9 @@
 # COUNTERS.md: what every operator reports
 
 Every experiment in this book compares counters, not times. A counter is an exact integer an
-operator counts as it runs. It is the same on every machine, at a desk and in the browser, so a
-number printed in the book can be regenerated and checked. A time cannot. Timing labs exist, but
-they are optional, run at a desk, and never feed a generated figure.
+operator counts as it runs. It is the same on every machine, at the book's build and in the
+reader's browser, so a number printed in the book can be regenerated and checked. A time cannot,
+so the book never prints one.
 
 This file is the specification. `python/query_lab/metrics.py` implements it, and
 `python/tests/test_metrics.py` holds the two together. Settle a change here first, then in code,
@@ -86,5 +86,4 @@ book's engine only.
 Counters say how much work was done, not how long it took. Two plans with the same counters can
 differ in time because of the cache, branch prediction or vector width; the chapters that make
 that argument use the book's small simulators (a cache model, a branch predictor, a SIMD lane
-view), each of which says what it leaves out. Time itself is measured only in the optional desk
-labs.
+view), each of which says what it leaves out. The book never measures time itself.

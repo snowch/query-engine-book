@@ -62,6 +62,13 @@ def read_query(path: str | Path) -> str:
     return clean_sql(Path(path).read_text())
 
 
+def explain(sql: str, con: duckdb.DuckDBPyConnection | None = None) -> dict:
+    """DuckDB's physical plan for ``sql``, as the JSON ``EXPLAIN (FORMAT JSON)`` returns: the top
+    operator, with its children below it. Nothing is run."""
+    con = con or connect()
+    return json.loads(con.execute(f"EXPLAIN (FORMAT JSON) {sql}").fetchall()[0][1])[0]
+
+
 def observe(sql: str, con: duckdb.DuckDBPyConnection | None = None) -> Observation:
     """Run ``sql`` once for its plan and once, profiled, for its result and counters."""
     con = con or connect()

@@ -22,7 +22,7 @@ import duckdb
 
 from . import plans, report
 from .metrics import Metrics
-from .reference import Observation, observe, read_query
+from .reference import Observation, explain, observe, read_query
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "chapters" / "_generated"
@@ -43,11 +43,39 @@ def duckdb_conditions(fixture: str) -> str:
 
 
 def plan_of(query: str, fixture: str) -> Callable[[], str]:
+    """DuckDB's plan for a query, before it runs, as a table: one row per operator, top down.
+
+    DuckDB draws its plan in box-drawing characters, and a monospace font without them (Android's,
+    for one) pulls the boxes apart. A table reads the same on every screen, and the panel beside
+    it draws the plan as a tree.
+    """
+
     def make() -> str:
-        seen = observe(read_query(ROOT / "queries" / query))
-        return f"```text\n{seen.plan.rstrip()}\n```\n" + duckdb_conditions(fixture)
+        rows = []
+
+        def walk(node: dict) -> None:
+            extra = dict(node.get("extra_info") or {})
+            estimate = extra.pop("Estimated Cardinality", None)
+            # The scan's function repeats its operator's name; the rest says what the operator does.
+            extra.pop("Function", None)
+            does = "; ".join(f"{k}: {_cell(v)}" for k, v in extra.items())
+            # The estimate sits beside the name, and the long details last, where a phone wraps them.
+            guess = f"{int(estimate):,}" if estimate else "none"
+            rows.append(f"| {node['name'].strip()} | {guess} | {does} |")
+            for child in node.get("children", []):
+                walk(child)
+
+        walk(explain(read_query(ROOT / "queries" / query)))
+        head = "| Operator | Rows out, estimated | What it does |\n|---|---:|---|\n"
+        return head + "\n".join(rows) + "\n" + duckdb_conditions(fixture)
 
     return make
+
+
+def _cell(value: object) -> str:
+    """A plan detail as table text: a list joined, and a pipe kept from ending the cell."""
+    text = ", ".join(map(str, value)) if isinstance(value, list) else str(value)
+    return "`" + text.replace("|", "\\|") + "`"
 
 
 def profile_table(seen: Observation) -> str:

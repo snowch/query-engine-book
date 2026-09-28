@@ -149,9 +149,7 @@ def _problems(node: dict) -> str:
     slug = parse_problems_block(str(node.get("value", "")))
     return (
         f'<div class="workbench" data-chapter="{html.escape(slug)}">'
-        '<p class="lab-fallback">Here you can edit this chapter\'s problems and run their tests in your '
-        "browser, in Python. It needs JavaScript. The same problems run at a desk: see "
-        '<a href="running-the-lab.html">Appendix A</a>.</p></div>'
+        '<p class="lab-fallback">This workbench needs JavaScript.</p></div>'
     )
 
 

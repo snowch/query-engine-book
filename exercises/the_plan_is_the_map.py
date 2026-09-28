@@ -1,8 +1,5 @@
 """Problems for ch01, The plan is the map. Replace each ``raise NotImplementedError`` with your
-answer, then run the graders:
-
-    PYTHONPATH=python:external/parquet-book/python:exercises \\
-        python3 -m pytest exercises/tests/test_the_plan_is_the_map.py --problems
+answer, then press Run the graders.
 """
 
 from __future__ import annotations

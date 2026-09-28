@@ -27,16 +27,16 @@ quotes it, so the SQL you read is the SQL every figure below ran.
 ```
 
 Ask DuckDB how it will run the query, without running it, by putting `EXPLAIN` in front. What
-comes back is the **physical plan**: the steps the engine will take, each drawn as a box. Each
-box is an **operator**, one job with one input and one output. Rows flow from the bottom box to
-the top one.
+comes back is the **physical plan**: the steps the engine will take, one to a row of the table
+below. Each step is an **operator**, one job with one input and one output. Rows flow from the
+bottom operator to the top one.
 
 ```{include} _generated/returned-unit-price-plan.md
 ```
 
 Read the plan from the bottom, as the rows travel, and three things stand out.
 
-1. **The scan reads fewer columns than the file has.** The `Projections` list in the scan box
+1. **The scan reads fewer columns than the file has.** The `Projections` list in the scan's row
    names the columns it passes up. `note` and `order_date` are not there: nothing above needs
    them, so the scan never reads them.
 2. **One predicate moved into the scan.** `status = 'returned'` compares a column with a
@@ -44,7 +44,7 @@ Read the plan from the bottom, as the rows travel, and three things stand out.
    reads it and passes up only the rows that match. `status` is read for that test and then
    dropped. The unit price predicate divides one column by another, and it gets an operator of
    its own, `FILTER`.
-3. **Every box ends with a guess.** The number after `~` is the operator's **cardinality
+3. **Every operator comes with a guess.** The second column is the operator's **cardinality
    estimate**: how many rows the planner expects the operator to produce. It was made before a
    single row was read.
 
@@ -89,11 +89,7 @@ query: returned_unit_price.sql
 
 The panel draws what DuckDB measured when the book was built. Its button runs the same report
 again in your browser, under Pyodide, and says whether your browser's DuckDB gave the same
-answer. You can also edit the query and run your own. At a desk, the same numbers come from:
-
-```bash
-PYTHONPATH=python:external/parquet-book/python python3 -m query_lab observe queries/returned_unit_price.sql
-```
+answer. You can also edit the query and run your own.
 
 Compare the three bars on each operator.
 
@@ -105,7 +101,7 @@ Compare the three bars on each operator.
   keeps. The chapters on planning are about where better estimates come from, and what a bad one
   costs when it chooses between plans.
 - **Rows in, for each operator above the scan, is the output of the operator below.** Nothing is
-  lost between boxes. That makes the profile a ledger: each operator's reduction is its rows out
+  lost between operators. That makes the profile a ledger: each operator's reduction is its rows out
   against its rows in.
 - **Rows in, for the scan, is every row in the file.** That is DuckDB's report of the rows in the
   files it opened. [ch03](#projection-and-filter-pushdown) shows that it stays the same when the
@@ -177,18 +173,9 @@ turn, and a projection computes the unit price:
 :end-before: #: Each plan, by the query file it answers.
 ```
 
-Run it, and see its counters:
-
-```bash
-PYTHONPATH=python:external/parquet-book/python python3 -m query_lab run queries/returned_unit_price.sql
-```
-
-The tests run the plan, check the counters obey COUNTERS.md's rules, and compare the result
-with DuckDB's, row for row:
-
-```bash
-python3 -m pytest python/tests/test_operators.py
-```
+The book's tests run this plan every time the book is built. They check that its counters obey
+COUNTERS.md's rules, and compare its result with DuckDB's, row for row. The comparison below is
+what they found.
 
 ## Compare
 
@@ -221,8 +208,8 @@ filter is the one the scan never hands up.
 
 - **How long anything took.** The counters say how much work each operator did, not how fast.
   Your engine decodes Parquet in Python, many times slower than DuckDB's C++, and its times would
-  say nothing about the design. The chapters that are about time use small simulators, and time
-  itself is measured only at a desk.
+  say nothing about the design. The chapters that are about time use small simulators; the book
+  never prints a time.
 - **What DuckDB's scan decoded.** DuckDB reports the rows in the files its scan opened, not the
   rows it decoded. [ch03](#projection-and-filter-pushdown) counts that with your own scan.
 - **Anything about statistics.** Your scan reads every row group, whatever the query asks. It
@@ -268,9 +255,15 @@ filter is the one the scan never hands up.
 ## Problems
 
 There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test.
+diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
+there: they are the book's own tests, and they run in your browser. Your answers stay in this
+browser, and **Reset to the stubs** starts again.
 
-**1.1 A limit.** Write `Limit` in `exercises/the_plan_is_the_map.py`: an operator that hands up
+```problems
+chapter: the_plan_is_the_map
+```
+
+**1.1 A limit.** Write `Limit`: an operator that hands up
 the first `n` rows its child produces, and no more. It must stop asking its child for batches as
 soon as it has `n` rows. The graders compare its rows with DuckDB's `LIMIT`, and count the
 batches its child produced, with and without a filter between them. A limit that drains its
@@ -298,15 +291,8 @@ Which operator does more work than it did for the chapter's query, and why did D
 not help this time? How would you rewrite the query, and what would you expect the profile to
 show then? A good answer compares the two profiles operator by operator, names the rows the scan
 handed up in each, says what `lower` changed about where the status test could run, and predicts
-the rewritten query's profile before checking it with the `observe` command.
-
-Run the graders of problems 1.1 and 1.2 once you have written them:
-
-```bash
-python3 -m pytest exercises/tests/test_the_plan_is_the_map.py --problems
-```
-
-Add `-k problem_1_1` or `-k problem_1_2` to run one of them.
+the rewritten query's profile before checking it: paste either query into the panel's editor in
+*Predict, then measure* and run it.
 
 ## Where to go next
 

@@ -53,11 +53,12 @@ fragment. Point at what to notice, with a numbered list when there are several t
 (the generator's recipe, a manifest's facts, a simulator's parameters), then the panel, which asks
 for the prediction before it reveals the measurement and then draws the prediction, the engine's
 estimate and the measurement side by side. Show one exhibit of a run, not a table and a panel of
-the same numbers. Give the desk command that prints the same numbers. The discussion after the panel
+the same numbers. The discussion after the panel
 compares the three and says what each gap means.
 
 **Building it** quotes the operator the measurement needed, in the order it runs. Each quote
-gets a paragraph before it saying what to look for. End with the command that tests it.
+gets a paragraph before it saying what to look for. Say what the book's tests check, without a
+command: the reader runs nothing but the page.
 
 **Compare** puts the book's engine beside DuckDB: the same result, and the counters both report
 (COUNTERS.md says which ones can be compared). Where they differ, say why.
@@ -109,7 +110,9 @@ Quote Python from `python/` and SQL from `queries/`:
 
 Anchor on text that survives `ruff format`: a signature's opening, a docstring's first words.
 Never `:lines:`. The MyST parse fails if an anchor stops matching. Generated output, such as a
-plan, is an `{include}` of a fragment. Shell commands may be written in a `bash` block.
+plan, is an `{include}` of a fragment. A page gives no shell commands: the reader needs only a
+browser. The one exception is the *On your own machine* section of *Running the lab*; keep
+anything about running the book from a clone there.
 
 ### Never use a term before its chapter
 
@@ -127,6 +130,10 @@ A problem is a stub and a test that passes only when the stub is right.
   Never store it.
 - Test many cases, including the edges, so a hard-coded answer fails.
 - Make failure messages teach: "if you got X, you counted the rows before the filter".
+- The Problems section opens, before the first problem, with the chapter's workbench: a
+  ```` ```problems ```` block holding `chapter: <slug>`. The reader writes answers there and runs
+  the graders in the page. Keep the graders to a few tens of seconds: Pyodide is slower than a
+  desk, and the page runs every grader of the chapter at once.
 - Every chapter has one "diagnose the slow query" problem: a query, its plan and its profile,
   and a question about what made it slow. It has no test, and says what a good answer contains.
 

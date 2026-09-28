@@ -838,8 +838,17 @@ def build(out: Path) -> None:
     (out / "lab" / "py" / "queries").mkdir()
     for name in queries:
         shutil.copy(ROOT / "queries" / name, out / "lab" / "py" / "queries" / name)
+    # The problems, their graders and the conftest that gates them, for the workbench.
+    exercises = sorted(
+        str(f.relative_to(ROOT / "exercises"))
+        for f in (ROOT / "exercises").rglob("*.py")
+        if "__pycache__" not in f.parts
+    )
+    for name in exercises:
+        (out / "lab" / "py" / "exercises" / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(ROOT / "exercises" / name, out / "lab" / "py" / "exercises" / name)
     (out / "lab" / "py" / "package.json").write_text(
-        json.dumps({"packages": listing, "queries": queries, "fixtures": fixtures})
+        json.dumps({"packages": listing, "queries": queries, "exercises": exercises, "fixtures": fixtures})
     )
     (out / ".nojekyll").write_text("")
 
