@@ -59,13 +59,6 @@ def profile_table(seen: Observation) -> str:
     return head + "\n".join(rows) + "\n"
 
 
-def profile_of(query: str, fixture: str) -> Callable[[], str]:
-    def make() -> str:
-        return profile_table(observe(read_query(ROOT / "queries" / query))) + duckdb_conditions(fixture)
-
-    return make
-
-
 def _operators(profile: dict):
     node = profile["children"][0]
     while True:
@@ -110,7 +103,6 @@ def fixtures_table() -> str:
 
 FIGURES = (
     Figure("returned-unit-price-plan", plan_of("returned_unit_price.sql", "orders-sorted.parquet")),
-    Figure("returned-unit-price-profile", profile_of("returned_unit_price.sql", "orders-sorted.parquet")),
     Figure("orders-recipe", orders_recipe),
     Figure("fixtures", fixtures_table),
 )

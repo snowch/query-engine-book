@@ -164,5 +164,9 @@ Decisions taken this week:
 - **Panels draw from the build first.** Each panel's JSON is computed at build time and embedded,
   so it draws with nothing downloaded; *Run it in your browser* recomputes it under Pyodide, with
   DuckDB alone, and the page says whether the answers agree (`spikes/panels/README.md`).
+- **A run has one exhibit, and it asks before it answers.** The plan panel replaces the profile
+  table: it takes the reader's prediction per operator, hides the measurement until they reveal
+  it, then draws prediction, estimate and measurement together. The table is the panel's fallback
+  for print and for readers without JavaScript. Queries in a panel can be edited and rerun.
 - **DuckDB stays at 1.1.2.** DuckDB's own Pyodide wheels reach 1.2.0 at most; not worth leaving
   Pyodide's CDN for.

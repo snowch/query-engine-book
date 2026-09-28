@@ -45,6 +45,25 @@ The worker loads DuckDB alone, not pyarrow. For the plan panel that is the Pyodi
 its standard library and the DuckDB wheel: roughly half of what DuckDB with pyarrow and its
 dependencies would be. A panel that needs pyarrow loads it on first use.
 
+## Predict, then reveal
+
+A panel is the chapter's one exhibit of a run, not a second copy of a table. Two findings decided
+that: showing the same numbers twice makes a reader reconcile them instead of thinking (the
+redundancy effect in multimedia-learning research), and a prediction the reader commits to before
+seeing the answer is what makes the gap memorable (predict, observe, explain).
+
+So the plan panel asks first. For the book's query it opens with the planner's estimates, which
+`EXPLAIN` printed before the query ran, a box per operator for the reader's prediction, and every
+measurement hidden: the bars, the rows in and out, the rows on the links and the result. Before
+the reveal, bars are scaled to the estimates alone, so a bar's length gives nothing away. After
+it, each operator has three bars on one scale: the reader's prediction, the estimate and the
+measurement. Predictions and the reveal are kept in the browser's storage; *Predict again* clears
+them. A reader can reveal without predicting.
+
+The table the chapter used to include is now the panel's fallback: the renderer draws it from the
+same JSON (`tools/render.py`, `FALLBACKS`). A reader without JavaScript sees it in place of the
+panel, and it is what prints.
+
 ## Editing the query
 
 A panel whose report ran a query has an editor under it (*Edit the query*, closed until used).
@@ -68,9 +87,9 @@ and the panel draws *none*, never a zero the planner did not claim.
 |---|---|
 | `figures --check` | Every panel's committed JSON is what `query_lab.report` computes now. |
 | `python/tests/test_report.py` | The plan report matches DuckDB's profile; it holds no timings; every panel in `figures.PANELS` is generated; an edited query runs and says so. |
-| `tests/test_render.py` | A `lab` block carries its JSON; a missing query or panel fails the build. |
-| `tests/test_book.py` | Every experiment has a mount in `lab.js` and a report function. |
-| `tests/browser/panels.mjs` | In Chromium, every number a panel draws is a field of the build's JSON; after *Run it in your browser*, the page says the answers agree and draws the same numbers; an edited query draws the desk's answer for it; a broken one reports DuckDB's error; reset restores the book's query. |
+| `tests/test_render.py` | A `lab` block carries its JSON and a fallback table of the same numbers; a missing query or panel fails the build. |
+| `tests/test_book.py` | Every experiment has a mount, a report function and a fallback. |
+| `tests/browser/panels.mjs` | In Chromium: the panel asks before it answers and hides every measurement; typed predictions and the reveal draw the build's numbers beside the predictions and survive a reload; *Run it in your browser* gives the build's answer; an edited query draws the desk's answer for it; a broken one reports DuckDB's error; reset and *Predict again* work; without JavaScript and in print, the fallback table holds the same numbers. |
 
 ## Findings
 
@@ -88,8 +107,5 @@ and the panel draws *none*, never a zero the planner did not claim.
 
 ## Open
 
-- **Where a panel sits in a chapter.** ch01 keeps the generated profile table, which works
-  without JavaScript and reads well in print, and adds the panel after it. Whether a panel should
-  replace a table is a writing decision for the pilot review.
 - **Panels of the book's own engine.** When ch01's operators exist, a report can run the engine's
   plan and DuckDB's side by side in one JSON, and the same panel can draw both.

@@ -48,7 +48,8 @@ function mount(el) {
   status.className = "lab-status";
   status.setAttribute("aria-live", "polite");
   foot.append(run, status);
-  el.querySelector(".lab-fallback")?.remove();
+  // The fallback (the run as a table, for readers without JavaScript) stays in the page for
+  // printing; lab.css hides it on screen once the panel is drawn.
   el.append(body);
 
   // The editor, for a panel whose report ran a query: the query as the build ran it, or the
@@ -76,7 +77,7 @@ function mount(el) {
     });
     details.querySelector(".lab-reset").addEventListener("click", () => {
       editor.value = build.source;
-      store.drop(key);
+      if (store.get(key) !== null) store.drop(key);
       el.dataset.edited = "false";
       show(built, "build");
     });
@@ -88,7 +89,7 @@ function mount(el) {
   function show(json, source) {
     const data = JSON.parse(json);
     body.replaceChildren();
-    draw(body, data);
+    draw(body, data, { store, key });
     el.dataset.source = source;
     delete el.dataset.agrees;
     status.classList.remove("lab-error");

@@ -48,9 +48,10 @@ export async function launch() {
 /**
  * A page whose requests to ORIGIN are answered by `serve(path)`, which returns a file's bytes or
  * null. What the page and its downloads did goes to stderr, so a failure says where it stopped.
+ * `options` go to the browser context: `{ javaScriptEnabled: false }`, say.
  */
-export async function openPage(browser, serve) {
-  const context = await browser.newContext();
+export async function openPage(browser, serve, options = {}) {
+  const context = await browser.newContext(options);
   await context.route(`${ORIGIN}/**`, (route) => {
     const path = decodeURIComponent(new URL(route.request().url()).pathname).slice(1);
     const body = serve(path);

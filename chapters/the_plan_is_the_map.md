@@ -70,7 +70,7 @@ make a prediction.
 
 ## Predict, then measure
 
-Write down three numbers before you read on: the rows that come out of the scan, out of the
+Before you see what DuckDB measured, predict it: the rows that come out of the scan, out of the
 filter, and out of the projection. You have what you need. The generator wrote the orders from
 this recipe:
 
@@ -83,33 +83,29 @@ threshold. The unit price was drawn evenly across its range, so the share that p
 share of that range above the threshold. The projection computes a column and drops two; it
 does not change the number of rows.
 
-Now measure. At a desk, from the repository's root:
-
-```bash
-PYTHONPATH=python python3 -m query_lab observe queries/returned_unit_price.sql
-```
-
-It prints the plan, then the profile's counters beside the plan's estimates, one row per
-operator, top down. The profile names the scan `TABLE_SCAN`; the plan drew the same operator as
+The panel holds the run. Each operator shows the planner's estimate, which `EXPLAIN` printed
+before the query ran, and a box for your prediction. The measurement stays hidden until you
+reveal it. Then each operator has three bars on one scale: your prediction, the planner's
+estimate and the measurement. The profile names the scan `TABLE_SCAN`, where the plan drew it as
 `PARQUET_SCAN`.
-
-```{include} _generated/returned-unit-price-profile.md
-```
-
-The panel draws the same run as a tree, with each operator's estimate and measurement as two
-bars on one scale, so the gap between them is visible at a glance. Its button runs the same
-report in your browser, under Pyodide, and says whether your browser's DuckDB gave the build's
-answer.
 
 ```lab
 experiment: plan
 query: returned_unit_price.sql
 ```
 
-Compare the three columns.
+The panel draws what DuckDB measured when the book was built. Its button runs the same report
+again in your browser, under Pyodide, and says whether your browser's DuckDB gave the same
+answer. You can also edit the query and run your own. At a desk, the same numbers come from:
 
-- **Your prediction is close to the measurement, and the plan's estimate is not.** You knew how
-  the data was generated. DuckDB did not know how `status` and the unit price are distributed,
+```bash
+PYTHONPATH=python python3 -m query_lab observe queries/returned_unit_price.sql
+```
+
+Compare the three bars on each operator.
+
+- **A prediction from the recipe is close to the measurement, and the plan's estimate is
+  not.** You knew how the data was generated. DuckDB did not know how `status` and the unit price are distributed,
   so it guessed.
 - **Each estimate is the same share of the estimate below it.** With nothing better to go on,
   the planner gave both predicates one default **selectivity**, the fraction of rows a predicate

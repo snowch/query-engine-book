@@ -32,6 +32,19 @@ def test_a_lab_block_carries_the_json_the_build_computed():
     assert "needs JavaScript" in html
 
 
+def test_a_plan_panels_fallback_is_its_json_as_a_table():
+    """Without JavaScript, and in print, the panel is a table of the numbers it would draw."""
+    html = render(
+        {"type": "code", "lang": "lab", "value": "experiment: plan\nquery: returned_unit_price.sql"}
+    )
+    data = json.loads(html.split('class="lab-data">', 1)[1].split("</script>", 1)[0])
+    fallback = html.split('class="lab-fallback"', 1)[1]
+    node = data["root"]
+    while node:
+        assert f"<td>{node['operator']}</td><td>{node['rows_in']:,}</td>" in fallback
+        node = node["children"][0] if node["children"] else None
+
+
 def test_a_lab_block_naming_a_missing_query_or_panel_is_refused():
     with pytest.raises(LabBlockError, match="queries/missing.sql"):
         render({"type": "code", "lang": "lab", "value": "experiment: plan\nquery: missing.sql"})

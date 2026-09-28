@@ -179,11 +179,15 @@ def test_a_lab_block_naming_an_unknown_experiment_is_refused():
 def test_every_experiment_has_a_mount_and_a_report():
     """A lab block's experiment is drawn by web/lab and computed by query_lab.report."""
     from query_lab.report import EXPERIMENTS as REPORTS
+    from tools.render import FALLBACKS
 
     js = (ROOT / "web" / "lab" / "lab.js").read_text()
     for e in EXPERIMENTS:
         assert re.search(rf"\b{e}: mount", js), f"web/lab/lab.js does not mount {e}"
         assert e in REPORTS, f"query_lab.report has no {e}"
+        assert e in FALLBACKS, (
+            f"tools/render.py has no fallback for {e}: without JavaScript it would be empty"
+        )
 
 
 @pytest.mark.parametrize("chapter", CHAPTERS, ids=lambda c: c.slug)
