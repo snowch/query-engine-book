@@ -5,13 +5,6 @@ title: The plan is the map
 (the-plan-is-the-map)=
 # The plan is the map
 
-:::{div}
-:class: unwritten-note
-
-This chapter is a draft. The question and the experiment are written; the sections from
-*Building it* on are the plan for the rest.
-:::
-
 ## The question
 
 What does an engine do with your query, and where can you see what each step costs?
@@ -99,7 +92,7 @@ again in your browser, under Pyodide, and says whether your browser's DuckDB gav
 answer. You can also edit the query and run your own. At a desk, the same numbers come from:
 
 ```bash
-PYTHONPATH=python python3 -m query_lab observe queries/returned_unit_price.sql
+PYTHONPATH=python:external/parquet-book/python python3 -m query_lab observe queries/returned_unit_price.sql
 ```
 
 Compare the three bars on each operator.
@@ -124,28 +117,209 @@ the same counters, and they must agree with these.
 
 ## Building it
 
-[To write: A hand-written plan of scan, filter and projection over Arrow batches, each operator reporting its counters, checked against DuckDB's plan and profile.]
+Your engine runs the same plan, operator by operator. Each operator does one job and produces
+one output: a stream of **batches**. A batch is a slice of a table, a few thousand rows held
+column by column as Apache Arrow arrays, so an operator works on a column at a time instead of a
+row at a time. Every operator in the book shares one shape:
+
+```{literalinclude} ../python/query_lab/operators.py
+:language: python
+:start-at: class Operator:
+:end-before: class Scan(Operator):
+```
+
+`batches` is a generator. An operator produces a batch only when the operator above it asks
+for one, and it asks its own child for input only then. So the operator at the top drives the
+run, and nothing is read until something above asks. This is the **pull model**: rows are pulled
+up the plan, not pushed. `take` and `emit` count every batch on its way in and out, so every
+operator reports the counters in COUNTERS.md without any code of its own for counting.
+
+### The scan
+
+The scan is the only operator that reads. A Parquet file is cut into **row groups**: horizontal
+slices of the table, each holding every column's values for a run of rows, one column after
+another. The scan opens the file with the Parquet reader from *Parquet, byte by byte*, through
+that book's simulated object store, so every byte it reads is a request the store logged. It
+reads the footer, which says where everything is, then, for each row group, the chunks of the
+columns it was asked for. It decodes them and hands up one batch per row group.
+
+```{literalinclude} ../python/query_lab/operators.py
+:language: python
+:start-at: class Scan(Operator):
+:end-before: class Filter(Operator):
+```
+
+This scan reads every row group and hands up every row. It does not test a predicate; DuckDB's
+did. That difference is the first thing the comparison below shows.
+
+### Filter and project
+
+A filter asks its child for a batch, computes a true or false for every row with a kernel from
+`pyarrow.compute`, and hands up the rows that are true. A projection computes each output column
+from the batch it receives. Neither changes how many batches flow; only the filter changes how
+many rows.
+
+```{literalinclude} ../python/query_lab/operators.py
+:language: python
+:start-at: class Filter(Operator):
+:end-before: def arrow_type(
+```
+
+### The plan
+
+The engine has no planner yet, so you write the plan by hand, bottom up, the way `EXPLAIN` drew
+DuckDB's. The scan reads the five columns the query uses. Two filters take the two predicates in
+turn, and a projection computes the unit price:
+
+```{literalinclude} ../python/query_lab/plans.py
+:language: python
+:start-at: def returned_unit_price(
+:end-before: #: Each plan, by the query file it answers.
+```
+
+Run it, and see its counters:
+
+```bash
+PYTHONPATH=python:external/parquet-book/python python3 -m query_lab run queries/returned_unit_price.sql
+```
+
+The tests run the plan, check the counters obey COUNTERS.md's rules, and compare the result
+with DuckDB's, row for row:
+
+```bash
+python3 -m pytest python/tests/test_operators.py
+```
 
 ## Compare
 
-[To write: the engine's results and counters beside DuckDB's.]
+Your engine returns DuckDB's rows, in DuckDB's order. The table puts each of your operators
+beside the DuckDB operator that does the same job:
+
+```{include} _generated/returned-unit-price-compare.md
+```
+
+- **Where the two plans do the same job, they count the same rows.** Your unit price filter and
+  DuckDB's `FILTER` take the same rows in and hand the same rows out, and so do the two
+  projections. The test holds every pair to it.
+- **DuckDB has no partner for your scan.** Its scan tested `status = 'returned'` itself, so its
+  output is the output of your first filter. Your scan hands every row of the file up to a
+  filter that throws most of them away. [ch03](#projection-and-filter-pushdown) makes your scan do
+  what DuckDB's did, and measures what it saves.
+
+Your engine also counts what DuckDB's profile does not report: the batches each operator
+produced, the bytes and requests the scan made, and the most memory each operator held:
+
+```{include} _generated/returned-unit-price-engine.md
+```
+
+The scan read only the column chunks it asked for, which is a fraction of the file: the other
+columns' bytes were never requested. The rows it handed up, and the bytes of every column of
+every one of them, all went to the first filter, which kept few of them. The cheapest row to
+filter is the one the scan never hands up.
 
 ## What this cannot tell you
 
-[To write: what the experiment, the model and the code leave out.]
+- **How long anything took.** The counters say how much work each operator did, not how fast.
+  Your engine decodes Parquet in Python, many times slower than DuckDB's C++, and its times would
+  say nothing about the design. The chapters that are about time use small simulators, and time
+  itself is measured only at a desk.
+- **What DuckDB's scan decoded.** DuckDB reports the rows in the files its scan opened, not the
+  rows it decoded. [ch03](#projection-and-filter-pushdown) counts that with your own scan.
+- **Anything about statistics.** Your scan reads every row group, whatever the query asks. It
+  ignores the minimum and maximum the file records for each column.
+- **Memory beyond Arrow's buffers.** Peak memory counts the Arrow buffers an operator holds. The
+  reader decodes each column into Python values before your scan builds its arrays, and those
+  are not counted.
+- **Plans with more than one input, or more rows than memory.** One file, one thread, and every
+  batch small. Joins, spilling and parallelism are later parts of the book.
+- **How a planner chooses.** You wrote this plan. The planner that writes plans, and the
+  statistics it guesses with, are Part IV.
 
 ## What this means for your design
 
-[To write: the choices in the reader's own systems that this changes.]
+- **Read the profile before you change anything.** Rows in and rows out, operator by operator,
+  show where the work goes. The operator with the largest rows in, and the one that throws most
+  of them away, are where a change pays.
+- **Write predicates the scan can test.** DuckDB tested `status = 'returned'` inside its scan
+  because the predicate compares a bare column with a constant. The unit price test needed a
+  calculation first, so it waited for a filter, and every row the scan passed up reached it.
+- **Ask only for the columns you need.** Your scan's bytes read are the column chunks it
+  requested. Every extra column in a query is more bytes, in every row group.
+- **Treat estimates as guesses.** The plan's estimates were far from what the profile measured.
+  A plan chosen from guesses can be the wrong plan; the profile says whether it was.
 
 ## Key takeaways
 
-[To write: the claims made and shown above, each in bold with its reason.]
+:::{div}
+:class: takeaways
+
+- **A plan is a tree of operators, and rows flow up it.** The physical plan names each operator;
+  the profile says how many rows each took in and handed out.
+- **Estimates come before the run; counters come from it.** The planner's estimate and the
+  measured rows can be far apart, and only the profile says which was right.
+- **An engine pulls.** Each operator asks the one below it for a batch when it needs one, so
+  nothing is read until something asks.
+- **Where the two plans do the same job, they count the same rows.** That is what makes DuckDB a
+  reference: your engine's counters are checked against it, operator by operator.
+- **The scan decides how much everything above it does.** DuckDB's scan tested one predicate and
+  handed up a small share of the file; yours handed up all of it.
+:::
 
 ## Problems
 
-[To write: problems as stubs in `exercises/the_plan_is_the_map.py`, graded by `exercises/tests/test_the_plan_is_the_map.py`, and one diagnose-the-slow-query problem.]
+There are three problems. The first two are code with tests; the third is a slow query to
+diagnose, with no test.
+
+**1.1 A limit.** Write `Limit` in `exercises/the_plan_is_the_map.py`: an operator that hands up
+the first `n` rows its child produces, and no more. It must stop asking its child for batches as
+soon as it has `n` rows. The graders compare its rows with DuckDB's `LIMIT`, and count the
+batches its child produced, with and without a filter between them. A limit that drains its
+child fails even when its rows are right. This is where the pull model pays: a limit at the top
+of a plan stops the scan at the bottom.
+
+**1.2 A plan of your own.** Write `customer_orders`, the plan for every order of one customer:
+`order_id`, `order_date` and `amount`, where `customer_id` equals the customer given. Build it
+from the book's operators. The graders compare its result with DuckDB's for several customers,
+check its counters obey the rules, and check the scan reads no column the query does not use.
+
+**1.3 Diagnose the slow query.** No test. A colleague finds the same returned orders with this
+query:
+
+```{literalinclude} ../queries/lower_status.sql
+:language: sql
+```
+
+It returns the same rows as the chapter's query, and DuckDB profiles it like this:
+
+```{include} _generated/lower-status-profile.md
+```
+
+Which operator does more work than it did for the chapter's query, and why did DuckDB's scan
+not help this time? How would you rewrite the query, and what would you expect the profile to
+show then? A good answer compares the two profiles operator by operator, names the rows the scan
+handed up in each, says what `lower` changed about where the status test could run, and predicts
+the rewritten query's profile before checking it with the `observe` command.
+
+Run the graders of problems 1.1 and 1.2 once you have written them:
+
+```bash
+python3 -m pytest exercises/tests/test_the_plan_is_the_map.py --problems
+```
+
+Add `-k problem_1_1` or `-k problem_1_2` to run one of them.
 
 ## Where to go next
 
-[To write: papers, engine source code, and the optional depth in the companion books.]
+- **The iterator model.** Goetz Graefe, *Volcano: An Extensible and Parallel Query Evaluation
+  System*, IEEE Transactions on Knowledge and Data Engineering, 1994. The paper behind the pull
+  model, and behind the shape of `Operator`.
+- **Arrow's columnar format.** The [Arrow columnar format specification](https://arrow.apache.org/docs/format/Columnar.html)
+  describes the arrays a batch is made of. [ch02](#batches-in-memory) takes one apart.
+- **DuckDB's plans and profiles.** DuckDB's documentation on
+  [`EXPLAIN ANALYZE`](https://duckdb.org/docs/guides/meta/explain_analyze) and profiling explains
+  the operators and the profile's fields.
+- **Another engine, built the same way.** Andy Grove's *How Query Engines Work* builds a query
+  engine in Kotlin on Arrow, in its own order. It is credited here as the book that showed an
+  engine could be taught by building one.
+- **The scan's reader.** *[Parquet, byte by byte](https://github.com/snowch/parquet-book)*
+  builds the reader your scan uses, from the file's last byte up.

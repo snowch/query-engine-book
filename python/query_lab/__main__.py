@@ -1,11 +1,12 @@
 """The engine's command line.
 
     python3 -m query_lab observe queries/returned_unit_price.sql   # DuckDB's plan and profile
+    python3 -m query_lab run queries/returned_unit_price.sql       # the engine's plan for it
     python3 -m query_lab figures [--check]                         # the chapters' fragments
     python3 -m query_lab report plan returned_unit_price.sql [--sql TEXT]
                                                                    # a panel's JSON, as the page gets it
 
-Run from the repository's root, with ``PYTHONPATH=python``.
+Run from the repository's root, with ``PYTHONPATH=python:external/parquet-book/python``.
 """
 
 from __future__ import annotations
@@ -14,11 +15,11 @@ import json
 import sys
 from pathlib import Path
 
-from . import figures, report
+from . import figures, plans, report
 from .reference import observe, read_query
 
 USAGE = (
-    "usage: python3 -m query_lab observe <query.sql> | figures [--check]"
+    "usage: python3 -m query_lab observe <query.sql> | run <query.sql> | figures [--check]"
     " | report <experiment> <query.sql> [--sql TEXT]"
 )
 
@@ -33,6 +34,12 @@ def main(argv: list[str]) -> int:
             print()
             print(figures.profile_table(seen), end="")
             print(f"\n{len(seen.rows)} rows")
+            return 0
+        case ["run", path]:
+            plan = plans.plan_for(Path.cwd(), Path(path).name)
+            result = plan.run()
+            print(figures.engine_table(plan.metrics), end="")
+            print(f"\n{result.num_rows} rows")
             return 0
         case ["report", experiment, query, *rest]:
             config = {"experiment": experiment, "query": query}

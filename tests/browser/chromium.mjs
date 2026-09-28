@@ -53,7 +53,9 @@ export async function launch() {
 export async function openPage(browser, serve, options = {}) {
   const context = await browser.newContext(options);
   await context.route(`${ORIGIN}/**`, (route) => {
-    const path = decodeURIComponent(new URL(route.request().url()).pathname).slice(1);
+    // A directory's URL is its index page, as a web server would answer it, and typed as one.
+    const raw = decodeURIComponent(new URL(route.request().url()).pathname).slice(1);
+    const path = raw === "" || raw.endsWith("/") ? `${raw}index.html` : raw;
     const body = serve(path);
     if (body === null) return route.fulfill({ status: 404 });
     if (typeof body === "object" && !(body instanceof Uint8Array) && !Buffer.isBuffer(body)) {
@@ -71,7 +73,7 @@ export async function openPage(browser, serve, options = {}) {
 /** A `serve` for a directory: its files, and nothing outside it. */
 export function directory(root) {
   return (path) => {
-    const file = normalize(join(root, path || "index.html"));
+    const file = normalize(join(root, path));
     if (!file.startsWith(root) || !existsSync(file)) return null;
     return readFileSync(file);
   };

@@ -20,7 +20,8 @@ from pathlib import Path
 
 import duckdb
 
-from . import report
+from . import plans, report
+from .metrics import Metrics
 from .reference import Observation, observe, read_query
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -57,6 +58,77 @@ def profile_table(seen: Observation) -> str:
         rows.append(f"| {m.operator} | {m.rows_in:,} | {estimate:,} | {m.rows_out:,} |")
     head = "| Operator | Rows in | Rows out, estimated | Rows out, measured |\n|---|---:|---:|---:|\n"
     return head + "\n".join(rows) + "\n"
+
+
+#: The counters the engine's table shows, and their headings. Spill and shuffle stay zero until
+#: the chapters that cause them, so they are left out until then.
+ENGINE_COUNTERS = (
+    ("rows_in", "Rows in"),
+    ("rows_out", "Rows out"),
+    ("batches_out", "Batches out"),
+    ("bytes_read", "Bytes read"),
+    ("requests", "Requests"),
+    ("peak_memory_bytes", "Peak memory, bytes"),
+)
+
+
+def engine_table(metrics: Metrics) -> str:
+    """The engine's counters, one row per operator, top down."""
+    head = "| Operator | " + " | ".join(h for _, h in ENGINE_COUNTERS) + " |\n"
+    head += "|---|" + "---:|" * len(ENGINE_COUNTERS) + "\n"
+    rows = [
+        f"| {m.operator} `{m.detail}` | "
+        + " | ".join(f"{getattr(m, c):,}" for c, _ in ENGINE_COUNTERS)
+        + " |"
+        for m in metrics.walk()
+    ]
+    return head + "\n".join(rows) + "\n"
+
+
+def engine_of(query: str, fixture: str) -> Callable[[], str]:
+    def make() -> str:
+        plan = plans.plan_for(ROOT, query)
+        plan.run()
+        return engine_table(plan.metrics) + conditions("the book's engine", fixture)
+
+    return make
+
+
+def compare_of(query: str, fixture: str) -> Callable[[], str]:
+    """The engine's operators beside DuckDB's partner for each, top down (plans.DUCKDB_PARTNERS)."""
+
+    def make() -> str:
+        plan = plans.plan_for(ROOT, query)
+        plan.run()
+        theirs = {m.operator: m for m in observe(read_query(ROOT / "queries" / query)).metrics.walk()}
+        rows = []
+        for m, partner in zip(plan.metrics.walk(), plans.DUCKDB_PARTNERS[query], strict=True):
+            duck = theirs[partner] if partner else None
+            rows.append(
+                f"| {m.operator} `{m.detail}` | {m.rows_in:,} | {m.rows_out:,} | "
+                + (f"{duck.operator} | {duck.rows_in:,} | {duck.rows_out:,} |" if duck else "none | | |")
+            )
+        head = (
+            "| Your engine's operator | Rows in | Rows out | DuckDB's operator | Rows in | Rows out |\n"
+            "|---|---:|---:|---|---:|---:|\n"
+        )
+        return (
+            head
+            + "\n".join(rows)
+            + "\n"
+            + conditions(f"the book's engine and DuckDB {duckdb.__version__} with one thread", fixture)
+        )
+
+    return make
+
+
+def profile_of(query: str, fixture: str) -> Callable[[], str]:
+    """DuckDB's profile for a query, as the ``observe`` command prints it."""
+
+    def make() -> str:
+        return profile_table(observe(read_query(ROOT / "queries" / query))) + duckdb_conditions(fixture)
+
+    return make
 
 
 def _operators(profile: dict):
@@ -104,6 +176,10 @@ def fixtures_table() -> str:
 FIGURES = (
     Figure("returned-unit-price-plan", plan_of("returned_unit_price.sql", "orders-sorted.parquet")),
     Figure("orders-recipe", orders_recipe),
+    Figure("returned-unit-price-engine", engine_of("returned_unit_price.sql", "orders-sorted.parquet")),
+    Figure("returned-unit-price-compare", compare_of("returned_unit_price.sql", "orders-sorted.parquet")),
+    Figure("lower-status-plan", plan_of("lower_status.sql", "orders-sorted.parquet")),
+    Figure("lower-status-profile", profile_of("lower_status.sql", "orders-sorted.parquet")),
     Figure("fixtures", fixtures_table),
 )
 

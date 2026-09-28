@@ -138,7 +138,8 @@ What the first week produced, and the decisions it forced. Each links to where t
 | Counters spec | Written, implemented, tested. | `COUNTERS.md`, `python/query_lab/metrics.py` |
 | Fixture generator | `orders` (sorted and shuffled) and `customers`. | `fixtures/generate.py` |
 | Build checks | No typed numbers, no pasted code, glossary order, desk-browser parity. Engine-versus-DuckDB parity waits for the engine. | `tests/`, `scripts/verify-numbers.py` |
-| Chapter 1 | The question, *Observe* and *Predict, then measure* drafted; the rest is outlined. | `chapters/the_plan_is_the_map.md` |
+| Chapter 1 | Written: DuckDB observed, predict then reveal, the engine's scan, filter and project, compared with DuckDB operator by operator, and three problems (two graded, one slow query to diagnose). | `chapters/the_plan_is_the_map.md`, `python/query_lab/operators.py`, `exercises/` |
+| Cover page | As in sizing-and-tco: the site's front page, before the preface. | `cover.md` |
 | Panels spike | Passed: `query_lab.report` computes each panel's JSON, the build embeds it, JavaScript draws it, and the page can recompute it under Pyodide. The first panel, the plan, is in ch01. | `spikes/panels/`, `web/lab/` |
 
 Decisions taken this week:

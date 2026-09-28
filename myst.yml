@@ -36,6 +36,7 @@ project:
     - node_modules/**
     - _build/**
   toc:
+    - file: cover.md
     - file: index.md
     - file: parts/seeing_a_query.md
       children:

@@ -59,6 +59,9 @@ class LabBlockError(Exception):
 #: MyST page slug -> the file this build publishes it as. Filled in by the site build.
 PAGES: dict[str, str] = {}
 
+#: The images the rendered pages use, as repository paths, for the site build to copy.
+IMAGES: set[str] = set()
+
 #: A reference whose text opens with a chapter label, which the renderer re-derives.
 LABELLED = re.compile(r"^(ch\d+|Appendix [A-Z])\b")
 
@@ -348,9 +351,13 @@ def render(node: dict, footnotes: list | None = None, label: str = "") -> str:
             footnotes.append(node)
         return ""
     if kind == "image":
-        src = html.escape(str(node.get("url", "")))
+        # MyST rewrites an image's URL to a hashed name at the site's root, which breaks under a
+        # base path. The path as written is kept in urlSource: the site build copies that file,
+        # and every page is published flat at the root, so the path works from any page.
+        src = _repo_path({"file": str(node.get("urlSource") or node.get("url", ""))}).lstrip("/")
+        IMAGES.add(src)
         alt = html.escape(str(node.get("alt", "")))
-        return f'<img src="{src}" alt="{alt}" loading="lazy">'
+        return f'<img src="{html.escape(src)}" alt="{alt}" loading="lazy">'
     if kind == "container":
         return f"<figure>{children()}</figure>"
     if kind == "caption":

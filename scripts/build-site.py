@@ -42,7 +42,11 @@ SUBTITLE = "Build a query engine to learn what a query costs"
 
 def page_list() -> list[dict]:
     """Every page, in reading order, with what the chrome needs to know about it."""
-    pages = [{"source": "index.md", "href": "index.html", "title": "Preface", "label": None}]
+    # The cover is the site's front page, index.html; the preface follows it.
+    pages = [
+        {"source": "cover.md", "href": "index.html", "title": TITLE, "nav": "Cover", "label": None},
+        {"source": "index.md", "href": "preface.html", "title": "Preface", "label": None},
+    ]
     for part in PARTS:
         pages.append(
             {
@@ -99,7 +103,7 @@ def nav_html(pages: list[dict], here: str) -> str:
                 f"{html.escape(p['title'])}</a></li>"
             )
         else:
-            out.append(f'<li><a href="{p["href"]}"{c}{aria}>{html.escape(p["title"])}</a></li>')
+            out.append(f'<li><a href="{p["href"]}"{c}{aria}>{html.escape(p.get("nav", p["title"]))}</a></li>')
     out.append("</ol></nav>")
     return "".join(out)
 
@@ -715,6 +719,7 @@ def build(out: Path) -> None:
     if missing:
         sys.exit(f"MyST produced no parse for: {', '.join(missing)}. Is each page in myst.yml's toc?")
     renderer.PAGES.clear()
+    renderer.IMAGES.clear()
     for p in pages:
         renderer.PAGES[parse[p["source"]]["slug"]] = p["href"]
 
@@ -744,6 +749,9 @@ def build(out: Path) -> None:
         (out / p["href"]).write_text(text)
 
     shutil.copy(ROOT / "web" / "book.css", out / "book.css")
+    for image in sorted(renderer.IMAGES):
+        (out / image).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(ROOT / image, out / image)
     (out / "favicon.svg").write_text(FAVICON)
     for size in (192, 512):
         (out / f"icon-{size}.png").write_bytes(icon_png(size))
