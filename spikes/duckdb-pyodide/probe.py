@@ -5,7 +5,9 @@
     node spikes/duckdb-pyodide/browser.mjs          # the same file, under Pyodide in Chromium
 
 For every query in ``queries/``: DuckDB's result, its ``EXPLAIN`` plan, and the counters from its
-JSON profile. Then the Parquet book's scan, the book's scan layer, on both orders fixtures. The
+JSON profile. Then the Parquet book's scan, the book's scan layer, on both orders fixtures. Then
+the book's engine: every hand-written plan's result and counters, which exercise the Parquet
+book's reader and pyarrow's kernels as the page runs them. The
 three runs must print the same document, byte for byte; ``tests/test_pyodide.py`` checks the
 desk against Node, and ``scripts/ci-check.sh`` runs the browser.
 """
@@ -27,6 +29,7 @@ from parquet_lab.object_store import NetworkModel  # noqa: E402
 from parquet_lab.prune import Op  # noqa: E402
 from parquet_lab.scan import Query, Strategy, scan  # noqa: E402
 
+from query_lab.plans import PLANS, plan_for  # noqa: E402
 from query_lab.reference import observe, read_query  # noqa: E402
 
 
@@ -49,6 +52,11 @@ def probe(root: Path) -> dict:
             "bytes_fetched": result.bytes_fetched,
             "requests": len(result.requests),
         }
+    out["engine"] = {}
+    for query in sorted(PLANS):
+        plan = plan_for(root, query)
+        table = plan.run()
+        out["engine"][query] = {"rows": table.to_pylist(), "metrics": plan.metrics.to_json()}
     return out
 
 

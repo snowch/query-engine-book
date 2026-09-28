@@ -18,7 +18,7 @@ from tools.render import LabBlockError, parse_lab_block
 
 ROOT = Path(__file__).resolve().parent.parent
 BOOK_PAGES = sorted(
-    [ROOT / "index.md"]
+    [ROOT / "cover.md", ROOT / "index.md"]
     + list((ROOT / "parts").glob("*.md"))
     + list((ROOT / "chapters").glob("*.md"))
     + list((ROOT / "appendices").glob("*.md"))
@@ -50,12 +50,12 @@ def headings(text: str, level: int) -> list[str]:
 
 def test_the_table_of_contents_is_the_outline():
     toc = yaml.safe_load((ROOT / "myst.yml").read_text())["project"]["toc"]
-    files = [toc[0]["file"]]
-    for entry in toc[1:]:
+    files = [toc[0]["file"], toc[1]["file"]]
+    for entry in toc[2:]:
         if "file" in entry:
             files.append(entry["file"])
         files += [c["file"] for c in entry.get("children", [])]
-    expected = ["index.md"]
+    expected = ["cover.md", "index.md"]
     for part in PARTS:
         expected.append(part.path)
         expected += [c.path for c in CHAPTERS if c.part == part.title]
@@ -149,7 +149,9 @@ def test_a_written_chapter_defines_the_terms_the_glossary_says_it_does(term, anc
     chapter = next(c for c in CHAPTERS if c.anchor == anchor)
     if chapter not in WRITTEN:
         pytest.skip(f"{chapter.label} is not written")
-    assert re.search(rf"\*\*{re.escape(term)}\*\*", (ROOT / chapter.path).read_text(), re.I), (
+    # A term may wrap across lines where the chapter defines it, and may be plural there.
+    words = r"\s+".join(re.escape(w) for w in term.split())
+    assert re.search(rf"\*\*{words}(?:s|es)?\*\*", (ROOT / chapter.path).read_text(), re.I), (
         f"{chapter.label} should introduce {term!r} in bold where it defines it"
     )
 
@@ -204,7 +206,7 @@ def test_the_renderer_and_the_outline_know_the_same_pages():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     sources = [p["source"] for p in module.page_list()]
-    assert sources[0] == "index.md"
+    assert sources[:2] == ["cover.md", "index.md"]
     assert sorted(sources) == sorted(str(p.relative_to(ROOT)) for p in BOOK_PAGES)
 
 

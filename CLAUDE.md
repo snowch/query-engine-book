@@ -44,11 +44,13 @@ package once both books are stable; until then, a fix to shared tooling is worth
 
 | Path | What it is |
 |---|---|
-| `python/query_lab/` | The engine. `metrics` (the counters), `reference` (DuckDB), `figures` (every generated fragment). Operators arrive chapter by chapter. |
+| `python/query_lab/` | The engine. `operators` (scan, filter, project, pulling Arrow batches), `plans` (a hand-written plan per query, until Part IV's planner), `metrics` (the counters), `reference` (DuckDB), `report` (what panels draw), `figures` (every generated fragment). |
+| `exercises/` | The problems: `<slug>.py` stubs, and `tests/test_<slug>.py` graders, skipped unless run with `--problems`. |
 | `external/parquet-book/` | Git submodule, pinned: the Parquet book. Its `python/parquet_lab` is the engine's scan layer. Never copy it into this repository. |
 | `queries/` | Every query a chapter runs, one per file. Pages quote them; figures and tests run them. |
 | `fixtures/` | Parquet files written by pyarrow from a seeded generator, each with a manifest (`.json`). |
-| `chapters/`, `parts/`, `appendices/`, `index.md` | The book, in MyST markdown. |
+| `cover.md`, `index.md`, `parts/`, `chapters/`, `appendices/` | The book, in MyST markdown. The cover is the site's `index.html`; the preface is `preface.html`. |
+| `public/` | The book's pictures, such as the cover's. |
 | `chapters/_generated/` | Fragments written by `python -m query_lab figures`. Never edited by hand. |
 | `spikes/` | Experiments that decided something. Each has a README with its findings; tests keep the ones that still matter true. |
 | `tools/` | The outline (`outline.py`), the renderer (`render.py`), the highlighter. |

@@ -12,8 +12,8 @@ select = ["E", "F", "W", "I", "B", "UP"]
 ignore = ["E501"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "python/tests"]
-pythonpath = [".", "python", "external/parquet-book/python"]
+testpaths = ["tests", "python/tests", "exercises"]
+pythonpath = [".", "python", "external/parquet-book/python", "exercises"]
 
 [tool.ruff.lint.isort]
 # The engine is this repository's own package; the Parquet book's reader (parquet_lab) is a

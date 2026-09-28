@@ -1,0 +1,33 @@
+<svg viewBox="0 0 560 300" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, 'Segoe UI', system-ui, sans-serif">
+  <!-- A plan as the book draws it: operators stacked as rows flow up, each with the planner's
+       estimate (grey) beside what it measured (blue), and the reader's prediction (amber). No
+       numbers: the book computes every number, and a cover has nothing to compute. -->
+  <rect x="0" y="0" width="560" height="300" rx="14" fill="#f2f6f7"/>
+  <g fill="none" stroke="#c4d0d6" stroke-width="1.5">
+    <rect x="40" y="30" width="480" height="60" rx="8" fill="#fdfdfc"/>
+    <rect x="40" y="120" width="480" height="60" rx="8" fill="#fdfdfc"/>
+    <rect x="40" y="210" width="480" height="60" rx="8" fill="#fdfdfc"/>
+  </g>
+  <g font-size="15" font-weight="600" letter-spacing=".04em" fill="#35648f">
+    <text x="60" y="58">PROJECT</text>
+    <text x="60" y="148">FILTER</text>
+    <text x="60" y="238">SCAN</text>
+  </g>
+  <!-- Rows flowing up: fewer at each step. -->
+  <g stroke="#83949d" stroke-width="2" fill="#83949d">
+    <line x1="280" y1="208" x2="280" y2="186"/><polygon points="274,190 286,190 280,181"/>
+    <line x1="280" y1="118" x2="280" y2="96"/><polygon points="274,100 286,100 280,91"/>
+  </g>
+  <!-- Prediction, estimate, measurement for each operator. -->
+  <g>
+    <rect x="180" y="44" width="92" height="8" rx="3" fill="#c8791a"/>
+    <rect x="180" y="56" width="112" height="8" rx="3" fill="#c4d0d6"/>
+    <rect x="180" y="68" width="88" height="8" rx="3" fill="#35648f"/>
+    <rect x="180" y="134" width="150" height="8" rx="3" fill="#c8791a"/>
+    <rect x="180" y="146" width="112" height="8" rx="3" fill="#c4d0d6"/>
+    <rect x="180" y="158" width="142" height="8" rx="3" fill="#35648f"/>
+    <rect x="180" y="224" width="170" height="8" rx="3" fill="#c8791a"/>
+    <rect x="180" y="236" width="300" height="8" rx="3" fill="#c4d0d6"/>
+    <rect x="180" y="248" width="176" height="8" rx="3" fill="#35648f"/>
+  </g>
+</svg>
