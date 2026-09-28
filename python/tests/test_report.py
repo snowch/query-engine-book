@@ -64,3 +64,18 @@ def test_unknown_experiments_and_queries_are_refused():
         report.run(ROOT, {"experiment": "plan", "query": "missing.sql"})
     with pytest.raises(report.ReportError, match="empty"):
         report.run(ROOT, {**CONFIG, "sql": "-- nothing but a comment\n;"})
+
+
+def test_the_plan_report_needs_no_pyarrow():
+    """The page loads DuckDB alone for a plan panel (web/lab/python-worker.js), so the report
+    module must import without pyarrow, and a plan must run without it."""
+    import subprocess
+    import sys
+
+    code = (
+        "import sys; sys.modules['pyarrow'] = None\n"
+        "from pathlib import Path\n"
+        "from query_lab import report\n"
+        "report.run(Path('.'), {'experiment': 'plan', 'query': 'returned_unit_price.sql'})\n"
+    )
+    subprocess.run([sys.executable, "-c", code], cwd=ROOT, check=True)

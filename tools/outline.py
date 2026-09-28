@@ -145,7 +145,7 @@ _CHAPTERS = (
         "What does a batch of rows look like in memory, and why does the order you touch it in matter?",
         "Arrow arrays built from raw buffers, a validity bitmap decoded by hand, and sorted and "
         "shuffled gathers run through a cache simulator.",
-        (),
+        ("gather",),
         ("orders-sorted.parquet", "orders-shuffled.parquet"),
     ),
     (
@@ -186,4 +186,4 @@ BY_ANCHOR = {x.anchor: x for x in (*CHAPTERS, *APPENDICES)}
 #: The experiments ``web/lab/lab.js`` knows how to mount, each drawn from the JSON of the
 #: function of the same name in ``query_lab.report``. A ``lab`` block naming anything else fails
 #: the build, rather than rendering an empty box.
-EXPERIMENTS: tuple[str, ...] = ("plan",)
+EXPERIMENTS: tuple[str, ...] = ("plan", "gather")

@@ -81,6 +81,28 @@ shows is the SQL both engines ran.
 A DuckDB tree does not satisfy invariant 4 (it reports no batches), so `check()` is for the
 book's engine only.
 
+## The simulators' counters
+
+Some costs are not an operator's to count: which bytes a processor had to fetch from memory, for
+one. The book counts those with small simulators, each a model that says what it leaves out.
+Their counters are exact integers too, the same on every machine and in the browser, and a
+figure that prints one names the simulator and its settings in its conditions line.
+
+**The cache model** (`python/query_lab/cache.py`, ch02): `lines` lines of `line_bytes` bytes,
+any line anywhere in the cache, the least recently used pushed out first. The book's setting is
+512 lines of 64 bytes.
+
+| Field | Meaning |
+|---|---|
+| `reads` | Reads asked of the cache, one per call, whatever its size. |
+| `hits` | Lines a read found in the cache. |
+| `misses` | Lines a read had to fetch from memory. A read that spans two lines counts two. |
+| `bytes_fetched` | `misses` times `line_bytes`: the bytes moved from memory into the cache. |
+
+Invariants: a read touches at least one line, so `hits + misses >= reads`; and reading a buffer
+once, in order, from an empty cache fetches each of its lines exactly once, so its `misses` is
+its size in lines. `python/tests/test_memory.py` holds the model to both.
+
 ## What the counters leave out
 
 Counters say how much work was done, not how long it took. Two plans with the same counters can

@@ -11,11 +11,23 @@ chapter that introduces it: `tests/test_book.py` checks every entry.
 **Batch.** A slice of a table, a few thousand rows held column by column as Arrow arrays: what
 one operator hands the next. [ch01](#the-plan-is-the-map)
 
+**Cache hit.** A read whose cache line is already in the cache. [ch02](#batches-in-memory)
+
 **Cache line.** The fixed-size block of memory a processor moves between memory and its caches.
 Reading one byte brings in the whole line. [ch02](#batches-in-memory)
 
+**Cache miss.** A read whose cache line is not in the cache, so the whole line is fetched from
+memory first. [ch02](#batches-in-memory)
+
 **Cardinality estimate.** The number of rows a planner expects an operator to produce, made
 before the query runs. [ch01](#the-plan-is-the-map)
+
+**Gather.** Reading rows by position, in an order given by a list of positions: row `k` of the
+output is row `positions[k]` of the input. A sort, a join and a lookup each end in one.
+[ch02](#batches-in-memory)
+
+**Offsets.** The buffer of a string array that says where each row's bytes start and end in its
+data buffer. [ch02](#batches-in-memory)
 
 **Operator.** One step of a plan: a job with one input and one output, such as a scan, a filter
 or a projection. [ch01](#the-plan-is-the-map)

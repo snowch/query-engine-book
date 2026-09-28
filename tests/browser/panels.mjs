@@ -3,10 +3,11 @@
 //   node tests/browser/panels.mjs _build/html
 //
 // For each page with a panel, the check reads the panel back from the page and holds it to the
-// JSON the build embedded, which is query_lab.report's answer:
+// JSON the build embedded, which is query_lab.report's answer. Each experiment has a reader
+// (PANELS below) that says what its drawing shows, asking and revealed:
 //
-// 1. It draws at once, asking: estimates shown, a box per operator for a prediction, and every
-//    measurement hidden, down to the rows on the links.
+// 1. It draws at once, asking: what the reader predicts from is shown, a box per prediction, and
+//    every measurement hidden (for a plan, down to the rows on the links).
 // 2. Predictions typed and revealed: every measurement is the JSON's, every prediction is what
 //    was typed, and both survive a reload.
 // 3. "Run it in your browser" reruns the report under Pyodide; the page must say the answer is
@@ -59,6 +60,50 @@ const revealed = (want, guesses) => want.map((o, i) => ({ ...o, ...(guesses ? { 
 const none = (v) => (v === null ? "none" : v);
 const shown = (ops) => ops.map((o) => ({ ...o, estimated: none(o.estimated) }));
 
+/** The gathers as the page drew them, read back from the DOM. */
+async function drawnGathers(lab) {
+  return lab.$$eval(".gather-run", (runs) => runs.map((run) => {
+    const value = (s) => {
+      const e = run.querySelector(s);
+      if (!e) return undefined;
+      const text = e.textContent;
+      return text === "none" || text === "no guess" || text === "hidden" ? text : Number(text.replace(/,/g, ""));
+    };
+    const out = {
+      fixture: run.dataset.fixture,
+      column_lines: value(".plan-bar.estimated .plan-bar-value"),
+      fetched: value(".plan-bar.measured .plan-bar-value"),
+      dots: run.querySelectorAll(".gather-pattern circle").length,
+    };
+    for (const field of ["reads", "hits", "misses", "bytes_fetched"]) {
+      const v = value(`[data-field="${field}"]`);
+      if (v !== undefined) out[field] = v;
+    }
+    const predicted = value(".plan-bar.predicted .plan-bar-value");
+    if (predicted !== undefined) out.predicted = predicted;
+    return out;
+  }));
+}
+
+/** For each experiment: how to read its drawing, and what it must show asking and revealed. */
+const PANELS = {
+  plan: {
+    read: drawn,
+    asking: (data) => shown(expected(data.root)).map((o) => ({ operator: o.operator, estimated: o.estimated, measured: "hidden" })),
+    revealed: (data, guesses) => revealed(shown(expected(data.root)), guesses),
+    count: (data) => expected(data.root).length,
+  },
+  gather: {
+    read: drawnGathers,
+    asking: (data) => data.gathers.map((g) => ({ fixture: g.fixture, column_lines: data.column_lines, fetched: "hidden", dots: g.pattern.length })),
+    revealed: (data, guesses) => data.gathers.map((g, i) => ({
+      fixture: g.fixture, column_lines: data.column_lines, fetched: g.misses, dots: g.pattern.length,
+      reads: g.reads, hits: g.hits, misses: g.misses, bytes_fetched: g.bytes_fetched, predicted: guesses[i],
+    })),
+    count: (data) => data.gathers.length,
+  },
+};
+
 function same(label, got, want) {
   const a = JSON.stringify(got), b = JSON.stringify(want);
   if (a !== b) throw new Error(`${label}: drew ${a}, expected ${b}`);
@@ -89,36 +134,39 @@ async function ready(page) {
 async function checkPanel(page, file, index) {
   const lab = () => page.$$(".lab[data-experiment]").then((all) => all[index]);
   let el = await lab();
-  const label = `${file} ${await el.getAttribute("data-experiment")}`;
+  const experiment = await el.getAttribute("data-experiment");
+  const label = `${file} ${experiment}`;
+  const panel = PANELS[experiment];
+  if (!panel) throw new Error(`${label}: no reader for this experiment in tests/browser/panels.mjs`);
   const data = JSON.parse(await el.$eval("script.lab-data", (s) => s.textContent));
-  const config = { experiment: await el.getAttribute("data-experiment"), query: await el.getAttribute("data-query") };
-  const want = shown(expected(data.root));
+  const config = { experiment, query: await el.getAttribute("data-query") };
+  const read = panel.read;
 
   // 1. Asking.
-  const asking = await drawn(el);
-  same(`${label}, asking`, asking, want.map((o) => ({ operator: o.operator, estimated: o.estimated, measured: "hidden" })));
+  same(`${label}, asking`, await read(el), panel.asking(data));
   const links = await el.$$eval(".plan-link", (ls) => ls.map((l) => l.textContent));
   if (links.some((t) => /\d/.test(t))) throw new Error(`${label}: a link gives away rows before the reveal: ${links}`);
   if (await el.$(".plan-preview")) throw new Error(`${label}: the result shows before the reveal`);
 
   // 2. Predict, reveal, reload.
   const inputs = await el.$$(".plan-predict input");
-  if (inputs.length !== want.length) throw new Error(`${label}: ${inputs.length} prediction boxes for ${want.length} operators`);
-  const guesses = want.map((_, i) => 1000 + 111 * i);
+  const count = panel.count(data);
+  if (inputs.length !== count) throw new Error(`${label}: ${inputs.length} prediction boxes for ${count} predictions`);
+  const guesses = [...Array(count).keys()].map((i) => 1000 + 111 * i);
   for (const [i, input] of inputs.entries()) await input.fill(String(guesses[i]));
   await (await el.$(".plan-reveal")).click();
-  same(`${label}, revealed`, await drawn(el), revealed(want, guesses));
+  same(`${label}, revealed`, await read(el), panel.revealed(data, guesses));
   await page.reload();
   await ready(page);
   el = await lab();
-  same(`${label}, after a reload`, await drawn(el), revealed(want, guesses));
+  same(`${label}, after a reload`, await read(el), panel.revealed(data, guesses));
   console.log(`  ${label}: asks first, reveals the build's numbers beside the predictions, and keeps both`);
 
   // 3. The same report, in the browser.
   await runAndWait(page, el);
   const [agrees, status] = await el.evaluate((e) => [e.dataset.agrees, e.querySelector(".lab-status").textContent]);
   if (agrees !== "true") throw new Error(`${label}: ${status}`);
-  same(`${label}, from your browser`, await drawn(el), revealed(want, guesses));
+  same(`${label}, from your browser`, await read(el), panel.revealed(data, guesses));
   console.log(`  ${label}: recomputed in the browser to the build's answer`);
 
   // 4. Edited, broken, reset, predict again.
@@ -150,16 +198,16 @@ async function checkPanel(page, file, index) {
       throw new Error(`${label}, broken query: ${broken}`);
     }
     await (await el.$(".lab-reset")).click();
-    same(`${label}, after reset`, await drawn(el), revealed(want, guesses));
+    same(`${label}, after reset`, await drawn(el), panel.revealed(data, guesses));
     if (await editor.inputValue() !== data.source) throw new Error(`${label}: reset did not restore the query`);
     console.log(`  ${label}: a broken query reports DuckDB's error, and reset restores the book's query`);
   }
   await (await el.$(".plan-again")).click();
-  same(`${label}, predicting again`, await drawn(el), want.map((o) => ({ operator: o.operator, estimated: o.estimated, measured: "hidden" })));
+  same(`${label}, predicting again`, await read(el), panel.asking(data));
   if ((await el.$$eval(".plan-predict input", (is) => is.map((i) => i.value))).some(Boolean)) {
     throw new Error(`${label}: predicting again kept the old predictions`);
   }
-  return { label, want };
+  return { label };
 }
 
 const browser = await launch();

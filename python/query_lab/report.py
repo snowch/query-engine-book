@@ -93,7 +93,55 @@ def _details(extra: dict) -> list[list[str]]:
     return out
 
 
-EXPERIMENTS = {"plan": plan}
+#: The same orders in two files: written in date order, and shuffled (fixtures/generate.py).
+GATHER_FIXTURES = ("orders-sorted.parquet", "orders-shuffled.parquet")
+
+#: How many of each gather's reads the panel draws, evenly spaced through it: enough to see the
+#: pattern.
+PATTERN_READS = 160
+
+
+def gather(root: Path, column: str) -> dict:
+    """One column of the orders, gathered into date order through the cache model, once from
+    each file: where date order is the order the rows are stored in, and where it is not.
+
+    For each gather: the cache's counters, and the line of the column that every so many of its
+    reads fell in, which is the pattern the panel draws.
+    """
+    # The engine needs pyarrow, which the plan panel does not load in the page: imported here, so
+    # a plan runs with DuckDB alone.
+    from . import memory
+    from .cache import Cache
+    from .operators import Scan
+    from .plans import in_date_order
+
+    gathers = []
+    for fixture in GATHER_FIXTURES:
+        table = Scan(root / "fixtures" / fixture, ["order_id", "order_date", column]).run()
+        values = table.column(column).combine_chunks()
+        if values.type not in memory.FIXED:
+            raise ReportError(f"{column} is not a fixed-width column")
+        width = memory.FIXED[values.type][0]
+        order = in_date_order(table)
+        cache = Cache()
+        memory.gather(values, order, cache)
+        every = max(1, len(order) // PATTERN_READS)
+        pattern = [i * width // cache.line_bytes for i in order[::every][:PATTERN_READS]]
+        gathers.append({"fixture": fixture, **cache.counters(), "pattern_every": every, "pattern": pattern})
+    return {
+        "experiment": "gather",
+        "column": column,
+        "engine": "the book's engine and cache model",
+        "type": str(values.type),
+        "width": width,
+        "rows": len(values),
+        "column_lines": -(-len(values) * width // cache.line_bytes),
+        "cache": {"lines": cache.lines, "line_bytes": cache.line_bytes},
+        "gathers": gathers,
+    }
+
+
+EXPERIMENTS = {"plan": plan, "gather": gather}
 
 
 def panel_name(config: dict[str, str]) -> str:
