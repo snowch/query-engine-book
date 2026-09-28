@@ -71,8 +71,8 @@ make check       # ./scripts/ci-check.sh: exactly what CI runs
 
 Always run `make check` before pushing. It runs, in order: ruff, the fixture check, the figures
 check, the number check, the MyST parse, the site render, the link check, pytest (the book's
-tests, the engine's, and desk-browser parity under Node), and, in headless Chromium, the probe
-and every panel.
+tests, the engine's, and desk-browser parity under Node), and, in headless Chromium, the probe,
+every panel, and the site's chrome served under a base path on a shared origin.
 
 ## The invariants
 
@@ -158,4 +158,6 @@ without following its order or examples; each chapter keeps a list of its primar
 - Upgrading DuckDB or pyarrow without regenerating fixtures (the generator refuses other versions).
 - A new MyST directive or node type without a branch in `tools/render.py`.
 - A root-relative URL (`/lab/...`) anywhere in a page: the site is served under a base path.
+- A bare browser-storage key for the book's own state. Other books share the origin
+  (snowch.github.io); name the key for this book, as `last-read:<base path>` is.
 - Moving the submodule without re-running the tests: the scan layer's counters feed figures.

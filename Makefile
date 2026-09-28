@@ -64,9 +64,10 @@ test:  ## Run the tests
 	$(PYTHON) -m pytest -q
 
 .PHONY: browser-test
-browser-test: all  ## Drive the DuckDB probe and every panel in headless Chromium
+browser-test: all  ## Drive the DuckDB probe, every panel and the site's chrome in headless Chromium
 	./scripts/browser-probe.sh
 	node tests/browser/panels.mjs _build/html
+	node tests/browser/site.mjs _build/html
 
 .PHONY: check
 check:  ## Everything CI runs
