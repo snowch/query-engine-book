@@ -728,8 +728,7 @@ def build(out: Path) -> None:
         mdast = parse[p["source"]]["mdast"]
         normalise_headings(mdast)
         body = renderer.render_page(mdast)
-        # Only a page that mounts an experiment or a workbench loads the lab's script. The lab is
-        # not built yet (PLAN.md, Phase 0: the panels spike); until it is, no page has either.
+        # Only a page that mounts a panel or a workbench loads the lab's script.
         markers = ('class="lab"', 'class="workbench"')
         has_lab = any(m in body for m in markers)
         text = page_html(
@@ -775,7 +774,14 @@ def build(out: Path) -> None:
     fixtures = sorted(
         str(f.relative_to(out / "fixtures")) for f in (out / "fixtures").rglob("*") if f.is_file()
     )
-    (out / "lab" / "py" / "package.json").write_text(json.dumps({"packages": listing, "fixtures": fixtures}))
+    # The queries the panels run, as the repository keeps them.
+    queries = sorted(f.name for f in (ROOT / "queries").glob("*.sql"))
+    (out / "lab" / "py" / "queries").mkdir()
+    for name in queries:
+        shutil.copy(ROOT / "queries" / name, out / "lab" / "py" / "queries" / name)
+    (out / "lab" / "py" / "package.json").write_text(
+        json.dumps({"packages": listing, "queries": queries, "fixtures": fixtures})
+    )
     (out / ".nojekyll").write_text("")
 
     files = sorted(str(f.relative_to(out)) for f in out.rglob("*") if f.is_file() and f.name != ".nojekyll")

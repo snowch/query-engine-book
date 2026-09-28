@@ -135,7 +135,7 @@ _CHAPTERS = (
         "What does an engine do with your query, and where can you see what each step costs?",
         "A hand-written plan of scan, filter and projection over Arrow batches, each operator "
         "reporting its counters, checked against DuckDB's plan and profile.",
-        (),
+        ("plan",),
         ("orders-sorted.parquet",),
     ),
     (
@@ -183,7 +183,7 @@ APPENDICES = (
 BY_SLUG = {c.slug: c for c in CHAPTERS}
 BY_ANCHOR = {x.anchor: x for x in (*CHAPTERS, *APPENDICES)}
 
-#: The experiments ``web/lab/lab.js`` knows how to mount. A ``lab`` block naming anything else
-#: fails the build, rather than rendering an empty box. None yet: the panels spike (PLAN.md,
-#: Phase 0) decides how the first one is drawn.
-EXPERIMENTS: tuple[str, ...] = ()
+#: The experiments ``web/lab/lab.js`` knows how to mount, each drawn from the JSON of the
+#: function of the same name in ``query_lab.report``. A ``lab`` block naming anything else fails
+#: the build, rather than rendering an empty box.
+EXPERIMENTS: tuple[str, ...] = ("plan",)

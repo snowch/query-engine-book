@@ -11,9 +11,10 @@ notices is missing.
 
 Three node shapes are this book's own:
 
-- A fenced block in the language ``lab`` is an experiment. It becomes a mount point that
-  ``web/lab/lab.js`` fills, and the renderer checks that the experiment and fixture it names
-  exist.
+- A fenced block in the language ``lab`` is an experiment: a panel. It becomes a mount point
+  that ``web/lab/lab.js`` draws, carrying the panel's JSON as the build computed it
+  (``python -m query_lab figures``), so it draws with nothing to download. The renderer checks
+  that the experiment, the query and the fixtures it names exist, and that the JSON is there.
 - A fenced block in the language ``problems`` is a chapter's workbench, where a reader edits the
   chapter's problems and runs their tests in the page. The renderer checks that the chapter it
   names has problems.
@@ -31,12 +32,18 @@ from __future__ import annotations
 import html
 import json
 import re
+import sys
 from pathlib import Path
 
 from tools.highlight import highlight
 from tools.outline import BY_ANCHOR, EXPERIMENTS
 
 ROOT = Path(__file__).resolve().parent.parent
+# The panels' file names are the engine's to decide (query_lab.report.panel_name): the figures
+# write the JSON and this renderer embeds it, so both must agree on where it lives.
+sys.path.insert(0, str(ROOT / "python"))
+from query_lab.report import panel_name  # noqa: E402
+
 REPO_URL = "https://github.com/snowch/query-engine-book/blob/main/"
 
 
@@ -93,7 +100,21 @@ def parse_lab_block(value: str) -> dict:
     for fixture in filter(None, (config.get("fixture"), *config.get("fixtures", "").split(","))):
         if not (ROOT / "fixtures" / fixture.strip()).exists():
             raise LabBlockError(f"lab block names fixtures/{fixture.strip()}, which does not exist")
+    if "query" in config and not (ROOT / "queries" / config["query"]).is_file():
+        raise LabBlockError(f"lab block names queries/{config['query']}, which does not exist")
     return config
+
+
+def panel_data(config: dict) -> str:
+    """The JSON the build computed for a panel, or a build failure naming the command to run."""
+    path = ROOT / "chapters" / "_generated" / panel_name(config)
+    if not path.is_file():
+        raise LabBlockError(
+            f"no build-time JSON for {config}: add it to PANELS in python/query_lab/figures.py and "
+            f"run `make figures` (expected {path.relative_to(ROOT)})"
+        )
+    # Minified, and safe inside a script element: a "</" in a string cannot end the element.
+    return json.dumps(json.loads(path.read_text()), separators=(",", ":")).replace("</", "<\\/")
 
 
 def _lab(node: dict) -> str:
@@ -101,9 +122,10 @@ def _lab(node: dict) -> str:
     attrs = " ".join(f'data-{html.escape(k)}="{html.escape(v)}"' for k, v in config.items())
     return (
         f'<div class="lab" {attrs}>'
-        '<p class="lab-fallback">This experiment runs the book\'s engine in your browser, under '
-        "Pyodide. It needs JavaScript. The same engine runs at a desk: see "
-        '<a href="running-the-lab.html">Appendix A</a>.</p></div>'
+        f'<script type="application/json" class="lab-data">{panel_data(config)}</script>'
+        '<p class="lab-fallback">This panel draws what the book\'s engine computed when the book '
+        "was built, and can run it again in your browser. It needs JavaScript. The same engine "
+        'runs at a desk: see <a href="running-the-lab.html">Appendix A</a>.</p></div>'
     )
 
 

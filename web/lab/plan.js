@@ -1,0 +1,79 @@
+// The plan panel: DuckDB's operators as the rows flow through them, from query_lab.report.plan.
+//
+// It draws the tree top down, as DuckDB's EXPLAIN does, with the rows each operator passes to
+// the one above it on the link between them. Each operator shows the planner's estimate of its
+// output beside the rows the profile measured, as two bars on one scale, so a bad estimate is a
+// visible gap. Every number drawn is a field of the report's JSON.
+
+const fmt = (n) => Number(n).toLocaleString("en-GB");
+
+function el(tag, className, text) {
+  const e = document.createElement(tag);
+  if (className) e.className = className;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+/** The largest row count any bar in the tree draws, so every bar shares one scale. */
+function scale(node) {
+  return Math.max(node.estimated_rows_out, node.rows_out, ...node.children.map(scale));
+}
+
+function bar(label, value, max, kind) {
+  const row = el("div", `plan-bar ${kind}`);
+  row.append(el("span", "plan-bar-label", label));
+  const track = el("span", "plan-bar-track");
+  const fill = el("span", "plan-bar-fill");
+  fill.style.width = `${max ? (100 * value) / max : 0}%`;
+  track.append(fill);
+  row.append(track, el("span", "plan-bar-value", fmt(value)));
+  return row;
+}
+
+function operator(node, max) {
+  const box = el("div", "plan-node");
+  const card = el("div", "plan-op");
+  card.dataset.operator = node.operator;
+  card.append(el("div", "plan-op-name", node.operator));
+  if (node.detail.length) {
+    const dl = el("dl", "plan-op-detail");
+    for (const [key, ...values] of node.detail) {
+      dl.append(el("dt", "", key), el("dd", "", values.join(", ")));
+    }
+    card.append(dl);
+  }
+  const bars = el("div", "plan-bars");
+  bars.append(
+    bar("Estimated", node.estimated_rows_out, max, "estimated"),
+    bar("Measured", node.rows_out, max, "measured"),
+  );
+  card.append(bars);
+  const flow = el("div", "plan-op-flow");
+  flow.innerHTML = `<span>rows in</span> <b data-field="rows_in"></b> <span>rows out</span> <b data-field="rows_out"></b>`;
+  flow.querySelector('[data-field="rows_in"]').textContent = fmt(node.rows_in);
+  flow.querySelector('[data-field="rows_out"]').textContent = fmt(node.rows_out);
+  card.append(flow);
+  box.append(card);
+  if (node.children.length) {
+    const kids = el("div", "plan-children");
+    for (const child of node.children) {
+      const branch = el("div", "plan-branch");
+      branch.append(el("div", "plan-link", `▲ ${fmt(child.rows_out)} rows`), operator(child, max));
+      kids.append(branch);
+    }
+    box.append(kids);
+  }
+  return box;
+}
+
+export function mountPlan(root, data) {
+  const head = el("div", "lab-head");
+  head.append(el("span", "lab-title", "The plan, as it ran"));
+  const note = el("span", "lab-note");
+  note.append(el("code", "", `queries/${data.query}`), ` · ${fmt(data.result_rows)} result rows`);
+  head.append(note);
+  root.append(head);
+  const tree = el("div", "plan-tree");
+  tree.append(operator(data.root, scale(data.root)));
+  root.append(tree);
+}

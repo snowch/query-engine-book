@@ -27,9 +27,11 @@ submodule in `external/parquet-book`, so clone with `--recurse-submodules`, or r
 
 ## In your browser
 
-The pages will run the engine's Python in your browser, under Pyodide, with the same DuckDB and
-pyarrow versions a desk uses. That part of the lab is being built. The first run downloads
-Python, DuckDB and pyarrow, which is a large download; your browser keeps them after that.
+A panel draws what the engine computed when the book was built, so it appears at once with
+nothing to download. Its **Run it in your browser** button runs the same code again in your
+browser, under Pyodide, with the DuckDB version a desk uses, and says whether your browser got
+the same answer as the build. The first run downloads Python and DuckDB, which is a large
+download; your browser keeps them after that.
 
 ## Versions
 

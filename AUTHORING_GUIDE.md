@@ -30,8 +30,9 @@ Not the order the chapter is read in.
 4. **The problems and their tests.** Make each fail, and read the failure: it is the first thing a
    reader sees. Solve each one outside the repository and check it passes. Never commit a
    solution.
-5. **The figures.** Every number the prose will need, as a fragment from
-   `python/query_lab/figures.py`.
+5. **The figures and panels.** Every number the prose will need, as a fragment from
+   `python/query_lab/figures.py`. A panel only where a picture beats a table: a report function
+   in `query_lab.report`, drawn by `web/lab/` (CLAUDE.md, *Adding things*).
 6. **The prose**, last, to serve all of the above.
 
 Writing the prose first produces a chapter that explains what you meant to build.

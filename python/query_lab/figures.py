@@ -20,6 +20,7 @@ from pathlib import Path
 
 import duckdb
 
+from . import report
 from .reference import Observation, observe, read_query
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -115,27 +116,44 @@ FIGURES = (
 )
 
 
+#: Every panel a chapter embeds, as its ``lab`` block's settings. Each one's JSON is computed here
+#: at build time, embedded in the page by the renderer, and recomputed in the page on request.
+PANELS = ({"experiment": "plan", "query": "returned_unit_price.sql"},)
+
+
+def panel_json(config: dict[str, str]) -> str:
+    return json.dumps(report.run(ROOT, config), indent=1) + "\n"
+
+
+def outputs() -> dict[str, Callable[[], str]]:
+    """Every generated file, by name: the fragments, then the panels' JSON."""
+    out: dict[str, Callable[[], str]] = {f"{f.name}.md": f.make for f in FIGURES}
+    for config in PANELS:
+        out[report.panel_name(config)] = lambda config=config: panel_json(config)
+    return out
+
+
 def main(argv: list[str]) -> int:
     check = "--check" in argv
     stale = []
     OUT.mkdir(parents=True, exist_ok=True)
-    for f in FIGURES:
-        path = OUT / f"{f.name}.md"
-        text = f.make()
+    made = outputs()
+    for name, make in made.items():
+        path = OUT / name
+        text = make()
         if check:
             if not path.exists() or path.read_text() != text:
                 stale.append(path.name)
         else:
             path.write_text(text)
-    known = {f"{f.name}.md" for f in FIGURES}
-    orphans = sorted(p.name for p in OUT.glob("*.md") if p.name not in known)
+    orphans = sorted(p.name for p in OUT.glob("*") if p.is_file() and p.name not in made)
     if check:
         if stale or orphans:
             print("stale generated fragments (run `make figures` and commit):", ", ".join(stale + orphans))
             return 1
-        print(f"  {len(FIGURES)} generated fragments are current")
+        print(f"  {len(made)} generated fragments and panels are current")
         return 0
     for name in orphans:
         (OUT / name).unlink()
-    print(f"wrote {len(FIGURES)} fragments to {OUT.relative_to(ROOT)}")
+    print(f"wrote {len(made)} fragments and panels to {OUT.relative_to(ROOT)}")
     return 0

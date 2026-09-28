@@ -8,7 +8,8 @@ The engine is Python on Arrow: batches are ``pyarrow.RecordBatch``, and kernels 
 |---|---|---|
 | ``metrics`` | the counters every operator reports (COUNTERS.md) | all |
 | ``reference`` | DuckDB, the reference engine: result, plan and profile of a query | all |
-| ``figures`` | every generated fragment the chapters include | all |
+| ``report`` | what each panel draws, as JSON, at build time and in the page | all |
+| ``figures`` | every generated fragment and panel the chapters include | all |
 
 It runs unchanged at a desk and, in the page, under Pyodide.
 """

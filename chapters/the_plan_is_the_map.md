@@ -96,6 +96,16 @@ operator, top down. The profile names the scan `TABLE_SCAN`; the plan drew the s
 ```{include} _generated/returned-unit-price-profile.md
 ```
 
+The panel draws the same run as a tree, with each operator's estimate and measurement as two
+bars on one scale, so the gap between them is visible at a glance. Its button runs the same
+report in your browser, under Pyodide, and says whether your browser's DuckDB gave the build's
+answer.
+
+```lab
+experiment: plan
+query: returned_unit_price.sql
+```
+
 Compare the three columns.
 
 - **Your prediction is close to the measurement, and the plan's estimate is not.** You knew how

@@ -139,7 +139,7 @@ What the first week produced, and the decisions it forced. Each links to where t
 | Fixture generator | `orders` (sorted and shuffled) and `customers`. | `fixtures/generate.py` |
 | Build checks | No typed numbers, no pasted code, glossary order, desk-browser parity. Engine-versus-DuckDB parity waits for the engine. | `tests/`, `scripts/verify-numbers.py` |
 | Chapter 1 | The question, *Observe* and *Predict, then measure* drafted; the rest is outlined. | `chapters/the_plan_is_the_map.md` |
-| Panels spike | Not started. | |
+| Panels spike | Passed: `query_lab.report` computes each panel's JSON, the build embeds it, JavaScript draws it, and the page can recompute it under Pyodide. The first panel, the plan, is in ch01. | `spikes/panels/`, `web/lab/` |
 
 Decisions taken this week:
 
@@ -161,3 +161,8 @@ Decisions taken this week:
   its listed order instead.
 - **The first browser run is a large download** (the spike measured the runtime, DuckDB, pyarrow
   and pyarrow's dependencies at the CDN). The page must say so and load DuckDB only on demand.
+- **Panels draw from the build first.** Each panel's JSON is computed at build time and embedded,
+  so it draws with nothing downloaded; *Run it in your browser* recomputes it under Pyodide, with
+  DuckDB alone, and the page says whether the answers agree (`spikes/panels/README.md`).
+- **DuckDB stays at 1.1.2.** DuckDB's own Pyodide wheels reach 1.2.0 at most; not worth leaving
+  Pyodide's CDN for.

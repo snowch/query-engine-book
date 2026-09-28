@@ -1,0 +1,60 @@
+{
+ "experiment": "plan",
+ "query": "returned_unit_price.sql",
+ "engine": "DuckDB 1.1.2",
+ "result_rows": 729,
+ "root": {
+  "operator": "PROJECTION",
+  "detail": [
+   [
+    "Projections",
+    "order_id",
+    "customer_id",
+    "unit_price"
+   ]
+  ],
+  "estimated_rows_out": 800,
+  "rows_in": 729,
+  "rows_out": 729,
+  "children": [
+   {
+    "operator": "FILTER",
+    "detail": [
+     [
+      "Expression",
+      "((amount / CAST(quantity AS DOUBLE)) > 100.0)"
+     ]
+    ],
+    "estimated_rows_out": 800,
+    "rows_in": 1183,
+    "rows_out": 729,
+    "children": [
+     {
+      "operator": "TABLE_SCAN",
+      "detail": [
+       [
+        "Function",
+        "PARQUET_SCAN"
+       ],
+       [
+        "Projections",
+        "amount",
+        "quantity",
+        "order_id",
+        "customer_id"
+       ],
+       [
+        "Filters",
+        "status='returned' AND status IS NOT NULL"
+       ]
+      ],
+      "estimated_rows_out": 4000,
+      "rows_in": 20000,
+      "rows_out": 1183,
+      "children": []
+     }
+    ]
+   }
+  ]
+ }
+}

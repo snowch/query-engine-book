@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from tools.highlight import highlight
-from tools.render import UnknownNodeError, render, render_page
+from tools.render import LabBlockError, UnknownNodeError, render, render_page
 
 
 def test_an_unknown_node_raises_rather_than_vanishing():
@@ -18,6 +20,21 @@ def test_a_tab_set_is_not_this_books_markup():
     error, not a box with one tab in it."""
     with pytest.raises(UnknownNodeError):
         render({"type": "tabSet", "children": []})
+
+
+def test_a_lab_block_carries_the_json_the_build_computed():
+    html = render(
+        {"type": "code", "lang": "lab", "value": "experiment: plan\nquery: returned_unit_price.sql"}
+    )
+    assert 'class="lab"' in html and 'data-experiment="plan"' in html
+    data = json.loads(html.split('class="lab-data">', 1)[1].split("</script>", 1)[0])
+    assert data["experiment"] == "plan" and data["query"] == "returned_unit_price.sql"
+    assert "needs JavaScript" in html
+
+
+def test_a_lab_block_naming_a_missing_query_or_panel_is_refused():
+    with pytest.raises(LabBlockError, match="queries/missing.sql"):
+        render({"type": "code", "lang": "lab", "value": "experiment: plan\nquery: missing.sql"})
 
 
 def test_text_is_escaped():

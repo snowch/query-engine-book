@@ -64,8 +64,9 @@ test:  ## Run the tests
 	$(PYTHON) -m pytest -q
 
 .PHONY: browser-test
-browser-test:  ## Run the DuckDB-in-Pyodide probe in headless Chromium and compare with the desk
+browser-test: all  ## Drive the DuckDB probe and every panel in headless Chromium
 	./scripts/browser-probe.sh
+	node tests/browser/panels.mjs _build/html
 
 .PHONY: check
 check:  ## Everything CI runs

@@ -1,0 +1,47 @@
+/* The laboratory's panels. They borrow the book's palette (web/book.css): every colour here is
+   one of its tokens, so light and dark themes both work. */
+
+.lab { margin: 1.8rem 0; border: 1px solid var(--edge); border-radius: 8px; background: var(--bg);
+       font: 14px/1.5 var(--chrome); box-shadow: 0 1px 2px var(--raise); overflow: hidden; }
+.lab-fallback, .lab-status { margin: 0; color: var(--muted); }
+.lab-fallback { padding: 1rem; }
+.lab-error { color: var(--stop); }
+.lab-head { display: flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: baseline; padding: .6rem 1rem;
+            border-bottom: 1px solid var(--edge); background: var(--panel); }
+.lab-title { font-weight: 650; }
+.lab-note { color: var(--faint); font-size: 12.5px; margin-left: auto; }
+.lab code { font-size: 12.5px; }
+.lab-foot { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: center; padding: .6rem 1rem;
+            border-top: 1px solid var(--edge); background: var(--panel); }
+.lab-foot .lab-status { font-size: 13px; flex: 1 1 16rem; }
+.lab button { font: 13px var(--chrome); color: var(--ink); background: var(--bg); border: 1px solid var(--rule);
+              border-radius: 4px; padding: .25rem .6rem; cursor: pointer; }
+.lab button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.lab button:disabled { opacity: .6; cursor: progress; }
+
+/* The plan: operators top down, as DuckDB draws them, rows flowing up the links between them. */
+.plan-tree { padding: 1rem; overflow-x: auto; }
+.plan-node { display: flex; flex-direction: column; align-items: center; }
+.plan-children { display: flex; gap: 1rem; justify-content: center; }
+.plan-branch { display: flex; flex-direction: column; align-items: center; }
+.plan-link { font-size: 12px; color: var(--faint); padding: .35rem 0; border-left: 2px solid var(--rule);
+             padding-left: .5rem; margin: .2rem 0; font-variant-numeric: tabular-nums; }
+/* One width for every operator, whatever its depth: a nested box has no container to size it by. */
+.plan-op { width: 26rem; max-width: calc(100vw - 4rem); border: 1px solid var(--rule); border-radius: 6px; background: var(--bg);
+           padding: .55rem .75rem; box-shadow: 0 1px 2px var(--raise); }
+.plan-op-name { font: 600 12.5px var(--mono); letter-spacing: .02em; color: var(--accent); }
+.plan-op-detail { margin: .3rem 0 .45rem; display: grid; grid-template-columns: max-content 1fr;
+                  gap: .05rem .6rem; font-size: 12.5px; }
+.plan-op-detail dt { color: var(--faint); }
+.plan-op-detail dd { margin: 0; font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.plan-bars { display: grid; gap: .2rem; }
+.plan-bar { display: grid; grid-template-columns: 5.2rem 1fr 4.2rem; gap: .5rem; align-items: center;
+            font-size: 12.5px; }
+.plan-bar-label { color: var(--muted); }
+.plan-bar-track { height: .55rem; background: var(--panel); border-radius: 3px; overflow: hidden; }
+.plan-bar-fill { display: block; height: 100%; border-radius: 3px; }
+.plan-bar.estimated .plan-bar-fill { background: var(--rule); }
+.plan-bar.measured .plan-bar-fill { background: var(--accent); }
+.plan-bar-value { text-align: right; font-variant-numeric: tabular-nums; }
+.plan-op-flow { margin-top: .4rem; font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.plan-op-flow b { color: var(--ink); font-weight: 600; margin-right: .6rem; }

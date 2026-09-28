@@ -53,8 +53,8 @@ package once both books are stable; until then, a fix to shared tooling is worth
 | `spikes/` | Experiments that decided something. Each has a README with its findings; tests keep the ones that still matter true. |
 | `tools/` | The outline (`outline.py`), the renderer (`render.py`), the highlighter. |
 | `scripts/` | Build and check entry points. `ci-check.sh` is what CI runs. |
-| `web/` | The site stylesheet. The browser lab (`web/lab/`) comes with the panels spike. |
-| `tests/` | Tests of the book, the renderer, and desk-browser parity. |
+| `web/` | The site stylesheet, and `web/lab/`: the panels. Each draws JSON from `query_lab.report` embedded at build time, and can recompute it under Pyodide in a worker. |
+| `tests/` | Tests of the book, the renderer, and desk-browser parity; `tests/browser/` drives Chromium. |
 
 ## Build, run, test
 
@@ -69,7 +69,8 @@ make check       # ./scripts/ci-check.sh: exactly what CI runs
 
 Always run `make check` before pushing. It runs, in order: ruff, the fixture check, the figures
 check, the number check, the MyST parse, the site render, the link check, pytest (the book's
-tests, the engine's, and desk-browser parity under Node), and the probe in headless Chromium.
+tests, the engine's, and desk-browser parity under Node), and, in headless Chromium, the probe
+and every panel.
 
 ## The invariants
 
@@ -115,6 +116,13 @@ run it in figures and tests through `query_lab.reference.read_query`.
 **A figure.** Add a `Figure` to `python/query_lab/figures.py` that runs DuckDB or the engine and
 returns markdown ending with its conditions line, run `make figures`, and `{include}` it.
 
+**A panel.** Only where a picture beats a table. Add a function to `python/query_lab/report.py`
+that returns the JSON to draw, and its name to `EXPERIMENTS` there and in `tools/outline.py`; a
+drawing module in `web/lab/` and its mount in `lab.js`; the block's settings to `PANELS` in
+`figures.py`; then `make figures` and a ```` ```lab ```` block in the chapter. JavaScript draws;
+it never computes a count. `tests/browser/panels.mjs` checks each panel against its JSON and
+reruns it under Pyodide; add a reader for any new drawing to it.
+
 **A counter.** Change COUNTERS.md first, then `metrics.py`, then every chapter that prints it.
 
 **A glossary term.** An entry in `appendices/glossary.md`, alphabetical, ending with a link to
@@ -125,7 +133,8 @@ the chapter that introduces it; that chapter puts the term in bold where it defi
 - **Python:** 3.11 at a desk and whatever Pyodide pins in the page, unchanged. Readable before
   fast: this code is quoted in a book. Dataclasses, exceptions, `match`. `ruff check` and
   `ruff format` clean.
-- **JavaScript:** plain ES modules, no framework, no build step. It moves bytes and draws JSON.
+- **JavaScript:** plain ES modules, no framework, no build step. It moves bytes and draws JSON,
+  using the colour tokens in `web/book.css` so both themes work.
 - **Comments** say why, in full sentences.
 
 ## Book-writing conventions
