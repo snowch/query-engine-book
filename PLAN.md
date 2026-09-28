@@ -29,7 +29,8 @@ used and data shuffled, in any engine, including Vast DataBase.
 - **The Parquet book's reader is the scan layer,** imported as a package, not copied.
 - **DuckDB is the single reference engine.** It's used as a library in the browser (Pyodide) and
   at the desk, with its version pinned.
-- **Counters, not time, in the browser.** Timing labs are optional and run at the desk.
+- **Counters, not time.** The book never prints a time. There are no desk labs: the reader needs
+  only a browser, and runs every panel and problem in the page.
 - **Small simulators for CPU concepts:** a cache model, a 2-bit branch predictor, and a SIMD lane
   view.
 - **Self-contained.** Hardware and format concepts are introduced at the point they're first
@@ -100,7 +101,8 @@ If any of these fail, change the approach before writing more.
   spilling.
 - **Part IV, Planning:** from SQL to a logical plan; optimiser rules; statistics, cost and join
   order.
-- **Part V, Scaling out:** parallelism on one machine (a desk lab with DuckDB's thread setting);
+- **Part V, Scaling out:** parallelism on one machine (to rethink: the browser's DuckDB has one
+  thread, and there are no desk labs, so this chapter simulates threads with counters);
   partitioning and shuffle; skew; stages and distributed execution, simulated locally with
   counters for bytes moved, and Spark, Trino and Ballista described in prose.
 - **Part VI, Beyond Python (optional):** what a compiled engine changes, reading one DuckDB
@@ -169,5 +171,7 @@ Decisions taken this week:
   table: it takes the reader's prediction per operator, hides the measurement until they reveal
   it, then draws prediction, estimate and measurement together. Without JavaScript a panel says
   it needs JavaScript; there is no static copy. Queries in a panel can be edited and rerun.
+- **No desk.** The reader needs only a browser. Chapters give no shell commands; each chapter's
+  problems run in a workbench in the page, by pytest under Pyodide, on the reader's answers.
 - **DuckDB stays at 1.1.2.** DuckDB's own Pyodide wheels reach 1.2.0 at most; not worth leaving
   Pyodide's CDN for.

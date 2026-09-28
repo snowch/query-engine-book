@@ -45,7 +45,7 @@ package once both books are stable; until then, a fix to shared tooling is worth
 | Path | What it is |
 |---|---|
 | `python/query_lab/` | The engine. `operators` (scan, filter, project, pulling Arrow batches), `plans` (a hand-written plan per query, until Part IV's planner), `metrics` (the counters), `reference` (DuckDB), `report` (what panels draw), `figures` (every generated fragment). |
-| `exercises/` | The problems: `<slug>.py` stubs, and `tests/test_<slug>.py` graders, skipped unless run with `--problems`. |
+| `exercises/` | The problems: `<slug>.py` stubs, and `tests/test_<slug>.py` graders, skipped unless run with `--problems`. The reader runs them in the chapter's workbench, in the page. |
 | `external/parquet-book/` | Git submodule, pinned: the Parquet book. Its `python/parquet_lab` is the engine's scan layer. Never copy it into this repository. |
 | `queries/` | Every query a chapter runs, one per file. Pages quote them; figures and tests run them. |
 | `fixtures/` | Parquet files written by pyarrow from a seeded generator, each with a manifest (`.json`). |
@@ -55,7 +55,7 @@ package once both books are stable; until then, a fix to shared tooling is worth
 | `spikes/` | Experiments that decided something. Each has a README with its findings; tests keep the ones that still matter true. |
 | `tools/` | The outline (`outline.py`), the renderer (`render.py`), the highlighter. |
 | `scripts/` | Build and check entry points. `ci-check.sh` is what CI runs. |
-| `web/` | The site stylesheet, and `web/lab/`: the panels. Each draws JSON from `query_lab.report` embedded at build time, and can recompute it under Pyodide in a worker. |
+| `web/` | The site stylesheet, and `web/lab/`: the panels and the problems workbench. A panel draws JSON from `query_lab.report` embedded at build time and can recompute it under Pyodide; the workbench runs a chapter's graders under Pyodide on the reader's answers. Both share one Python worker. |
 | `tests/` | Tests of the book, the renderer, and desk-browser parity; `tests/browser/` drives Chromium. |
 
 ## Build, run, test
@@ -72,7 +72,8 @@ make check       # ./scripts/ci-check.sh: exactly what CI runs
 Always run `make check` before pushing. It runs, in order: ruff, the fixture check, the figures
 check, the number check, the MyST parse, the site render, the link check, pytest (the book's
 tests, the engine's, and desk-browser parity under Node), and, in headless Chromium, the probe,
-every panel, and the site's chrome served under a base path on a shared origin.
+every panel, every problems workbench, and the site's chrome served under a base path on a shared
+origin.
 
 ## How changes land
 
@@ -84,27 +85,31 @@ bring the branch level with `main`.
 ## The invariants
 
 1. **Counters, not time.** Every number the book prints about a run is a counter from
-   COUNTERS.md: the same on every machine and in the browser. Times appear only in optional
-   desk labs and never in a generated figure.
-2. **No number typed into prose.** Counts come from `python -m query_lab figures` fragments
+   COUNTERS.md: the same on every machine and in the browser. The book never prints a time.
+2. **The reader needs only a browser.** Everything a page asks the reader to run, runs in the
+   page: a panel, or a chapter's problems workbench. No page gives a shell command or sends the
+   reader to a desk; `tests/test_book.py` fails one that does. The desk is where the book is
+   built and tested, not where it is read.
+3. **No number typed into prose.** Counts come from `python -m query_lab figures` fragments
    `{include}`d into the page. `scripts/verify-numbers.py` fails the build otherwise. A definition
    that must be typed takes `% number-ok: <reason>` before its paragraph.
-3. **No code pasted into prose.** Python is quoted from `python/` and SQL from `queries/` with
+4. **No code pasted into prose.** Python is quoted from `python/` and SQL from `queries/` with
    `{literalinclude}` and `:start-at:` / `:end-before:` text anchors, never `:lines:`. Generated
    output (a plan, a table) comes from an `{include}`. `tests/test_book.py` fails a pasted
-   `python`, `sql`, `text` or unlabelled block; `bash` commands are allowed.
-4. **DuckDB is the reference, pinned.** One version at the desk and in the browser, one thread in
+   `python`, `sql`, `text` or unlabelled block, and any shell command (invariant 2).
+5. **DuckDB is the reference, pinned.** One version at the desk and in the browser, one thread in
    both. Every chapter observes DuckDB first and compares against it last. Upgrading DuckDB is a
    deliberate commit that regenerates every fixture and figure.
-5. **The desk and the browser agree.** `tests/test_pyodide.py` runs the same probe natively and
+6. **The desk and the browser agree.** `tests/test_pyodide.py` runs the same probe natively and
    under Pyodide and requires identical output.
-6. **Fixtures are written by a production writer**, from a fixed seed. The engine is tested
+7. **Fixtures are written by a production writer**, from a fixed seed. The engine is tested
    against files it did not write.
-7. **No term before its chapter.** Every glossary term names the chapter that introduces it, and
+8. **No term before its chapter.** Every glossary term names the chapter that introduces it, and
    no earlier chapter uses it. `tests/test_book.py` checks each entry.
-8. **Problems are tests.** Stubs the reader fills in, graded by tests that derive the expected
-   answer at test time (from DuckDB, a manifest, or a simulator). Never commit a solution.
-9. **Deterministic.** Nothing reads a clock or a network to compute a figure. The same commit
+9. **Problems are tests.** Stubs the reader fills in, graded by tests that derive the expected
+   answer at test time (from DuckDB, a manifest, or a simulator), run by pytest in the page's
+   workbench under Pyodide. Never commit a solution.
+10. **Deterministic.** Nothing reads a clock or a network to compute a figure. The same commit
    builds the same book.
 
 ## Adding things

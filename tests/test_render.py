@@ -37,6 +37,14 @@ def test_a_lab_block_naming_a_missing_query_or_panel_is_refused():
         render({"type": "code", "lang": "lab", "value": "experiment: plan\nquery: missing.sql"})
 
 
+def test_a_problems_block_becomes_a_workbench():
+    html = render({"type": "code", "lang": "problems", "value": "chapter: the_plan_is_the_map"})
+    assert 'class="workbench" data-chapter="the_plan_is_the_map"' in html
+    assert "needs JavaScript" in html
+    with pytest.raises(LabBlockError):
+        render({"type": "code", "lang": "problems", "value": "chapter: no_such_chapter"})
+
+
 def test_text_is_escaped():
     assert render({"type": "text", "value": "<b>&"}) == "&lt;b&gt;&amp;"
 

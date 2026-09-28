@@ -13,7 +13,8 @@ time, in Python on Apache Arrow. By the end you can look at a design choice (a s
 partitioning scheme, a join, a memory limit) and predict how it changes the bytes read, the
 rows moved, the memory used and the data shuffled, in any engine.
 
-You need Python and nothing else. The book is self-contained: each idea about hardware or file
+You need a browser and nothing else: everything the book asks you to run, runs in the page. You
+should be able to read Python. The book is self-contained: each idea about hardware or file
 formats is introduced where it is first needed, with a deliberately small model. Two companion
 books go deeper and are optional: *Parquet, byte by byte*, whose Parquet reader is this engine's
 scan, and a book on computer systems.
@@ -46,8 +47,8 @@ tree, so the book cannot drift from the code it describes. The bar above each bl
 file.
 
 **Counters, not time.** An engine's work is counted in rows, batches, bytes and requests, which
-are the same on every machine and in your browser. Times differ from run to run, so they appear
-only in optional labs you run at a desk.
+are the same on every machine and in your browser. Times differ from run to run, so the book
+never prints one.
 
 ## Where this starts
 

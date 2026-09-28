@@ -5,36 +5,30 @@ title: Running the lab
 (running-the-lab)=
 # Running the lab
 
-## At a desk
+Everything the book asks you to run, runs in this page, in your browser. There is nothing to
+install.
 
-You need Python 3.11 or later and Git. From a fresh clone:
-
-```bash
-git clone --recurse-submodules https://github.com/snowch/query-engine-book
-cd query-engine-book
-make install
-make
-make serve
-```
-
-`make install` installs the pinned DuckDB and pyarrow, and the pinned MyST the site is parsed
-with. `make` generates the figures and builds the site into `_build/html`, and `make serve`
-serves it locally. `make check` runs everything CI runs.
-
-The engine's scan layer is the Parquet reader from *Parquet, byte by byte*. It is a Git
-submodule in `external/parquet-book`, so clone with `--recurse-submodules`, or run
-`git submodule update --init` in a clone you already have.
-
-## In your browser
+## Panels
 
 A panel draws what the engine computed when the book was built, so it appears at once with
 nothing to download. Its **Run it in your browser** button runs the same code again in your
-browser, under Pyodide, with the DuckDB version a desk uses, and says whether your browser got
-the same answer as the build. The first run downloads Python and DuckDB, which is a large
-download; your browser keeps them after that.
+browser, under Pyodide, and says whether your browser got the same answer as the build. A panel
+that shows a query lets you edit the query and run your own.
+
+## Problems
+
+Each chapter's problems open with a workbench. Write your answers in it and press **Run the
+graders**: they are the book's own tests, run by pytest in your browser, and they report each
+check as it passed or failed. Your answers stay in this browser, and **Reset to the stubs**
+starts again.
+
+## The first run
+
+The first run downloads Python, DuckDB and, for the problems, pyarrow and pytest. That is a large
+download, and your browser keeps it afterwards, so later runs start quickly. Each download
+happens only when something first needs it: reading the book downloads nothing.
 
 ## Versions
 
 The book pins DuckDB and pyarrow to the versions the browser's Python ships, so a plan printed in
-the book is the plan you see in the page and at a desk. `requirements.txt` holds the pins, and
-`spikes/duckdb-pyodide/README.md` explains the choice.
+the book is the plan your browser makes when you run it.

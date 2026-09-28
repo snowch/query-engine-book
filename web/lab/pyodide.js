@@ -1,4 +1,4 @@
-// Pyodide, and the book's Python files inside it, for the worker that runs the panels' reports.
+// Pyodide, and the book's Python files inside it, for the worker that runs panels and problems.
 //
 // Pyodide is CPython compiled to WebAssembly, fetched from a pinned release on a public CDN only
 // when a reader runs something. The version is the one requirements.txt matches: its DuckDB is the
@@ -29,7 +29,7 @@ function writeFile(pyodide, path, bytes) {
 
 /**
  * Lay out what the build listed in py/package.json (from `base`, a URL in web/lab): the Python
- * packages and the queries under py/, and the fixtures beside the lab.
+ * packages, the queries and the problems under py/, and the fixtures beside the lab.
  */
 export async function writeBook(pyodide, base) {
   const list = await (await fetchOk(new URL("py/package.json", base))).json();
@@ -37,11 +37,15 @@ export async function writeBook(pyodide, base) {
     ...Object.entries(list.packages).flatMap(([pkg, modules]) =>
       modules.map((m) => [`py/${pkg}/${m}`, `${ROOT}/python/${pkg}/${m}`])),
     ...list.queries.map((q) => [`py/queries/${q}`, `${ROOT}/queries/${q}`]),
+    ...list.exercises.map((e) => [`py/exercises/${e}`, `${ROOT}/exercises/${e}`]),
     ...list.fixtures.map((f) => [`../fixtures/${f}`, `${ROOT}/fixtures/${f}`]),
   ];
   const bodies = await Promise.all(files.map(async ([from]) =>
     new Uint8Array(await (await fetchOk(new URL(from, base))).arrayBuffer())));
   files.forEach(([, to], i) => writeFile(pyodide, to, bodies[i]));
+  // pytest takes the repository's root as its root, so it finds exercises/conftest.py and its
+  // --problems option, as it does at the book's build.
+  writeFile(pyodide, `${ROOT}/pytest.ini`, new TextEncoder().encode("[pytest]\n"));
   pyodide.runPython(`
 import sys
 if "${ROOT}/python" not in sys.path:

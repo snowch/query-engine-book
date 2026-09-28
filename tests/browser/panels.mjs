@@ -134,7 +134,11 @@ async function checkPanel(page, file, index) {
     const rows = await el.$$eval(".plan-preview tbody tr", (trs) => trs.map((tr) => [...tr.cells].map((c) => c.textContent)));
     same(`${label}, edited result`, rows, theirs.preview.rows.map((r) => r.map((v) =>
       typeof v === "number" ? v.toLocaleString("en-GB", { maximumFractionDigits: 2 }) : String(v))));
-    if (await page.evaluate((k) => localStorage.getItem(k), `lab:${config.experiment}:${config.query}`) !== EDITED) {
+    // Kept under a key named for this book (the site's directory), since other books share the origin.
+    const kept = await page.evaluate((suffix) => Object.keys(localStorage)
+      .filter((k) => k.startsWith("lab:") && k.endsWith(suffix)).map((k) => localStorage.getItem(k)),
+    `:${config.experiment}:${config.query}`);
+    if (kept.length !== 1 || kept[0] !== EDITED) {
       throw new Error(`${label}: the edit was not kept in the browser's storage`);
     }
     console.log(`  ${label}: an edited query, run in the browser, draws what a desk computes for it`);
