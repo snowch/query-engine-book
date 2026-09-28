@@ -2,6 +2,8 @@
 
 *Build a query engine to learn what a query costs.*
 
+**Read it online: [snowch.github.io/query-engine-book](https://snowch.github.io/query-engine-book/)**
+
 An interactive technical book for data engineers who run queries every day and want to know what
 they cost. You build a small query engine in Python on Apache Arrow, one operator at a time, and
 measure each operator against DuckDB: rows in and out, batches, bytes read, requests, memory,
