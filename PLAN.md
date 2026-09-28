@@ -145,8 +145,9 @@ Decisions taken this week:
 
 - **The pinned versions are Pyodide 0.27.7, DuckDB 1.1.2 and pyarrow 18.1.0.** 0.27.7 is the
   newest Pyodide that ships both DuckDB and pyarrow. The desk pins the same versions, and DuckDB
-  runs with one thread in both places. Moving to DuckDB's own Pyodide wheels, for a newer DuckDB,
-  is open and unverified (`spikes/duckdb-pyodide/README.md`, finding 1).
+  runs with one thread in both places. DuckDB's own Pyodide wheels go no further than 1.2.0, on
+  the same Pyodide; 1.2.0 was verified to work and to agree with the desk, and moving to it is
+  open (`spikes/duckdb-pyodide/README.md`, finding 1).
 - **The Parquet reader comes in as a git submodule.** A `pyproject.toml` in the Parquet book's
   `python/` directory would allow a pinned `pip install` from Git instead; that belongs with the
   shared-tooling extraction.

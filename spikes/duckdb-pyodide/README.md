@@ -42,12 +42,27 @@ Pyodide's own distribution carried DuckDB for a while and then stopped:
 and pyarrow at the desk (`requirements.txt`). Plans and profiles differ between DuckDB versions,
 so the desk must run the browser's version for generated figures to match the page.
 
-The cost is age: DuckDB 1.1.2 and pyarrow 18.1.0 date from late 2024. The way forward is
-DuckDB's own Pyodide wheels (the `duckdb-pyodide` project), which would let the book move to a
-newer Pyodide with a newer DuckDB loaded by `micropip`. **Not verified here**: this sandbox's
-network policy blocks `duckdb.github.io`, where those wheels are published. Check it from a desk
-before the pilot's go/no-go; an upgrade is then a deliberate commit that regenerates every
-fixture and figure (PLAN.md, *Version drift*).
+The cost is age: DuckDB 1.1.2 and pyarrow 18.1.0 date from late 2024.
+
+**DuckDB's own Pyodide wheels do not change that much** (checked once the environment allowed
+`duckdb.github.io`). The `duckdb-pyodide` project's index lists wheels up to DuckDB 1.2.0, and
+its newest are built for Pyodide's 2024 ABI, the one 0.27.x uses. None exist for the 2025 ABI
+(Pyodide 0.28 and later), and probing for unlisted versions from 1.2.1 to 1.5.6 found none. So
+the newest browser DuckDB is 1.2.0, on the Pyodide the book already pins:
+
+| Check, DuckDB 1.2.0 on Pyodide 0.27.7 | Result |
+|---|---|
+| Loads from `duckdb.github.io` beside Pyodide's pyarrow 18.1.0 | yes |
+| Served with `access-control-allow-origin: *`, so a page can fetch it | yes |
+| Probe under Node against a desk running DuckDB 1.2.0 | identical, byte for byte |
+| `python/tests` with DuckDB 1.2.0 at the desk | all pass, finding 3 included |
+| Plans and counters against 1.1.2 | same row counts; the plan drawing differs (1.2.0 no longer prints the `IS NOT NULL` half of a pushed filter) |
+
+Moving to 1.2.0 would be one minor version newer, loaded from a project that has not published
+since, instead of from Pyodide's own CDN. It stays a deliberate commit: change the pin in
+`requirements.txt`, load the wheel by URL in the page and in `node.mjs` and `page.html`, and
+regenerate every fixture and figure (PLAN.md, *Version drift*). Node's built-in fetch ignores
+`HTTPS_PROXY`; behind a proxy, run `node.mjs` with `NODE_USE_ENV_PROXY=1` to load a wheel by URL.
 
 ## Finding 2: the JSON profile works, with one thread
 
