@@ -22,6 +22,9 @@ memory first. [ch02](#batches-in-memory)
 **Cardinality estimate.** The number of rows a planner expects an operator to produce, made
 before the query runs. [ch01](#the-plan-is-the-map)
 
+**Filter pushdown.** Testing a query's predicates inside the scan, so it hands up only the rows
+that pass. [ch03](#projection-and-filter-pushdown)
+
 **Gather.** Reading rows by position, in an order given by a list of positions: row `k` of the
 output is row `positions[k]` of the input. A sort, a join and a lookup each end in one.
 [ch02](#batches-in-memory)
@@ -37,6 +40,12 @@ DuckDB draws it for `EXPLAIN`. [ch01](#the-plan-is-the-map)
 
 **Profile.** A plan's operators after a run, each with counters from that run.
 [ch01](#the-plan-is-the-map)
+
+**Projection pushdown.** Reading only the columns a query uses, inside the scan, so no other
+column's bytes are fetched. [ch03](#projection-and-filter-pushdown)
+
+**Pruning.** Skipping a row group, unread, because its statistics show no row in it can satisfy
+the query's predicates. [ch03](#projection-and-filter-pushdown)
 
 **Pull model.** Running a plan by having each operator ask the one below it for a batch when it
 needs one, so the top of the plan drives the run. [ch01](#the-plan-is-the-map)

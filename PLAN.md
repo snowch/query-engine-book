@@ -142,6 +142,7 @@ What the first week produced, and the decisions it forced. Each links to where t
 | Build checks | No typed numbers, no pasted code, glossary order, desk-browser parity. Engine-versus-DuckDB parity waits for the engine. | `tests/`, `scripts/verify-numbers.py` |
 | Chapter 1 | Written: DuckDB observed, predict then reveal, the engine's scan, filter and project, compared with DuckDB operator by operator, and three problems (two graded, one slow query to diagnose). | `chapters/the_plan_is_the_map.md`, `python/query_lab/operators.py`, `exercises/` |
 | Chapter 2 | Written: DuckDB's Arrow result read buffer by buffer, the engine's arrays built from raw buffers and its validity bitmap read by hand, a cache model, and a gather in date order from the sorted and the shuffled file, predicted then revealed in a panel. Two graded problems and one to diagnose. | `chapters/batches_in_memory.md`, `python/query_lab/memory.py`, `python/query_lab/cache.py` |
+| Chapter 3 | Written: DuckDB's one-operator plan for a date query and a profile that claims every row; the engine's scan given `filters`, skipping row groups by their statistics (through the Parquet book's reader) and testing rows itself; a panel predicting row groups read from the sorted and the shuffled file; DuckDB's bytes counted at the file system, equal to the engine's on both files. Two graded problems and one to diagnose. The pilot's three chapters are written. | `chapters/projection_and_filter_pushdown.md`, `python/query_lab/operators.py` |
 | Cover page | As in sizing-and-tco: the site's front page, before the preface. | `cover.md` |
 | Panels spike | Passed: `query_lab.report` computes each panel's JSON, the build embeds it, JavaScript draws it, and the page can recompute it under Pyodide. The first panel, the plan, is in ch01. | `spikes/panels/`, `web/lab/` |
 
@@ -180,5 +181,9 @@ Decisions taken this week:
 - **One appendix section for running the book from a clone.** The chapters stay browser-only;
   *Running the lab* keeps the commands for a reader who wants them, and is the one page a test
   lets hold a shell command.
+- **DuckDB's bytes are counted at the file system.** DuckDB 1.1.2's profile reports no bytes,
+  so the build hands DuckDB an fsspec file system that counts every byte it serves
+  (`query_lab.reference.bytes_read`, pinned `fsspec` in `requirements.txt`). It counts a whole
+  query, so it is compared only with a plan that is one scan, and only at build time.
 - **DuckDB stays at 1.1.2.** DuckDB's own Pyodide wheels reach 1.2.0 at most; not worth leaving
   Pyodide's CDN for.

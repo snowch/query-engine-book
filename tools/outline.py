@@ -155,7 +155,7 @@ _CHAPTERS = (
         "How much of a file can a scan avoid reading, once it knows the columns and the predicate?",
         "Projection and filters pushed into the Parquet book's scan, counting the bytes read and "
         "the row groups skipped.",
-        (),
+        ("pruning",),
         ("orders-sorted.parquet", "orders-shuffled.parquet"),
     ),
 )
@@ -186,4 +186,4 @@ BY_ANCHOR = {x.anchor: x for x in (*CHAPTERS, *APPENDICES)}
 #: The experiments ``web/lab/lab.js`` knows how to mount, each drawn from the JSON of the
 #: function of the same name in ``query_lab.report``. A ``lab`` block naming anything else fails
 #: the build, rather than rendering an empty box.
-EXPERIMENTS: tuple[str, ...] = ("plan", "gather")
+EXPERIMENTS: tuple[str, ...] = ("plan", "gather", "pruning")

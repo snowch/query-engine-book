@@ -145,8 +145,10 @@ columns it was asked for. It decodes them and hands up one batch per row group.
 :end-before: class Filter(Operator):
 ```
 
-This scan reads every row group and hands up every row. It does not test a predicate; DuckDB's
-did. That difference is the first thing the comparison below shows.
+Called with no `filters`, as this chapter calls it, the scan reads every row group and hands up
+every row. It tests no predicate, where DuckDB's did. That difference is the first thing the
+comparison below shows, and the `filters` are how [ch03](#projection-and-filter-pushdown) closes
+it.
 
 ### Filter and project
 
@@ -212,8 +214,8 @@ filter is the one the scan never hands up.
   never prints a time.
 - **What DuckDB's scan decoded.** DuckDB reports the rows in the files its scan opened, not the
   rows it decoded. [ch03](#projection-and-filter-pushdown) counts that with your own scan.
-- **Anything about statistics.** Your scan reads every row group, whatever the query asks. It
-  ignores the minimum and maximum the file records for each column.
+- **Anything about statistics.** Your scan, as this chapter uses it, reads every row group,
+  whatever the query asks. It ignores the minimum and maximum the file records for each column.
 - **Memory beyond Arrow's buffers.** Peak memory counts the Arrow buffers an operator holds. The
   reader decodes each column into Python values before your scan builds its arrays, and those
   are not counted.

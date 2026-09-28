@@ -15,9 +15,14 @@ object whose ``experiment`` names it.
 
 from __future__ import annotations
 
+import datetime as dt
+import struct
 from pathlib import Path
 
 import duckdb
+from parquet_lab.object_store import MemoryStore, NetworkModel, TracingStore
+from parquet_lab.reader import FooterOptions, read_footer
+from parquet_lab.schema import build, leaves
 
 from .metrics import Metrics
 from .reference import clean_sql, observe
@@ -141,7 +146,109 @@ def gather(root: Path, column: str) -> dict:
     }
 
 
-EXPERIMENTS = {"plan": plan, "gather": gather}
+def pruning(root: Path, query: str) -> dict:
+    """The engine's scan for a query in ``queries/``, pushed down as its plan in
+    ``query_lab.plans`` pushes it, run against each orders file: which row groups the statistics
+    let it skip and why, each row group's range of the filtered column, and the scan's counters.
+    """
+    # The engine needs pyarrow, which the plan panel does not load in the page.
+    from .operators import Scan
+    from .plans import PLANS
+
+    if query not in PLANS:
+        raise ReportError(f"no hand-written plan for queries/{query}")
+    # Only a plan that is a scan with filters can be run against another file, by naming it.
+    scan = PLANS[query](root)
+    if not isinstance(scan, Scan) or not scan.filters:
+        raise ReportError(f"the plan for queries/{query} is not a scan with filters")
+    files = []
+    for fixture in GATHER_FIXTURES:
+        scan = PLANS[query](root, fixture)
+        scan.run()
+        column = scan.filters[0].column
+        footer = read_footer(_store(root / "fixtures" / fixture), fixture, FooterOptions())
+        leaf = next(x for x in leaves(build(footer.metadata.schema)) if x.dotted_path() == column)
+        groups = []
+        for index, row_group in enumerate(footer.metadata.row_groups):
+            low, high = _bounds(leaf, row_group)
+            groups.append(
+                {
+                    "rows": row_group.num_rows,
+                    "min": low[0],
+                    "max": high[0],
+                    "min_label": low[1],
+                    "max_label": high[1],
+                    "read": index not in scan.skipped,
+                    "why": scan.skipped.get(index, "the statistics cannot rule it out"),
+                }
+            )
+        m = scan.metrics
+        files.append(
+            {
+                "fixture": fixture,
+                "row_groups": groups,
+                "row_groups_read": m.batches_in,
+                "rows_decoded": m.rows_in,
+                "rows_out": m.rows_out,
+                "bytes_read": m.bytes_read,
+                "requests": m.requests,
+                "file_bytes": (root / "fixtures" / fixture).stat().st_size,
+            }
+        )
+    low, high = _window(scan.filters, leaf)
+    return {
+        "experiment": "pruning",
+        "query": query,
+        "engine": "the book's engine",
+        "column": column,
+        "filters": [str(f) for f in scan.filters],
+        "window": {"min": low[0], "max": high[0], "min_label": low[1], "max_label": high[1]},
+        "files": files,
+    }
+
+
+def _store(path: Path) -> TracingStore:
+    objects = MemoryStore()
+    objects.put(path.name, path.read_bytes())
+    return TracingStore(objects, NetworkModel())
+
+
+def _position(leaf, value: object) -> tuple[float, str]:
+    """A value of the column as a number to place it by, and as text to label it with."""
+    if isinstance(value, dt.date):
+        return (value - dt.date(1970, 1, 1)).days, value.isoformat()
+    if leaf.logical_type is not None and leaf.logical_type.name == "DATE":
+        return value, (dt.date(1970, 1, 1) + dt.timedelta(days=value)).isoformat()
+    return value, f"{value:,}" if isinstance(value, int) else f"{value:g}"
+
+
+def _bounds(leaf, row_group) -> tuple[tuple[float, str], tuple[float, str]]:
+    """A row group's minimum and maximum of the column, from its statistics."""
+    formats = {"INT32": "<i", "INT64": "<q", "DOUBLE": "<d", "FLOAT": "<f"}
+    fmt = formats.get(leaf.physical_type.name)
+    st = row_group.columns[leaf.column].statistics
+    if fmt is None or st is None:
+        raise ReportError(f"{leaf.dotted_path()} has no numeric statistics to draw")
+    low = st.min_value if st.min_value is not None else st.min
+    high = st.max_value if st.max_value is not None else st.max
+    return _position(leaf, struct.unpack(fmt, low)[0]), _position(leaf, struct.unpack(fmt, high)[0])
+
+
+def _window(filters, leaf) -> tuple[tuple[float | None, str], tuple[float | None, str]]:
+    """The range of values the filters let through, as the panel draws it: each end None when
+    no filter bounds it."""
+    low, high = (None, ""), (None, "")
+    for f in filters:
+        if f.op in (">", ">="):
+            low = _position(leaf, f.value)
+        elif f.op in ("<", "<="):
+            high = _position(leaf, f.value)
+        elif f.op == "=":
+            low = high = _position(leaf, f.value)
+    return low, high
+
+
+EXPERIMENTS = {"plan": plan, "gather": gather, "pruning": pruning}
 
 
 def panel_name(config: dict[str, str]) -> str:

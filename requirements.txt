@@ -4,3 +4,5 @@
 duckdb==1.1.2
 pyarrow==18.1.0
 PyYAML>=6
+# The build only, never the page: counts the bytes DuckDB reads (query_lab.reference.bytes_read).
+fsspec==2026.9.0
