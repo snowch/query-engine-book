@@ -584,8 +584,8 @@ def page_html(
 <title>{html.escape(title)} · {TITLE}</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icon-192.png">
-<meta name="theme-color" content="#35648f">
+<link rel="apple-touch-icon" href="icon-maskable-192.png">
+<meta name="theme-color" content="{ICON_BACKGROUND}">
 <link rel="stylesheet" href="book.css">
 {lab}
 {HEAD_SCRIPT}
@@ -615,26 +615,61 @@ def page_html(
 """
 
 
-FAVICON = """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-<rect width="32" height="32" rx="6" fill="#35648f"/>
-<rect x="6" y="7" width="4" height="18" rx="1" fill="#fff"/>
-<rect x="12" y="7" width="4" height="18" rx="1" fill="#fff" opacity=".8"/>
-<rect x="18" y="7" width="4" height="18" rx="1" fill="#fff" opacity=".6"/>
-<rect x="24" y="7" width="2.5" height="18" rx="1" fill="#fff" opacity=".4"/>
-</svg>
-"""
+#: The book's icon, in a 32-unit square: three bars stacked like a plan's operators, narrowing
+#: upwards as rows are thrown away on the way up, the top one amber like the reader's prediction in
+#: the panels. Dark slate, not the Parquet book's blue columns, so the two books are told apart on a
+#: home screen. (x, y, width, height, corner radius, colour). The SVG and every PNG draw these.
+ICON_BACKGROUND = "#263238"
+ICON_BARS = (
+    (5, 20, 22, 5, 1.5, "#ffffff"),
+    (8.5, 13.5, 15, 5, 1.5, "#c9d5db"),
+    (12, 7, 8, 5, 1.5, "#e0a34e"),
+)
+#: A maskable icon fills its square, and the platform cuts it to a circle or a rounded shape. Only
+#: the centre circle, of radius 40% of the square, is sure to show, so the bars are drawn smaller,
+#: about the centre, until every corner falls inside it (tests/test_site.py checks).
+MASKABLE_SCALE = 0.85
+
+#: Every icon the site writes: file name, size in pixels, and whether it is maskable.
+ICONS = (
+    ("icon-192.png", 192, False),
+    ("icon-512.png", 512, False),
+    ("icon-maskable-192.png", 192, True),
+    ("icon-maskable-512.png", 512, True),
+)
 
 
-def icon_png(size: int) -> bytes:
-    """The favicon's picture as a PNG ``size`` pixels square: home screens want a bitmap. Drawn
-    here, from the same shapes, so the build needs no image library and writes the same bytes
-    every time."""
+def _icon_shapes(maskable: bool):
+    """The bars, scaled about the centre for a maskable icon."""
+    k = MASKABLE_SCALE if maskable else 1.0
+    for x, y, w, h, r, colour in ICON_BARS:
+        yield 16 + (x - 16) * k, 16 + (y - 16) * k, w * k, h * k, r * k, colour
+
+
+def favicon_svg() -> str:
+    bars = "".join(
+        f'<rect x="{x:g}" y="{y:g}" width="{w:g}" height="{h:g}" rx="{r:g}" fill="{c}"/>\n'
+        for x, y, w, h, r, c in _icon_shapes(False)
+    )
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">\n'
+        f'<rect width="32" height="32" rx="6" fill="{ICON_BACKGROUND}"/>\n{bars}</svg>\n'
+    )
+
+
+def icon_png(size: int, maskable: bool = False) -> bytes:
+    """The icon as a PNG ``size`` pixels square: home screens want a bitmap. Drawn here, from the
+    same shapes as the SVG, so the build needs no image library and writes the same bytes every
+    time. A maskable icon's background fills the whole square; the ordinary one has rounded
+    corners, transparent outside them."""
     import struct
     import zlib
 
-    blue = (0x35, 0x64, 0x8F)
-    # (x, y, width, height, corner radius, opacity of white over the blue), in the SVG's 32 units.
-    bars = [(6, 7, 4, 18, 1, 1.0), (12, 7, 4, 18, 1, 0.8), (18, 7, 4, 18, 1, 0.6), (24, 7, 2.5, 18, 1, 0.4)]
+    def rgb(colour: str) -> tuple[int, int, int]:
+        return int(colour[1:3], 16), int(colour[3:5], 16), int(colour[5:7], 16)
+
+    background = rgb(ICON_BACKGROUND)
+    bars = [(x, y, w, h, r, rgb(c)) for x, y, w, h, r, c in _icon_shapes(maskable)]
 
     def inside(x: float, y: float, rx: float, ry: float, w: float, h: float, r: float) -> bool:
         cx = min(max(x, rx + r), rx + w - r)
@@ -646,18 +681,19 @@ def icon_png(size: int) -> bytes:
     for py in range(size):
         raw.append(0)  # no filter on this scanline
         for px in range(size):
-            rgb, alpha = [0.0, 0.0, 0.0], 0.0
+            total, alpha = [0.0, 0.0, 0.0], 0.0
             for sx, sy in samples:
                 x, y = (px + sx) * 32 / size, (py + sy) * 32 / size
-                if not inside(x, y, 0, 0, 32, 32, 6):
+                if not maskable and not inside(x, y, 0, 0, 32, 32, 6):
                     continue
-                white = next((o for bx, by, bw, bh, br, o in bars if inside(x, y, bx, by, bw, bh, br)), 0.0)
+                colour = next(
+                    (c for bx, by, bw, bh, br, c in bars if inside(x, y, bx, by, bw, bh, br)), background
+                )
                 for i in range(3):
-                    rgb[i] += blue[i] * (1 - white) + 255 * white
+                    total[i] += colour[i]
                 alpha += 1
-            n = len(samples)
-            colour = [round(c / alpha) if alpha else 0 for c in rgb]
-            raw += bytes([*colour, round(255 * alpha / n)])
+            colour = [round(c / alpha) if alpha else 0 for c in total]
+            raw += bytes([*colour, round(255 * alpha / len(samples))])
 
     def chunk(kind: bytes, data: bytes) -> bytes:
         return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
@@ -682,11 +718,20 @@ def manifest() -> str:
             "scope": "./",
             "display": "standalone",
             "background_color": "#fdfdfc",
-            "theme_color": "#35648f",
+            "theme_color": ICON_BACKGROUND,
+            # Android draws a maskable icon edge to edge in its own shape; anywhere else, the
+            # ordinary icon, with its own rounded corners.
             "icons": [
-                {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
-                {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
-                {"src": "favicon.svg", "sizes": "any", "type": "image/svg+xml"},
+                *(
+                    {
+                        "src": name,
+                        "sizes": f"{size}x{size}",
+                        "type": "image/png",
+                        "purpose": "maskable" if maskable else "any",
+                    }
+                    for name, size, maskable in ICONS
+                ),
+                {"src": "favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
             ],
         },
         indent=2,
@@ -758,9 +803,9 @@ def build(out: Path) -> None:
     for image in sorted(renderer.IMAGES):
         (out / image).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / image, out / image)
-    (out / "favicon.svg").write_text(FAVICON)
-    for size in (192, 512):
-        (out / f"icon-{size}.png").write_bytes(icon_png(size))
+    (out / "favicon.svg").write_text(favicon_svg())
+    for name, size, maskable in ICONS:
+        (out / name).write_bytes(icon_png(size, maskable))
     (out / "manifest.webmanifest").write_text(manifest())
     lab = ROOT / "web" / "lab"
     if lab.is_dir():
