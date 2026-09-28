@@ -22,6 +22,9 @@ memory first. [ch02](#batches-in-memory)
 **Cardinality estimate.** The number of rows a planner expects an operator to produce, made
 before the query runs. [ch01](#the-plan-is-the-map)
 
+**Filter.** The operator that keeps the rows for which a predicate is true.
+[ch01](#the-plan-is-the-map)
+
 **Filter pushdown.** Testing a query's predicates inside the scan, so it hands up only the rows
 that pass. [ch03](#projection-and-filter-pushdown)
 
@@ -38,8 +41,14 @@ or a projection. [ch01](#the-plan-is-the-map)
 **Physical plan.** The operators an engine will run for a query, and how rows flow between them.
 DuckDB draws it for `EXPLAIN`. [ch01](#the-plan-is-the-map)
 
+**Predicate.** A condition that each row either meets or does not, such as
+`status = 'returned'`. [ch01](#the-plan-is-the-map)
+
 **Profile.** A plan's operators after a run, each with counters from that run.
 [ch01](#the-plan-is-the-map)
+
+**Projection.** The operator that computes the columns a query returns from the columns it is
+given, and drops the rest. [ch01](#the-plan-is-the-map)
 
 **Projection pushdown.** Reading only the columns a query uses, inside the scan, so no other
 column's bytes are fetched. [ch03](#projection-and-filter-pushdown)
@@ -55,6 +64,9 @@ it. [ch03](#projection-and-filter-pushdown)
 
 **Row group.** A horizontal slice of a Parquet file: every column's values for a run of rows,
 with statistics for each column. [ch01](#the-plan-is-the-map)
+
+**Scan.** The operator that reads rows from storage: the only operator that reads.
+[ch01](#the-plan-is-the-map)
 
 **Selectivity.** The fraction of its input rows a predicate keeps. [ch01](#the-plan-is-the-map)
 

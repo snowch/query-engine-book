@@ -17,8 +17,8 @@ You need a browser and nothing else: everything the book asks you to run, runs i
 you would rather run it on your own machine, [Running the lab](#running-the-lab) says how. You
 should be able to read Python. The book is self-contained: each idea about hardware or file
 formats is introduced where it is first needed, with a deliberately small model. Two companion
-books go deeper and are optional: *Parquet, byte by byte*, whose Parquet reader is this engine's
-scan, and a book on computer systems.
+books go deeper and are optional: *Parquet, byte by byte*, whose Parquet reader this engine reads
+its files with, and a book on computer systems.
 
 ## How a chapter works
 

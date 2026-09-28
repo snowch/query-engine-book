@@ -31,6 +31,13 @@ comes back is the **physical plan**: the steps the engine will take, one to a ro
 below. Each step is an **operator**, one job with one input and one output. Rows flow from the
 bottom operator to the top one.
 
+This plan has one operator for each of the three jobs in the question. A **scan** reads rows
+from storage: here, from the Parquet file. A **filter** keeps the rows for which a
+**predicate** is true, where a predicate is a condition, such as `status = 'returned'`, that
+each row either meets or does not. A **projection** computes the columns the query returns
+from the columns it is given, and drops the rest. DuckDB calls them `PARQUET_SCAN`, `FILTER` and
+`PROJECTION`.
+
 ```{include} _generated/returned-unit-price-plan.md
 ```
 
@@ -45,7 +52,8 @@ Read the plan from the bottom, as the rows travel, and three things stand out.
    dropped. The unit price predicate divides one column by another, and it gets an operator of
    its own, `FILTER`.
 3. **Every operator comes with a guess.** The second column is the operator's **cardinality
-   estimate**: how many rows the planner expects the operator to produce. It was made before a
+   estimate**: how many rows the planner, the part of the engine that turned the SQL into this
+   plan, expects the operator to produce. It was made before a
    single row was read.
 
 A plan tells you what the engine intends. To see what it did, you run the query with profiling
@@ -125,7 +133,7 @@ row at a time. Every operator in the book shares one shape:
 ```
 
 `batches` is a generator. An operator produces a batch only when the operator above it asks
-for one, and it asks its own child for input only then. So the operator at the top drives the
+for one, and it asks the operator below it, its child, for input only then. So the operator at the top drives the
 run, and nothing is read until something above asks. This is the **pull model**: rows are pulled
 up the plan, not pushed. `take` and `emit` count every batch on its way in and out, so every
 operator reports the counters in COUNTERS.md without any code of its own for counting.
@@ -152,8 +160,9 @@ it.
 
 ### Filter and project
 
-A filter asks its child for a batch, computes a true or false for every row with a kernel from
-`pyarrow.compute`, and hands up the rows that are true. A projection computes each output column
+A filter asks its child for a batch. It evaluates its predicate for
+every row with a kernel from `pyarrow.compute`, a function that works on a whole column at once,
+and hands up the rows that are true. A projection computes each output column
 from the batch it receives. Neither changes how many batches flow; only the filter changes how
 many rows.
 
