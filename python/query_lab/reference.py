@@ -86,3 +86,40 @@ def observe(sql: str, con: duckdb.DuckDBPyConnection | None = None) -> Observati
     finally:
         os.unlink(path)
     return Observation(sql=sql, columns=columns, rows=rows, plan=plan, profile=profile)
+
+
+def bytes_read(sql: str) -> int:
+    """The bytes DuckDB reads from files to run ``sql``, counted at the file system (ch03).
+
+    DuckDB's profile reports no bytes, so the book gives DuckDB a file system of its own, through
+    fsspec, that counts every read it serves. It needs fsspec, which only the book's build
+    installs: the figures that print this count are computed when the book is built, never in
+    the page.
+    """
+    from fsspec.implementations.local import LocalFileSystem  # noqa: PLC0415
+
+    served: list[int] = []
+
+    class Counting(LocalFileSystem):
+        protocol = "counted"
+
+        @classmethod
+        def _strip_protocol(cls, path):
+            return super()._strip_protocol(str(path).removeprefix("counted://"))
+
+        def _open(self, path, mode="rb", **kwargs):
+            f = super()._open(path, mode, **kwargs)
+            read = f.read
+
+            def counted(n=-1):
+                data = read(n)
+                served.append(len(data))
+                return data
+
+            f.read = counted
+            return f
+
+    con = connect()
+    con.register_filesystem(Counting())
+    con.execute(sql.replace("'fixtures/", f"'counted://{Path.cwd()}/fixtures/")).fetchall()
+    return sum(served)

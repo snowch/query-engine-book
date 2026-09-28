@@ -85,6 +85,31 @@ async function drawnGathers(lab) {
   }));
 }
 
+/** The pruning panel's files as the page drew them, read back from the DOM. */
+async function drawnFiles(lab) {
+  return lab.$$eval(".pruning-file", (files) => files.map((file) => {
+    const value = (s) => {
+      const e = file.querySelector(s);
+      if (!e) return undefined;
+      const text = e.textContent;
+      return text === "none" || text === "no guess" || text === "hidden" ? text : Number(text.replace(/,/g, ""));
+    };
+    const out = {
+      fixture: file.dataset.fixture,
+      row_groups: value(".plan-bar.estimated .plan-bar-value"),
+      read: value(".plan-bar.measured .plan-bar-value"),
+      drawn: [...file.querySelectorAll(".pruning-group")].map((g) => g.dataset.read === "true"),
+    };
+    for (const field of ["rows_decoded", "rows_out", "bytes_read", "requests"]) {
+      const v = value(`[data-field="${field}"]`);
+      if (v !== undefined) out[field] = v;
+    }
+    const predicted = value(".plan-bar.predicted .plan-bar-value");
+    if (predicted !== undefined) out.predicted = predicted;
+    return out;
+  }));
+}
+
 /** For each experiment: how to read its drawing, and what it must show asking and revealed. */
 const PANELS = {
   plan: {
@@ -101,6 +126,16 @@ const PANELS = {
       reads: g.reads, hits: g.hits, misses: g.misses, bytes_fetched: g.bytes_fetched, predicted: guesses[i],
     })),
     count: (data) => data.gathers.length,
+  },
+  pruning: {
+    read: drawnFiles,
+    // Asking, no row group is drawn: its range and its verdict are the answer.
+    asking: (data) => data.files.map((f) => ({ fixture: f.fixture, row_groups: f.row_groups.length, read: "hidden", drawn: [] })),
+    revealed: (data, guesses) => data.files.map((f, i) => ({
+      fixture: f.fixture, row_groups: f.row_groups.length, read: f.row_groups_read, drawn: f.row_groups.map((g) => g.read),
+      rows_decoded: f.rows_decoded, rows_out: f.rows_out, bytes_read: f.bytes_read, requests: f.requests, predicted: guesses[i],
+    })),
+    count: (data) => data.files.length,
   },
 };
 

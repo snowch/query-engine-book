@@ -1,4 +1,4 @@
-"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01, ch02).
+"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch03).
 
 The engine has no planner yet: that is Part IV. Until then, each query the book runs through
 the engine has a plan here, built from operators the way DuckDB's ``EXPLAIN`` drew its own,
@@ -8,6 +8,7 @@ it from the query.
 
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Callable
 from pathlib import Path
 
@@ -16,7 +17,7 @@ import pyarrow.compute as pc
 
 from .cache import Cache
 from .memory import fixed_width_array, gather
-from .operators import Filter, Operator, Project, Scan
+from .operators import Comparison, Filter, Operator, Project, Scan
 
 
 def returned_unit_price(root: Path) -> Operator:
@@ -73,8 +74,60 @@ def orders_by_date(root: Path, fixture: str = "orders-shuffled.parquet") -> tupl
     return pa.table(columns), caches
 
 
+#: Every column of the orders files, in the order the generator writes them.
+ORDERS_COLUMNS = ["order_id", "order_date", "customer_id", "status", "quantity", "amount", "note"]
+
+#: queries/early_march.sql's predicates, as a scan tests them.
+EARLY_MARCH = [
+    Comparison("order_date", ">=", dt.date(2024, 3, 1)),
+    Comparison("order_date", "<", dt.date(2024, 3, 15)),
+]
+
+
+def early_march(root: Path, fixture: str = "orders-sorted.parquet") -> Operator:
+    """queries/early_march.sql with both predicates pushed into the scan: the whole plan is the
+    scan, as DuckDB's is. ``fixture`` runs the same query against another orders file."""
+    return Scan(root / "fixtures" / fixture, ["order_id", "customer_id", "amount"], filters=EARLY_MARCH)
+
+
+def early_march_above(root: Path, fixture: str, columns: list[str]) -> Operator:
+    """queries/early_march.sql with nothing pushed into the scan but ``columns``: the scan hands
+    up every row of every row group, and a filter above it tests the dates, as ch01's plan did."""
+    scan = Scan(root / "fixtures" / fixture, columns)
+    march = Filter(scan, " AND ".join(map(str, EARLY_MARCH)), _all(EARLY_MARCH))
+    return Project(march, {name: _column(name) for name in ["order_id", "customer_id", "amount"]})
+
+
+def _all(comparisons: list[Comparison]):
+    """A filter's predicate: true where every comparison is."""
+
+    def predicate(batch: pa.RecordBatch) -> pa.Array:
+        masks = [c.mask(batch) for c in comparisons]
+        out = masks[0]
+        for m in masks[1:]:
+            out = pc.and_(out, m)
+        return out
+
+    return predicate
+
+
+def _column(name: str):
+    return lambda batch: batch[name]
+
+
+def largest_orders(root: Path, fixture: str = "orders-sorted.parquet") -> Operator:
+    """queries/largest_orders.sql, its predicate pushed into the scan."""
+    return Scan(
+        root / "fixtures" / fixture, ["order_id", "amount"], filters=[Comparison("amount", ">", 2400.0)]
+    )
+
+
 #: Each plan, by the query file it answers.
-PLANS: dict[str, Callable[[Path], Operator]] = {"returned_unit_price.sql": returned_unit_price}
+PLANS: dict[str, Callable[[Path], Operator]] = {
+    "returned_unit_price.sql": returned_unit_price,
+    "early_march.sql": early_march,
+    "largest_orders.sql": largest_orders,
+}
 
 #: For each plan, the DuckDB operator that does the same job as each of the plan's operators,
 #: top down, or None where DuckDB has no operator of its own for it. DuckDB tests
@@ -83,6 +136,8 @@ PLANS: dict[str, Callable[[Path], Operator]] = {"returned_unit_price.sql": retur
 #: to produce the same rows.
 DUCKDB_PARTNERS: dict[str, list[str | None]] = {
     "returned_unit_price.sql": ["PROJECTION", "FILTER", "TABLE_SCAN", None],
+    "early_march.sql": ["TABLE_SCAN"],
+    "largest_orders.sql": ["TABLE_SCAN"],
 }
 
 

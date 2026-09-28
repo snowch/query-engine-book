@@ -25,7 +25,7 @@ from . import plans, report
 from .cache import LINE_BYTES, LINES
 from .memory import buffer_names, buffer_sizes
 from .metrics import Metrics
-from .reference import Observation, connect, explain, observe, read_query
+from .reference import Observation, bytes_read, connect, explain, observe, read_query
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "chapters" / "_generated"
@@ -266,6 +266,76 @@ def gathers_table() -> str:
     )
 
 
+def _scan_of(plan) -> Metrics:
+    """The metrics of a plan's scan: the operator at the bottom of the tree."""
+    return list(plan.metrics.walk())[-1]
+
+
+def pushdown_table() -> str:
+    """queries/early_march.sql three ways, against each orders file: with nothing pushed into the
+    scan, with the columns pushed, and with the columns and the dates pushed. Then DuckDB, whose
+    bytes are counted at the file system, and whose scan pushes both."""
+    query = read_query(ROOT / "queries" / "early_march.sql")
+    used = ["order_id", "order_date", "customer_id", "amount"]
+    ways = [
+        ("Nothing pushed", lambda f: plans.early_march_above(ROOT, f, plans.ORDERS_COLUMNS)),
+        ("The columns pushed", lambda f: plans.early_march_above(ROOT, f, used)),
+        ("The columns and the dates pushed", lambda f: plans.early_march(ROOT, f)),
+    ]
+    lines = [
+        "| Scan | File | Row groups read | Rows decoded | Rows handed up | Bytes read | Requests |",
+        "|---|---|---:|---:|---:|---:|---:|",
+    ]
+    for label, make in ways:
+        for fixture in report.GATHER_FIXTURES:
+            plan = make(fixture)
+            plan.run()
+            m = _scan_of(plan)
+            lines.append(
+                f"| {label} | `{fixture}` | {m.batches_in:,} | {m.rows_in:,} | {m.rows_out:,} | "
+                f"{m.bytes_read:,} | {m.requests:,} |"
+            )
+    for fixture in report.GATHER_FIXTURES:
+        sql = query.replace("orders-sorted.parquet", fixture)
+        scan = list(observe(sql).metrics.walk())[-1]
+        lines.append(
+            f"| DuckDB's | `{fixture}` | not reported | not reported | {scan.rows_out:,} | "
+            f"{bytes_read(sql):,} | not reported |"
+        )
+    what = f"the book's engine, and DuckDB {duckdb.__version__} with one thread, its reads counted at the file system"
+    return (
+        "\n".join(lines) + "\n" + f"\n*Computed by {what}, on `fixtures/orders-sorted.parquet` and "
+        "`fixtures/orders-shuffled.parquet`, at build time.*\n"
+    )
+
+
+def row_groups_of(query: str, fixture: str) -> Callable[[], str]:
+    """Each row group of ``fixture``, with its statistics for the column the query's plan filters
+    on, and whether the engine's scan read it."""
+
+    def make() -> str:
+        data = report.pruning(ROOT, query)
+        found = next(f for f in data["files"] if f["fixture"] == fixture)
+        column = data["column"]
+        lines = [
+            f"| Row group | Rows | Smallest `{column}` | Largest `{column}` | Read by the scan |",
+            "|---:|---:|---:|---:|---|",
+        ]
+        for i, g in enumerate(found["row_groups"]):
+            lines.append(
+                f"| {i} | {g['rows']:,} | {g['min_label']} | {g['max_label']} | {'yes' if g['read'] else 'no'} |"
+            )
+        lines.append("")
+        lines.append(
+            f"The scan read {found['row_groups_read']:,} of {len(found['row_groups']):,} row groups: "
+            f"it decoded {found['rows_decoded']:,} rows, handed up {found['rows_out']:,}, and read "
+            f"{found['bytes_read']:,} of the file's {found['file_bytes']:,} bytes."
+        )
+        return "\n".join(lines) + "\n" + conditions("the book's engine", fixture)
+
+    return make
+
+
 def orders_recipe() -> str:
     """How the orders were generated, from the generator's own constants and manifest."""
     sys.path.insert(0, str(ROOT / "fixtures"))
@@ -317,6 +387,11 @@ FIGURES = (
     Figure("orders-by-date-buffers", arrow_buffers_of("orders_by_date.sql", "orders-shuffled.parquet")),
     Figure("orders-by-date-compare", buffers_compare_of("orders_by_date.sql", "orders-shuffled.parquet")),
     Figure("orders-by-date-gathers", gathers_table),
+    Figure("early-march-plan", plan_of("early_march.sql", "orders-sorted.parquet")),
+    Figure("early-march-profile", profile_of("early_march.sql", "orders-sorted.parquet")),
+    Figure("early-march-compare", compare_of("early_march.sql", "orders-sorted.parquet")),
+    Figure("early-march-pushdown", pushdown_table),
+    Figure("largest-orders-row-groups", row_groups_of("largest_orders.sql", "orders-sorted.parquet")),
 )
 
 
@@ -325,6 +400,7 @@ FIGURES = (
 PANELS = (
     {"experiment": "plan", "query": "returned_unit_price.sql"},
     {"experiment": "gather", "column": "amount"},
+    {"experiment": "pruning", "query": "early_march.sql"},
 )
 
 

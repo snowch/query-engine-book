@@ -13,11 +13,16 @@ them with DuckDB's.
 
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Callable, Iterator
+from dataclasses import dataclass
 from pathlib import Path
 
 import pyarrow as pa
+import pyarrow.compute as pc
+from parquet_lab import prune, stats
 from parquet_lab.column import read_column
+from parquet_lab.metadata import FileMetaData, RowGroup
 from parquet_lab.object_store import Bounded, MemoryStore, NetworkModel, TracingStore
 from parquet_lab.reader import FooterOptions, read_footer
 from parquet_lab.scan import Fetched
@@ -63,19 +68,90 @@ class Operator:
         return batch
 
 
+@dataclass(frozen=True)
+class Comparison:
+    """A predicate a scan can test by itself: one column compared with a constant (ch03).
+
+    The scan uses it twice. Before it reads a row group, it asks the row group's statistics
+    whether any value in it could satisfy the comparison, and skips the row group if none could.
+    After it reads one, it tests every row.
+    """
+
+    column: str
+    op: str
+    """One of ``=``, ``!=``, ``<``, ``<=``, ``>``, ``>=``."""
+    value: object
+    """A constant of the column's type: an int, a float, a str or a date."""
+
+    def __str__(self) -> str:
+        return f"{self.column} {self.op} {self.value}"
+
+    def mask(self, batch: pa.RecordBatch) -> pa.Array:
+        """True for each row of ``batch`` that satisfies the comparison."""
+        column = batch[self.column]
+        return KERNELS[self.op](column, pa.scalar(self.value, column.type))
+
+    def against_statistics(self, leaf: Leaf, metadata: FileMetaData, row_group: RowGroup) -> prune.Decision:
+        """Whether ``row_group`` can be skipped, from its statistics for the column, and why.
+
+        The Parquet book's reader decides: it reads the chunk's minimum and maximum, and asks
+        whether any value between them could satisfy the comparison.
+        """
+        chunk = row_group.columns[leaf.column]
+        if chunk.statistics is None:
+            return prune.read("the column chunk has no statistics")
+        converted = metadata.schema[leaf.element].converted_type
+        predicate = prune.Predicate.new(leaf, converted, prune.Op(self.op), _literal(self.value))
+        orders = metadata.column_orders
+        type_order = orders is not None and orders[leaf.column] == "TYPE_ORDER"
+        try:
+            bounds = stats.bounds(chunk.statistics, predicate.comparator, type_order)
+            found = (bounds.min, bounds.max)
+        except ValueError:
+            found = None
+        return prune.against_bounds(predicate, found, chunk.statistics.null_count, chunk.num_values)
+
+
+#: The kernel that tests each row, for each comparison.
+KERNELS = {
+    "=": pc.equal,
+    "!=": pc.not_equal,
+    "<": pc.less,
+    "<=": pc.less_equal,
+    ">": pc.greater,
+    ">=": pc.greater_equal,
+}
+
+
+def _literal(value: object) -> str:
+    """A constant as the Parquet book's reader parses one: a date as the days since 1970."""
+    if isinstance(value, dt.date):
+        return str((value - dt.date(1970, 1, 1)).days)
+    return str(value)
+
+
 class Scan(Operator):
     """Read columns of a Parquet file, one batch per row group, with the Parquet book's reader.
 
     The file sits in the reader's simulated object store, so every byte the scan reads is a
-    request the store logged: the footer first, then each column chunk it needs. This scan reads
-    every row group and hands up every row. ch03 teaches it to read less.
+    request the store logged: the footer first, then each column chunk it needs. With no
+    ``filters``, as in ch01, the scan reads every row group and hands up every row. With filters
+    (ch03), it skips each row group whose statistics rule out every row, and hands up only the
+    rows that pass.
     """
 
-    def __init__(self, path: str | Path, columns: list[str]) -> None:
-        super().__init__("Scan", f"{Path(path).name}: {', '.join(columns)}", [])
+    def __init__(self, path: str | Path, columns: list[str], filters: list[Comparison] = ()) -> None:
+        detail = f"{Path(path).name}: {', '.join(columns)}"
+        if filters:
+            detail += f"; {' AND '.join(map(str, filters))}"
+        super().__init__("Scan", detail, [])
         self.path = Path(path)
         self.columns = columns
+        self.filters = list(filters)
+        self.skipped: dict[int, str] = {}
+        """Each row group the scan skipped, by its position in the file, with the reason."""
 
+    # Row group by row group: one the statistics rule out is never requested at all.
     def batches(self) -> Iterator[pa.RecordBatch]:
         data = self.path.read_bytes()
         key = self.path.name
@@ -89,10 +165,18 @@ class Scan(Operator):
             if request.returned is not None:
                 have.add(request.returned, data[request.returned.start : request.returned.end])
         by_name = {leaf.dotted_path(): leaf for leaf in leaves(build(footer.metadata.schema))}
-        wanted = [by_name[name] for name in self.columns]
+        # The columns asked for, then any column a filter tests that was not asked for.
+        reading = list(dict.fromkeys([*self.columns, *(f.column for f in self.filters)]))
+        wanted = [by_name[name] for name in reading]
         schema = pa.schema([arrow_field(leaf) for leaf in wanted])
+        self.skipped = {}
+        self.count_requests(store)
 
-        for row_group in footer.metadata.row_groups:
+        for index, row_group in enumerate(footer.metadata.row_groups):
+            why = self.ruled_out(row_group, footer.metadata, by_name)
+            if why is not None:
+                self.skipped[index] = why
+                continue
             arrays = []
             for leaf in wanted:
                 chunk = row_group.columns[leaf.column]
@@ -102,9 +186,28 @@ class Scan(Operator):
                 arrays.append(to_arrow([t.value for t in decoded.triples], leaf))
             batch = pa.RecordBatch.from_arrays(arrays, schema=schema)
             self.take(batch)
-            self.metrics.bytes_read = store.bytes_returned()
-            self.metrics.requests = len(store.requests)
-            yield self.emit(batch)
+            # Until it has tested the rows, the scan holds every column it read, the filters' too.
+            self.metrics.peak_memory_bytes = max(
+                self.metrics.peak_memory_bytes, batch.get_total_buffer_size()
+            )
+            for f in self.filters:
+                batch = batch.filter(f.mask(batch))
+            self.count_requests(store)
+            yield self.emit(batch.select(self.columns))
+        self.count_requests(store)
+
+    def ruled_out(self, row_group: RowGroup, metadata: FileMetaData, by_name: dict[str, Leaf]) -> str | None:
+        """Why no row of ``row_group`` can pass the filters, from its statistics, or None if
+        some row might. One filter that rules the row group out is enough: they all must pass."""
+        for f in self.filters:
+            decision = f.against_statistics(by_name[f.column], metadata, row_group)
+            if decision.skip:
+                return f"{f}: {decision.why}"
+        return None
+
+    def count_requests(self, store: TracingStore) -> None:
+        self.metrics.bytes_read = store.bytes_returned()
+        self.metrics.requests = len(store.requests)
 
     def schema(self) -> pa.Schema:
         by_name = {leaf.dotted_path(): leaf for leaf in leaves(build(_footer(self.path).schema))}

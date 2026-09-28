@@ -72,7 +72,8 @@ Invariant 2 makes the tree read like a ledger. Each operator's reduction is `row
 | `rows_out` | `operator_cardinality` | Yes: a plan's result rows, and the scan's output rows when both engines pushed the same filter into the scan. |
 | `rows_in` (leaf) | `operator_rows_scanned` | **No.** DuckDB reports the rows in the files it opened, not the rows it decoded: on `orders-sorted`, a date filter that skips most row groups still reports every row as scanned. |
 | `rows_in` (non-leaf) | the children's `operator_cardinality` | Yes, by invariant 2. |
-| batches, bytes, requests, memory, spill, shuffle | not reported per operator | No. The book measures these in its own engine only, and says so. |
+| `bytes_read` | not reported | Counted outside DuckDB: `query_lab.reference.bytes_read` hands DuckDB a file system, through fsspec, that counts every byte it serves. That is the whole query's reads, so it is compared only with a plan whose one operator is the scan (ch03). The build counts it; the page does not. |
+| batches, requests, memory, spill, shuffle | not reported per operator | No. The book measures these in its own engine only, and says so. |
 
 Two settings make the comparison fair. DuckDB runs with one thread, because Pyodide gives it one,
 so desk and browser agree. And every query is run from a file in `queries/`, so the SQL the page

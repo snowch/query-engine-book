@@ -3,8 +3,8 @@
 // A report is query_lab.report.run, the function the build ran to draw the panel. Problems are
 // the chapter's graders, run by pytest exactly as the repository runs them, on the reader's edit of
 // the chapter's stubs. Pyodide and each package are fetched on first use only: a plan's report
-// needs DuckDB alone; a gather's also needs pyarrow, for the engine; the graders need both, and
-// pytest.
+// needs DuckDB alone; a gather's or a pruning's also needs pyarrow, for the engine; the graders
+// need both, and pytest.
 
 import { ROOT, startPyodide, writeBook } from "./pyodide.js";
 
@@ -73,7 +73,7 @@ let ready = null;
 const loaded = new Set();
 
 /** The packages each experiment's report needs, beyond Pyodide itself. */
-const NEEDS = { plan: ["duckdb"], gather: ["duckdb", "pyarrow"] };
+const NEEDS = { plan: ["duckdb"], gather: ["duckdb", "pyarrow"], pruning: ["duckdb", "pyarrow"] };
 
 async function setup() {
   postMessage({ type: "status", text: "Loading Python into your browser (a large download, the first time only)…" });
