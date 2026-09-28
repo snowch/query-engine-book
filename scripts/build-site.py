@@ -182,13 +182,19 @@ HEAD_SCRIPT = r"""<script>
   // Where the reader is: the page and how far down it, kept as they read. Opened from a home
   // screen, the book starts at index.html?resume (manifest.webmanifest) and goes back there; the
   // preface also offers a link back, however it was reached.
+  //
+  // The place is kept under a key named for this book's directory, not a bare "last-read". Books
+  // served from one origin (snowch.github.io/parquet-book/, /query-engine-book/) share one
+  // storage, and a bare key offered each book the other's page, which it does not have.
   const page = location.pathname.split("/").pop() || "index.html";
+  const PLACE = `last-read:${location.pathname.replace(/[^/]*$/, "")}`;
+  const RESUME = `resume-scroll:${location.pathname.replace(/[^/]*$/, "")}`;
   let last = null;
-  try { last = JSON.parse(localStorage.getItem("last-read")); } catch (e) {}
+  try { last = JSON.parse(localStorage.getItem(PLACE)); } catch (e) {}
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const launched = new URLSearchParams(location.search).has("resume") || (standalone && !document.referrer);
   if (page === "index.html" && launched && last && last.page && last.page !== "index.html") {
-    try { sessionStorage.setItem("resume-scroll", String(last.y || 0)); } catch (e) {}
+    try { sessionStorage.setItem(RESUME, String(last.y || 0)); } catch (e) {}
     location.replace(last.page);
     return;
   }
@@ -196,7 +202,7 @@ HEAD_SCRIPT = r"""<script>
   const remember = () => {
     if (page === "index.html") return;
     try {
-      localStorage.setItem("last-read", JSON.stringify({ page, title: document.title.split(" · ").slice(0, -1).join(" · "), y: Math.round(scrollY) }));
+      localStorage.setItem(PLACE, JSON.stringify({ page, title: document.title.split(" · ").slice(0, -1).join(" · "), y: Math.round(scrollY) }));
     } catch (e) {}
   };
   let pending = 0;
@@ -204,7 +210,7 @@ HEAD_SCRIPT = r"""<script>
   addEventListener("pagehide", remember);
   addEventListener("load", () => {
     let y = null;
-    try { y = sessionStorage.getItem("resume-scroll"); sessionStorage.removeItem("resume-scroll"); } catch (e) {}
+    try { y = sessionStorage.getItem(RESUME); sessionStorage.removeItem(RESUME); } catch (e) {}
     if (y === null) return remember();
     // Labs draw after load and push the page down, so the place is kept while the page settles:
     // for a few seconds, or until the reader scrolls for themselves.
@@ -227,7 +233,7 @@ HEAD_SCRIPT = r"""<script>
       const a = document.createElement("a");
       a.href = last.page;
       a.textContent = `Continue reading: ${last.title || last.page}`;
-      a.addEventListener("click", () => { try { sessionStorage.setItem("resume-scroll", String(last.y || 0)); } catch (e) {} });
+      a.addEventListener("click", () => { try { sessionStorage.setItem(RESUME, String(last.y || 0)); } catch (e) {} });
       p.append(a);
       h1.after(p);
     });
