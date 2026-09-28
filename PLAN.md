@@ -141,6 +141,7 @@ What the first week produced, and the decisions it forced. Each links to where t
 | Fixture generator | `orders` (sorted and shuffled) and `customers`. | `fixtures/generate.py` |
 | Build checks | No typed numbers, no pasted code, glossary order, desk-browser parity. Engine-versus-DuckDB parity waits for the engine. | `tests/`, `scripts/verify-numbers.py` |
 | Chapter 1 | Written: DuckDB observed, predict then reveal, the engine's scan, filter and project, compared with DuckDB operator by operator, and three problems (two graded, one slow query to diagnose). | `chapters/the_plan_is_the_map.md`, `python/query_lab/operators.py`, `exercises/` |
+| Chapter 2 | Written: DuckDB's Arrow result read buffer by buffer, the engine's arrays built from raw buffers and its validity bitmap read by hand, a cache model, and a gather in date order from the sorted and the shuffled file, predicted then revealed in a panel. Two graded problems and one to diagnose. | `chapters/batches_in_memory.md`, `python/query_lab/memory.py`, `python/query_lab/cache.py` |
 | Cover page | As in sizing-and-tco: the site's front page, before the preface. | `cover.md` |
 | Panels spike | Passed: `query_lab.report` computes each panel's JSON, the build embeds it, JavaScript draws it, and the page can recompute it under Pyodide. The first panel, the plan, is in ch01. | `spikes/panels/`, `web/lab/` |
 
@@ -173,5 +174,11 @@ Decisions taken this week:
   it needs JavaScript; there is no static copy. Queries in a panel can be edited and rerun.
 - **No desk.** The reader needs only a browser. Chapters give no shell commands; each chapter's
   problems run in a workbench in the page, by pytest under Pyodide, on the reader's answers.
+- **Cache counts join the counters.** The cache model's reads, hits, misses and bytes fetched
+  are counters too, specified in COUNTERS.md beside the operators', and printed with the model's
+  settings in the conditions line. They are the first of the simulators in section 2.
+- **One appendix section for running the book from a clone.** The chapters stay browser-only;
+  *Running the lab* keeps the commands for a reader who wants them, and is the one page a test
+  lets hold a shell command.
 - **DuckDB stays at 1.1.2.** DuckDB's own Pyodide wheels reach 1.2.0 at most; not worth leaving
   Pyodide's CDN for.

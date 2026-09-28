@@ -4,7 +4,7 @@ A plan is a tree of operators. Each operator has one job and one output: a strea
 record batches, produced by :meth:`Operator.batches`. An operator gets its input by asking its
 child for batches, one at a time, so the operator at the top of the plan drives the whole run:
 nothing is read until something above asks for it. That is the pull model, the one most engines
-use and the one ch02 sets beside the alternative.
+use. The arrays in each batch are built buffer by buffer, by :mod:`query_lab.memory` (ch02).
 
 Every operator counts what it does in a :class:`~query_lab.metrics.Metrics` as it runs, as
 COUNTERS.md defines. The counts are exact, so the book can print them and a test can compare
@@ -23,6 +23,7 @@ from parquet_lab.reader import FooterOptions, read_footer
 from parquet_lab.scan import Fetched
 from parquet_lab.schema import Leaf, build, leaves
 
+from .memory import array_from
 from .metrics import Metrics
 
 #: A predicate or an expression: a function of a batch that returns one Arrow array, one value
@@ -172,13 +173,12 @@ def arrow_field(leaf: Leaf) -> pa.Field:
 
 
 def to_arrow(values: list, leaf: Leaf) -> pa.Array:
-    """A column's decoded values as an Arrow array. Strings arrive as bytes; dates as days."""
+    """A column's decoded values as an Arrow array, built buffer by buffer (ch02). Strings arrive
+    as bytes, and dates as days since 1970, which is what a ``date32`` holds."""
     kind = arrow_type(leaf)
     if kind == pa.string():
-        return pa.array([None if v is None else v.decode() for v in values], pa.string())
-    if kind == pa.date32():
-        return pa.array(values, pa.int32()).cast(pa.date32())
-    return pa.array(values, kind)
+        values = [None if v is None else v.decode() for v in values]
+    return array_from(values, kind)
 
 
 def _footer(path: Path):

@@ -108,3 +108,14 @@
 .wb-problem li.failed code { color: var(--stop); }
 .wb-message { display: block; color: var(--muted); font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .wb-output { font: 12px/1.45 var(--mono); white-space: pre-wrap; margin: 0; }
+
+/* The gather: the two files' gathers side by side where there is room, each with the pattern of
+   its first reads above its bars. */
+.gather-facts { margin: 0; padding: .7rem 1rem 0; font-size: 13px; color: var(--muted); }
+.gather-facts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.gather-runs { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; padding: 1rem; }
+.gather-run { width: 22rem; }
+.gather-figure { margin: .4rem 0 .6rem; }
+.gather-pattern { display: block; width: 100%; height: auto; background: var(--panel); border-radius: 4px; }
+.gather-pattern circle { fill: var(--accent); }
+.gather-figure figcaption { font-size: 11.5px; color: var(--faint); margin-top: .25rem; }

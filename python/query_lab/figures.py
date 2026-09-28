@@ -19,10 +19,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import duckdb
+import pyarrow as pa
 
 from . import plans, report
+from .cache import LINE_BYTES, LINES
+from .memory import buffer_names, buffer_sizes
 from .metrics import Metrics
-from .reference import Observation, explain, observe, read_query
+from .reference import Observation, connect, explain, observe, read_query
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "chapters" / "_generated"
@@ -168,6 +171,101 @@ def _operators(profile: dict):
         node = node["children"][0]
 
 
+#: The result rows a figure shows: enough to see the pattern, few enough to read.
+FIRST_ROWS = 6
+
+
+def first_rows_of(query: str, fixture: str, columns: list[str]) -> Callable[[], str]:
+    """The first rows of a query's result, in the columns given."""
+
+    def make() -> str:
+        result = connect().execute(read_query(ROOT / "queries" / query)).arrow()
+        rows = result.select(columns).slice(0, FIRST_ROWS).to_pylist()
+        lines = ["| " + " | ".join(f"`{c}`" for c in columns) + " |", "|" + "---:|" * len(columns)]
+        lines += ["| " + " | ".join(_value(r[c]) for c in columns) + " |" for r in rows]
+        return "\n".join(lines) + "\n" + duckdb_conditions(fixture)
+
+    return make
+
+
+def _array(column) -> pa.Array:
+    """A column's one array as its engine built it. ``combine_chunks`` would copy it, and a copy
+    drops a bitmap that marks every row valid, which is one of the things a figure shows."""
+    return column.chunk(0) if column.num_chunks == 1 else column.combine_chunks()
+
+
+def _value(v: object) -> str:
+    return f"{v:,}" if isinstance(v, int) else str(v)
+
+
+def _bytes(size: int | None) -> str:
+    return "none" if size is None else f"{size:,}"
+
+
+def arrow_buffers_of(query: str, fixture: str) -> Callable[[], str]:
+    """Each column of a query's result as DuckDB hands it over in Arrow: its type, its nulls, and
+    the bytes in each of its buffers."""
+
+    def make() -> str:
+        result = connect().execute(read_query(ROOT / "queries" / query)).arrow()
+        lines = [
+            "| Column | Arrow type | Nulls | Validity bitmap | Offsets | Values or data |",
+            "|---|---|---:|---:|---:|---:|",
+        ]
+        for name, column in zip(result.column_names, result.columns, strict=True):
+            array = _array(column)
+            sizes = buffer_sizes(array)
+            payload = sizes.get("values", sizes.get("data"))
+            lines.append(
+                f"| `{name}` | `{array.type}` | {array.null_count:,} | {_bytes(sizes['validity'])} | "
+                f"{_bytes(sizes.get('offsets'))} | {_bytes(payload)} |"
+            )
+        return "\n".join(lines) + "\n" + duckdb_conditions(fixture)
+
+    return make
+
+
+def buffers_compare_of(query: str, fixture: str) -> Callable[[], str]:
+    """The engine's result for a query beside DuckDB's, buffer by buffer."""
+
+    def make() -> str:
+        ours, _ = plans.orders_by_date(ROOT, fixture)
+        theirs = connect().execute(read_query(ROOT / "queries" / query)).arrow()
+        lines = ["| Column | Buffer | Your engine, bytes | DuckDB, bytes |", "|---|---|---:|---:|"]
+        for name in ours.column_names:
+            mine = buffer_sizes(_array(ours.column(name)))
+            duck = buffer_sizes(_array(theirs.column(name)))
+            for buffer in buffer_names(ours.column(name).type):
+                lines.append(f"| `{name}` | {buffer} | {_bytes(mine[buffer])} | {_bytes(duck[buffer])} |")
+        return (
+            "\n".join(lines)
+            + "\n"
+            + conditions(f"the book's engine and DuckDB {duckdb.__version__} with one thread", fixture)
+        )
+
+    return make
+
+
+def gathers_table() -> str:
+    """Each column of queries/orders_by_date.sql gathered into date order through the cache model,
+    from the file stored in date order and from the shuffled one: the bytes each gather fetched."""
+    runs = {f: plans.orders_by_date(ROOT, f) for f in report.GATHER_FIXTURES}
+    lines = [
+        "| Column | Bytes in its buffers | Bytes fetched, sorted file | Bytes fetched, shuffled file |",
+        "|---|---:|---:|---:|",
+    ]
+    for name in plans.ORDERS_BY_DATE:
+        table, _ = runs[report.GATHER_FIXTURES[0]]
+        size = sum(s or 0 for s in buffer_sizes(_array(table.column(name))).values())
+        fetched = [runs[f][1][name].bytes_fetched for f in report.GATHER_FIXTURES]
+        lines.append(f"| `{name}` | {size:,} | {fetched[0]:,} | {fetched[1]:,} |")
+    what = f"the book's engine and its cache model ({LINES} lines of {LINE_BYTES} bytes)"
+    return (
+        "\n".join(lines) + "\n" + f"\n*Computed by {what} on `fixtures/orders-sorted.parquet` and "
+        "`fixtures/orders-shuffled.parquet`, at build time.*\n"
+    )
+
+
 def orders_recipe() -> str:
     """How the orders were generated, from the generator's own constants and manifest."""
     sys.path.insert(0, str(ROOT / "fixtures"))
@@ -209,12 +307,25 @@ FIGURES = (
     Figure("lower-status-plan", plan_of("lower_status.sql", "orders-sorted.parquet")),
     Figure("lower-status-profile", profile_of("lower_status.sql", "orders-sorted.parquet")),
     Figure("fixtures", fixtures_table),
+    Figure("orders-by-date-plan", plan_of("orders_by_date.sql", "orders-shuffled.parquet")),
+    Figure(
+        "orders-by-date-rows",
+        first_rows_of(
+            "orders_by_date.sql", "orders-shuffled.parquet", ["file_row_number", "order_id", "order_date"]
+        ),
+    ),
+    Figure("orders-by-date-buffers", arrow_buffers_of("orders_by_date.sql", "orders-shuffled.parquet")),
+    Figure("orders-by-date-compare", buffers_compare_of("orders_by_date.sql", "orders-shuffled.parquet")),
+    Figure("orders-by-date-gathers", gathers_table),
 )
 
 
 #: Every panel a chapter embeds, as its ``lab`` block's settings. Each one's JSON is computed here
 #: at build time, embedded in the page by the renderer, and recomputed in the page on request.
-PANELS = ({"experiment": "plan", "query": "returned_unit_price.sql"},)
+PANELS = (
+    {"experiment": "plan", "query": "returned_unit_price.sql"},
+    {"experiment": "gather", "column": "amount"},
+)
 
 
 def panel_json(config: dict[str, str]) -> str:

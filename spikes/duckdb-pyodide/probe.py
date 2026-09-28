@@ -7,7 +7,8 @@
 For every query in ``queries/``: DuckDB's result, its ``EXPLAIN`` plan, and the counters from its
 JSON profile. Then the Parquet book's scan, the book's scan layer, on both orders fixtures. Then
 the book's engine: every hand-written plan's result and counters, which exercise the Parquet
-book's reader and pyarrow's kernels as the page runs them. The
+book's reader and pyarrow's kernels as the page runs them, and ch02's gathers through the cache
+model. The
 three runs must print the same document, byte for byte; ``tests/test_pyodide.py`` checks the
 desk against Node, and ``scripts/ci-check.sh`` runs the browser.
 """
@@ -29,7 +30,7 @@ from parquet_lab.object_store import NetworkModel  # noqa: E402
 from parquet_lab.prune import Op  # noqa: E402
 from parquet_lab.scan import Query, Strategy, scan  # noqa: E402
 
-from query_lab.plans import PLANS, plan_for  # noqa: E402
+from query_lab.plans import PLANS, orders_by_date, plan_for  # noqa: E402
 from query_lab.reference import observe, read_query  # noqa: E402
 
 
@@ -57,8 +58,13 @@ def probe(root: Path) -> dict:
         plan = plan_for(root, query)
         table = plan.run()
         out["engine"][query] = {"rows": table.to_pylist(), "metrics": plan.metrics.to_json()}
+    out["gathers"] = {}
+    for name in ("orders-sorted", "orders-shuffled"):
+        _, caches = orders_by_date(root, f"{name}.parquet")
+        out["gathers"][name] = {column: cache.counters() for column, cache in caches.items()}
     return out
 
 
 if __name__ == "__main__":
-    print(json.dumps(probe(ROOT), sort_keys=True))
+    # A date prints as ISO text: the same at the desk and in the browser.
+    print(json.dumps(probe(ROOT), sort_keys=True, default=str))

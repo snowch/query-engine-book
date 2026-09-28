@@ -2,8 +2,9 @@
 //
 // A report is query_lab.report.run, the function the build ran to draw the panel. Problems are
 // the chapter's graders, run by pytest exactly as the repository runs them, on the reader's edit of
-// the chapter's stubs. Pyodide and each package are fetched on first use only: a report needs
-// DuckDB alone; the graders also need pyarrow, for the engine, and pytest.
+// the chapter's stubs. Pyodide and each package are fetched on first use only: a plan's report
+// needs DuckDB alone; a gather's also needs pyarrow, for the engine; the graders need both, and
+// pytest.
 
 import { ROOT, startPyodide, writeBook } from "./pyodide.js";
 
@@ -71,6 +72,9 @@ def run_problems(chapter, source):
 let ready = null;
 const loaded = new Set();
 
+/** The packages each experiment's report needs, beyond Pyodide itself. */
+const NEEDS = { plan: ["duckdb"], gather: ["duckdb", "pyarrow"] };
+
 async function setup() {
   postMessage({ type: "status", text: "Loading Python into your browser (a large download, the first time only)…" });
   const pyodide = await startPyodide();
@@ -94,7 +98,7 @@ onmessage = async ({ data }) => {
     ready ||= setup();
     const pyodide = await ready;
     if (data.kind === "report") {
-      await need(pyodide, ["duckdb"]);
+      await need(pyodide, NEEDS[data.config.experiment] || ["duckdb", "pyarrow"]);
       postMessage({ type: "status", text: "Running…" });
       postMessage({ type: "result", json: pyodide.globals.get("run_report")(JSON.stringify(data.config)) });
     } else if (data.kind === "problems") {

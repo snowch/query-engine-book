@@ -11,11 +11,12 @@
 // browser's storage, and is never compared with the build, because the build never ran it.
 // JavaScript here draws JSON and compares it; it never computes a count of its own.
 
+import { mountGather } from "./gather.js";
 import { mountPlan } from "./plan.js";
 import { runReport } from "./runner.js";
 import { mountWorkbench } from "./workbench.js";
 
-const EXPERIMENTS = { plan: mountPlan };
+const EXPERIMENTS = { plan: mountPlan, gather: mountGather };
 
 const store = {
   get(key) { try { return localStorage.getItem(key); } catch { return null; } },
@@ -30,13 +31,14 @@ function lastLine(error) {
 }
 
 function mount(el) {
-  const config = { experiment: el.dataset.experiment, query: el.dataset.query };
-  if (!config.query) delete config.query;
+  // The block's settings, as the renderer wrote them: nothing else is on the element yet.
+  const config = { ...el.dataset };
   const draw = EXPERIMENTS[config.experiment];
   const built = el.querySelector("script.lab-data").textContent;
   const build = JSON.parse(built);
   // Named for this book: other books share the origin, and its storage.
-  const key = `lab:${location.pathname.replace(/[^/]*$/, "")}:${config.experiment}:${config.query || ""}`;
+  const settings = Object.keys(config).filter((k) => k !== "experiment").sort().map((k) => config[k]);
+  const key = `lab:${location.pathname.replace(/[^/]*$/, "")}:${config.experiment}:${settings.join(":")}`;
 
   const body = document.createElement("div");
   body.className = "lab-body";
