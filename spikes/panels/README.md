@@ -45,15 +45,32 @@ The worker loads DuckDB alone, not pyarrow. For the plan panel that is the Pyodi
 its standard library and the DuckDB wheel: roughly half of what DuckDB with pyarrow and its
 dependencies would be. A panel that needs pyarrow loads it on first use.
 
+## Editing the query
+
+A panel whose report ran a query has an editor under it (*Edit the query*, closed until used).
+The reader's text goes to the same report as `sql`, and the panel redraws from what comes back,
+with the first rows of the result under the plan. An edit:
+
+- **is never compared with the build**, because the build never ran it; the status line says it
+  is the reader's query instead;
+- **is kept in the browser's storage**, per panel, and *Reset to the book's query* drops it;
+- **fails politely**: DuckDB's error message (its last line, without the Python traceback) goes
+  in the status line, and the last drawing stays.
+
+`tests/browser/panels.mjs` edits the query, requires the drawing to match what
+`python -m query_lab report plan <query> --sql <text>` prints at a desk for the same text, runs a
+broken query, and resets. An operator DuckDB gives no estimate for (`ORDER_BY`) reports `null`,
+and the panel draws *none*, never a zero the planner did not claim.
+
 ## What the checks hold
 
 | Check | What it requires |
 |---|---|
 | `figures --check` | Every panel's committed JSON is what `query_lab.report` computes now. |
-| `python/tests/test_report.py` | The plan report matches DuckDB's profile; it holds no timings; every panel in `figures.PANELS` is generated. |
+| `python/tests/test_report.py` | The plan report matches DuckDB's profile; it holds no timings; every panel in `figures.PANELS` is generated; an edited query runs and says so. |
 | `tests/test_render.py` | A `lab` block carries its JSON; a missing query or panel fails the build. |
 | `tests/test_book.py` | Every experiment has a mount in `lab.js` and a report function. |
-| `tests/browser/panels.mjs` | In Chromium, every number a panel draws is a field of the build's JSON; after *Run it in your browser*, the page says the answers agree and draws the same numbers. |
+| `tests/browser/panels.mjs` | In Chromium, every number a panel draws is a field of the build's JSON; after *Run it in your browser*, the page says the answers agree and draws the same numbers; an edited query draws the desk's answer for it; a broken one reports DuckDB's error; reset restores the book's query. |
 
 ## Findings
 
@@ -74,8 +91,5 @@ dependencies would be. A panel that needs pyarrow loads it on first use.
 - **Where a panel sits in a chapter.** ch01 keeps the generated profile table, which works
   without JavaScript and reads well in print, and adds the panel after it. Whether a panel should
   replace a table is a writing decision for the pilot review.
-- **Editing the query in the page.** The worker can run any query in `queries/`; letting a
-  reader edit one and redraw is a small step from here, and the Parquet book's workbench shows
-  the editor half.
 - **Panels of the book's own engine.** When ch01's operators exist, a report can run the engine's
   plan and DuckDB's side by side in one JSON, and the same panel can draw both.

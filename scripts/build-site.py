@@ -790,7 +790,8 @@ def build(out: Path) -> None:
         digest.update(f.encode())
         digest.update((out / f).read_bytes())
     (out / "sw.js").write_text(service_worker(["./", *files], digest.hexdigest()[:12]))
-    print(f"wrote {len(pages)} pages and {len(files) - len(pages)} assets to {out.relative_to(ROOT)}")
+    where = out.relative_to(ROOT) if out.is_relative_to(ROOT) else out
+    print(f"wrote {len(pages)} pages and {len(files) - len(pages)} assets to {where}")
 
 
 def main() -> None:

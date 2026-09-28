@@ -50,10 +50,16 @@ def connect() -> duckdb.DuckDBPyConnection:
     return con
 
 
+def clean_sql(text: str) -> str:
+    """A query as ``observe`` runs it: less its comment lines and its closing semicolon, so it can
+    follow ``EXPLAIN``. The same for a file in ``queries/`` and a query a reader edited."""
+    lines = [line for line in text.splitlines() if not line.lstrip().startswith("--")]
+    return "\n".join(lines).strip().rstrip(";").strip()
+
+
 def read_query(path: str | Path) -> str:
-    """A query from ``queries/``: the file's text, less comments and the closing semicolon."""
-    lines = [line for line in Path(path).read_text().splitlines() if not line.lstrip().startswith("--")]
-    return "\n".join(lines).strip().rstrip(";")
+    """A query from ``queries/``, cleaned by :func:`clean_sql`."""
+    return clean_sql(Path(path).read_text())
 
 
 def observe(sql: str, con: duckdb.DuckDBPyConnection | None = None) -> Observation:

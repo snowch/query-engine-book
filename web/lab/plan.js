@@ -16,17 +16,18 @@ function el(tag, className, text) {
 
 /** The largest row count any bar in the tree draws, so every bar shares one scale. */
 function scale(node) {
-  return Math.max(node.estimated_rows_out, node.rows_out, ...node.children.map(scale));
+  return Math.max(node.estimated_rows_out ?? 0, node.rows_out, ...node.children.map(scale));
 }
 
+/** One bar; `value` null means the report has no such number, and the bar says so. */
 function bar(label, value, max, kind) {
   const row = el("div", `plan-bar ${kind}`);
   row.append(el("span", "plan-bar-label", label));
   const track = el("span", "plan-bar-track");
   const fill = el("span", "plan-bar-fill");
-  fill.style.width = `${max ? (100 * value) / max : 0}%`;
+  fill.style.width = `${max && value !== null ? (100 * value) / max : 0}%`;
   track.append(fill);
-  row.append(track, el("span", "plan-bar-value", fmt(value)));
+  row.append(track, el("span", "plan-bar-value", value === null ? "none" : fmt(value)));
   return row;
 }
 
@@ -66,14 +67,41 @@ function operator(node, max) {
   return box;
 }
 
+/** The first rows of the result, as the report carried them. */
+function preview(data) {
+  const box = el("div", "plan-preview");
+  const shown = data.preview.rows.length;
+  box.append(el("h4", "", shown < data.result_rows
+    ? `The first ${fmt(shown)} of ${fmt(data.result_rows)} result rows`
+    : `The result: ${fmt(data.result_rows)} rows`));
+  const table = el("table");
+  const head = el("tr");
+  for (const c of data.preview.columns) head.append(el("th", "", c));
+  table.append(el("thead"), el("tbody"));
+  table.tHead.append(head);
+  for (const row of data.preview.rows) {
+    const tr = el("tr");
+    for (const v of row) {
+      const td = el("td", typeof v === "number" ? "num" : "", v === null ? "NULL"
+        : typeof v === "number" ? v.toLocaleString("en-GB", { maximumFractionDigits: 2 }) : String(v));
+      tr.append(td);
+    }
+    table.tBodies[0].append(tr);
+  }
+  const wrap = el("div", "plan-preview-wrap");
+  wrap.append(table);
+  box.append(wrap);
+  return box;
+}
+
 export function mountPlan(root, data) {
   const head = el("div", "lab-head");
-  head.append(el("span", "lab-title", "The plan, as it ran"));
+  head.append(el("span", "lab-title", data.edited ? "Your query's plan, as it ran" : "The plan, as it ran"));
   const note = el("span", "lab-note");
-  note.append(el("code", "", `queries/${data.query}`), ` · ${fmt(data.result_rows)} result rows`);
+  note.append(data.edited ? "edited from " : "", el("code", "", `queries/${data.query}`));
   head.append(note);
   root.append(head);
   const tree = el("div", "plan-tree");
   tree.append(operator(data.root, scale(data.root)));
-  root.append(tree);
+  root.append(tree, preview(data));
 }

@@ -45,3 +45,27 @@
 .plan-bar-value { text-align: right; font-variant-numeric: tabular-nums; }
 .plan-op-flow { margin-top: .4rem; font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
 .plan-op-flow b { color: var(--ink); font-weight: 600; margin-right: .6rem; }
+
+/* The first rows of the result. */
+/* Under the tree and as wide as an operator, so the eye goes from the top operator to its rows. */
+.plan-preview { width: 26rem; max-width: calc(100vw - 4rem); margin: 0 auto; padding: 0 0 1rem; }
+.plan-preview h4 { margin: 0 0 .4rem; font-size: 11.5px; font-weight: 600; letter-spacing: .05em;
+                   text-transform: uppercase; color: var(--faint); }
+.plan-preview-wrap { overflow-x: auto; }
+.plan-preview table { border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.plan-preview th, .plan-preview td { padding: .2rem .7rem .2rem 0; text-align: left; border-bottom: 1px solid var(--edge);
+                                     white-space: nowrap; }
+.plan-preview th { font-family: var(--mono); font-weight: 600; color: var(--muted); }
+.plan-preview td.num { text-align: right; }
+
+/* The query editor: the reader's copy of the query, run by the button below it. */
+.lab-editor { border-top: 1px solid var(--edge); }
+.lab-editor summary { padding: .5rem 1rem; cursor: pointer; font-size: 13px; color: var(--accent); }
+.lab-editor[open] summary { border-bottom: 1px solid var(--edge); }
+.lab-editor textarea { display: block; box-sizing: border-box; width: 100%; margin: 0; border: 0; resize: vertical;
+                       padding: .7rem 1rem; font: 13px/1.5 var(--mono); color: var(--ink); background: var(--code);
+                       tab-size: 2; }
+.lab-editor textarea:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+.lab-editor-bar { display: flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: center; padding: .5rem 1rem; }
+.lab-hint { font-size: 12px; color: var(--faint); }
+.lab[data-edited="true"] .lab-run { border-color: var(--accent); color: var(--accent); }

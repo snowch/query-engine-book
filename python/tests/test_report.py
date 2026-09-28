@@ -28,7 +28,7 @@ def test_the_plan_report_is_the_profile_with_its_estimates():
     assert [(o["operator"], o["rows_in"], o["rows_out"]) for o in ops] == [
         (m.operator, m.rows_in, m.rows_out) for m in seen.metrics.walk()
     ]
-    assert all(o["estimated_rows_out"] > 0 for o in ops), "every DuckDB operator carries an estimate"
+    assert all(o["estimated_rows_out"] > 0 for o in ops), "each operator of this plan carries an estimate"
     assert not any(k == "Estimated Cardinality" for o in ops for k, *_ in o["detail"])
 
 
@@ -46,8 +46,21 @@ def test_every_panel_is_generated_and_named_from_its_settings():
     assert report.panel_name(CONFIG) == "panel-plan-returned-unit-price.json"
 
 
+def test_an_edited_query_runs_and_says_so():
+    sql = "SELECT status, count(*) AS orders FROM 'fixtures/orders-sorted.parquet' GROUP BY status ORDER BY status"
+    data = report.run(ROOT, {**CONFIG, "sql": sql})
+    assert data["edited"] and data["source"] == sql
+    assert data["preview"]["columns"] == ["status", "orders"]
+    assert [row[0] for row in data["preview"]["rows"]] == sorted(row[0] for row in data["preview"]["rows"])
+    # DuckDB gives no estimate for an ORDER_BY: the report says none rather than zero.
+    order_by = next(o for o in walk(data["root"]) if o["operator"] == "ORDER_BY")
+    assert order_by["estimated_rows_out"] is None
+
+
 def test_unknown_experiments_and_queries_are_refused():
     with pytest.raises(report.ReportError, match="no experiment"):
         report.run(ROOT, {"experiment": "nonsense"})
     with pytest.raises(report.ReportError, match="no query"):
         report.run(ROOT, {"experiment": "plan", "query": "missing.sql"})
+    with pytest.raises(report.ReportError, match="empty"):
+        report.run(ROOT, {**CONFIG, "sql": "-- nothing but a comment\n;"})
