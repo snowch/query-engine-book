@@ -94,10 +94,17 @@ def test_no_code_is_pasted_into_a_page(page):
         )
 
 
+#: The one page that says how to run the book on your own machine. Only it gives shell commands.
+OWN_MACHINE = ROOT / "appendices" / "running_the_lab.md"
+
+
 @pytest.mark.parametrize("page", BOOK_PAGES, ids=lambda p: str(p.relative_to(ROOT)))
 def test_the_reader_needs_nothing_but_a_browser(page):
     """Everything a page asks the reader to run, runs in the page: a panel, or a workbench. No page
-    gives a shell command or sends the reader to a desk."""
+    gives a shell command or sends the reader to a desk, except the one appendix section on
+    running the book on your own machine, which keeps that out of the chapters."""
+    if page == OWN_MACHINE:
+        pytest.skip("the appendix on running the book on your own machine")
     text = page.read_text()
     assert not [lang for lang, _ in fences(text) if lang in ("bash", "sh", "shell", "console")], (
         "a shell command in a page: run it in the page instead (a panel or the workbench)"

@@ -111,7 +111,8 @@ Quote Python from `python/` and SQL from `queries/`:
 Anchor on text that survives `ruff format`: a signature's opening, a docstring's first words.
 Never `:lines:`. The MyST parse fails if an anchor stops matching. Generated output, such as a
 plan, is an `{include}` of a fragment. A page gives no shell commands: the reader needs only a
-browser.
+browser. The one exception is the *On your own machine* section of *Running the lab*; keep
+anything about running the book from a clone there.
 
 ### Never use a term before its chapter
 

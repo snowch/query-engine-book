@@ -13,7 +13,8 @@ time, in Python on Apache Arrow. By the end you can look at a design choice (a s
 partitioning scheme, a join, a memory limit) and predict how it changes the bytes read, the
 rows moved, the memory used and the data shuffled, in any engine.
 
-You need a browser and nothing else: everything the book asks you to run, runs in the page. You
+You need a browser and nothing else: everything the book asks you to run, runs in the page. If
+you would rather run it on your own machine, [Running the lab](#running-the-lab) says how. You
 should be able to read Python. The book is self-contained: each idea about hardware or file
 formats is introduced where it is first needed, with a deliberately small model. Two companion
 books go deeper and are optional: *Parquet, byte by byte*, whose Parquet reader is this engine's

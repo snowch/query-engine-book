@@ -88,8 +88,9 @@ bring the branch level with `main`.
    COUNTERS.md: the same on every machine and in the browser. The book never prints a time.
 2. **The reader needs only a browser.** Everything a page asks the reader to run, runs in the
    page: a panel, or a chapter's problems workbench. No page gives a shell command or sends the
-   reader to a desk; `tests/test_book.py` fails one that does. The desk is where the book is
-   built and tested, not where it is read.
+   reader to a desk, except one section of the *Running the lab* appendix, *On your own
+   machine*, which says how to run the engine and the graders from a clone for a reader who
+   wants to; `tests/test_book.py` fails any other page that does.
 3. **No number typed into prose.** Counts come from `python -m query_lab figures` fragments
    `{include}`d into the page. `scripts/verify-numbers.py` fails the build otherwise. A definition
    that must be typed takes `% number-ok: <reason>` before its paragraph.
