@@ -305,6 +305,16 @@ th { font-size: 11.5px; font-weight: 600; letter-spacing: .06em; text-transform:
 td.align-right, th.align-right { text-align: right; }
 td.align-center, th.align-center { text-align: center; }
 td code { font-size: 12.5px; }
+/* Code in a table (a plan's expression, a column list) may be one long token, so on a phone it
+   breaks anywhere rather than pushing the table wider than the screen. */
+@media (max-width: 40rem) {
+  td code { overflow-wrap: anywhere; }
+  /* Narrower cells and smaller type let a four-column table of counts fit a phone without
+     scrolling. */
+  table { font-size: 13.5px; }
+  th, td { padding-left: .4rem; padding-right: .4rem; }
+  th { font-size: 11px; letter-spacing: .02em; }
+}
 /* On a phone, a wide table becomes one card per row, each value under its column's heading. */
 @media (max-width: 40rem) {
   table.cards, table.cards tbody, table.cards tr, table.cards td { display: block; width: 100%; }

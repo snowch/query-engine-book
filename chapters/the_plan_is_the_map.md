@@ -27,16 +27,16 @@ quotes it, so the SQL you read is the SQL every figure below ran.
 ```
 
 Ask DuckDB how it will run the query, without running it, by putting `EXPLAIN` in front. What
-comes back is the **physical plan**: the steps the engine will take, each drawn as a box. Each
-box is an **operator**, one job with one input and one output. Rows flow from the bottom box to
-the top one.
+comes back is the **physical plan**: the steps the engine will take, one to a row of the table
+below. Each step is an **operator**, one job with one input and one output. Rows flow from the
+bottom operator to the top one.
 
 ```{include} _generated/returned-unit-price-plan.md
 ```
 
 Read the plan from the bottom, as the rows travel, and three things stand out.
 
-1. **The scan reads fewer columns than the file has.** The `Projections` list in the scan box
+1. **The scan reads fewer columns than the file has.** The `Projections` list in the scan's row
    names the columns it passes up. `note` and `order_date` are not there: nothing above needs
    them, so the scan never reads them.
 2. **One predicate moved into the scan.** `status = 'returned'` compares a column with a
@@ -44,7 +44,7 @@ Read the plan from the bottom, as the rows travel, and three things stand out.
    reads it and passes up only the rows that match. `status` is read for that test and then
    dropped. The unit price predicate divides one column by another, and it gets an operator of
    its own, `FILTER`.
-3. **Every box ends with a guess.** The number after `~` is the operator's **cardinality
+3. **Every operator comes with a guess.** The second column is the operator's **cardinality
    estimate**: how many rows the planner expects the operator to produce. It was made before a
    single row was read.
 
@@ -101,7 +101,7 @@ Compare the three bars on each operator.
   keeps. The chapters on planning are about where better estimates come from, and what a bad one
   costs when it chooses between plans.
 - **Rows in, for each operator above the scan, is the output of the operator below.** Nothing is
-  lost between boxes. That makes the profile a ledger: each operator's reduction is its rows out
+  lost between operators. That makes the profile a ledger: each operator's reduction is its rows out
   against its rows in.
 - **Rows in, for the scan, is every row in the file.** That is DuckDB's report of the rows in the
   files it opened. [ch03](#projection-and-filter-pushdown) shows that it stays the same when the
