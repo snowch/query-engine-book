@@ -1,0 +1,616 @@
+{
+  "name": "orders-sorted",
+  "why": "Orders written in date order. Each row group holds a narrow run of dates, so a filter on the date can skip most row groups, and neighbouring rows are neighbours in memory.",
+  "writer": "parquet-cpp-arrow version 18.1.0",
+  "file_bytes": 497857,
+  "rows": 20000,
+  "row_groups": [
+    {
+      "rows": 2000,
+      "columns": {
+        "order_id": {
+          "compressed_bytes": 10855,
+          "uncompressed_bytes": 18837,
+          "min": 1,
+          "max": 2000,
+          "null_count": 0
+        },
+        "order_date": {
+          "compressed_bytes": 294,
+          "uncompressed_bytes": 287,
+          "min": "2024-01-01",
+          "max": "2024-02-06",
+          "null_count": 0
+        },
+        "customer_id": {
+          "compressed_bytes": 4038,
+          "uncompressed_bytes": 4028,
+          "min": 1,
+          "max": 997,
+          "null_count": 0
+        },
+        "status": {
+          "compressed_bytes": 867,
+          "uncompressed_bytes": 861,
+          "min": "cancelled",
+          "max": "shipped",
+          "null_count": 0
+        },
+        "quantity": {
+          "compressed_bytes": 1114,
+          "uncompressed_bytes": 1107,
+          "min": 1,
+          "max": 10,
+          "null_count": 0
+        },
+        "amount": {
+          "compressed_bytes": 12725,
+          "uncompressed_bytes": 18750,
+          "min": 3.3,
+          "max": 2482.37,
+          "null_count": 0
+        },
+        "note": {
+          "compressed_bytes": 18678,
+          "uncompressed_bytes": 45909,
+          "min": "as as",
+          "max": "wrap wrap time",
+          "null_count": 320
+        }
+      }
+    },
+    {
+      "rows": 2000,
+      "columns": {
+        "order_id": {
+          "compressed_bytes": 10859,
+          "uncompressed_bytes": 18837,
+          "min": 2001,
+          "max": 4000,
+          "null_count": 0
+        },
+        "order_date": {
+          "compressed_bytes": 300,
+          "uncompressed_bytes": 293,
+          "min": "2024-02-06",
+          "max": "2024-03-14",
+          "null_count": 0
+        },
+        "customer_id": {
+          "compressed_bytes": 3986,
+          "uncompressed_bytes": 3976,
+          "min": 1,
+          "max": 1000,
+          "null_count": 0
+        },
+        "status": {
+          "compressed_bytes": 867,
+          "uncompressed_bytes": 862,
+          "min": "cancelled",
+          "max": "shipped",
+          "null_count": 0
+        },
+        "quantity": {
+          "compressed_bytes": 1114,
+          "uncompressed_bytes": 1107,
+          "min": 1,
+          "max": 10,
+          "null_count": 0
+        },
+        "amount": {
+          "compressed_bytes": 12694,
+          "uncompressed_bytes": 18742,
+          "min": 2.19,
+          "max": 2485.14,
+          "null_count": 0
+        },
+        "note": {
+          "compressed_bytes": 19105,
+          "uncompressed_bytes": 46645,
+          "min": "as as as fragile urgent",
+          "max": "wrap wrap same time",
+          "null_count": 324
+        }
+      }
+    },
+    {
+      "rows": 2000,
+      "columns": {
+        "order_id": {
+          "compressed_bytes": 10857,
+          "uncompressed_bytes": 18837,
+          "min": 4001,
+          "max": 6000,
+          "null_count": 0
+        },
+        "order_date": {
+          "compressed_bytes": 294,
+          "uncompressed_bytes": 287,
+          "min": "2024-03-14",
+          "max": "2024-04-19",
+          "null_count": 0
+        },
+        "customer_id": {
+          "compressed_bytes": 4078,
+          "uncompressed_bytes": 4068,
+          "min": 1,
+          "max": 996,
+          "null_count": 0
+        },
+        "status": {
+          "compressed_bytes": 867,
+          "uncompressed_bytes": 861,
+          "min": "cancelled",
+          "max": "shipped",
+          "null_count": 0
+        },
+        "quantity": {
+          "compressed_bytes": 1114,
+          "uncompressed_bytes": 1107,
+          "min": 1,
+          "max": 10,
+          "null_count": 0
+        },
+        "amount": {
+          "compressed_bytes": 12673,
+          "uncompressed_bytes": 18702,
+          "min": 3.06,
+          "max": 2496.85,
+          "null_count": 0
+        },
+        "note": {
+          "compressed_bytes": 19397,
+          "uncompressed_bytes": 47757,
+          "min": "as as",
+          "max": "wrap wrap wrap",
+          "null_count": 281
+        }
+      }
+    },
+    {
+      "rows": 2000,
+      "columns": {
+        "order_id": {
+          "compressed_bytes": 10857,
+          "uncompressed_bytes": 18837,
+          "min": 6001,
+          "max": 8000,
+          "null_count": 0
+        },
+        "order_date": {
+          "compressed_bytes": 300,
+          "uncompressed_bytes": 293,
+          "min": "2024-04-19",
+          "max": "2024-05-26",
+          "null_count": 0
+        },
+        "customer_id": {
+          "compressed_bytes": 4016,
+          "uncompressed_bytes": 4004,
+          "min": 1,
+          "max": 999,
+          "null_count": 0
+        },
+        "status": {
+          "compressed_bytes": 866,
+          "uncompressed_bytes": 861,
+          "min": "cancelled",
+          "max": "shipped",
+          "null_count": 0
+        },
+        "quantity": {
+          "compressed_bytes": 1114,
+          "uncompressed_bytes": 1107,
+          "min": 1,
+          "max": 10,
+          "null_count": 0
+        },
+        "amount": {
+          "compressed_bytes": 12695,
+          "uncompressed_bytes": 18734,
+          "min": 2.76,
+          "max": 2496.75,
+          "null_count": 0
+        },
+        "note": {
+          "compressed_bytes": 19228,
+          "uncompressed_bytes": 47134,
+          "min": "as as reorder with invoice",
+          "max": "wrap wrap with leave",
+          "null_count": 307
+        }
+      }
+    },
+    {
+      "rows": 2000,
+      "columns": {
+        "order_id": {
+          "compressed_bytes": 10859,
+          "uncompressed_bytes": 18837,
+          "min": 8001,
+          "max": 10000,
+          "null_count": 0
+        },
+        "order_date": {
+          "compressed_bytes": 294,
+          "uncompressed_bytes": 287,
+          "min": "2024-05-26",
+          "max": "2024-07-01",
+          "null_count": 0
+        },
+        "customer_id": {
+          "compressed_bytes": 4066,
+          "uncompressed_bytes": 4056,
+          "min": 1,
+          "max": 997,
+          "null_count": 0
+        },
+        "status": {
+          "compressed_bytes": 864,
+          "uncompressed_bytes": 860,
+          "min": "cancelled",
+          "max": "shipped",
+          "null_count": 0
+        },
+        "quantity": {
+          "compressed_bytes": 1114,
+          "uncompressed_bytes": 1107,
+          "min": 1,
+          "max": 10,
+          "null_count": 0
+        },
+        "amount": {
+          "compressed_bytes": 12700,
+          "uncompressed_bytes": 18758,
+          "min": 4.3,
+          "max": 2494.48,
+          "null_count": 0
+        },
+        "note": {
+          "compressed_bytes": 19286,
+          "uncompressed_bytes": 47265,
+          "min": "as as leave",
+          "max": "wrap wrap with with delivery",
+          "null_count": 299
+        }
+      }
+    },
+    {
+      "rows": 2000,
+      "columns": {
+        "order_id": {
+          "compressed_bytes": 10857,
+          "uncompressed_bytes": 18837,
+          "min": 10001,
+          "max": 12000,
+          "null_count": 0
+        },
+        "order_date": {
+          "compressed_bytes": 294,
+          "uncompressed_bytes": 287,
+          "min": "2024-07-02",
+          "max": "2024-08-07",
+          "null_count": 0
+        },
+        "customer_id": {
+          "compressed_bytes": 3962,
+          "uncompressed_bytes": 3952,
+          "min": 1,
+          "max": 994,
+          "null_count": 0
+        },
+        "status": {
+          "compressed_bytes": 862,
+          "uncompressed_bytes": 858,
+          "min": "cancelled",
+          "max": "shipped",
+          "null_count": 0
+        },
+        "quantity": {
+          "compressed_bytes": 1114,
+          "uncompressed_bytes": 1107,
+          "min": 1,
+          "max": 10,
+          "null_count": 0
+        },
+        "amount": {
+          "compressed_bytes": 12648,
+          "uncompressed_bytes": 18686,
+          "min": 3.26,
+          "max": 2492.95,
+          "null_count": 0
+        },
+        "note": {
+          "compressed_bytes": 18959,
+          "uncompressed_bytes": 46432,
+          "min": "as as as",
+          "max": "wrap wrap wrap",
+          "null_count": 300
+        }
+      }
+    },
+    {
+      "rows": 2000,
+      "columns": {
+        "order_id": {
+          "compressed_bytes": 10857,
+          "uncompressed_bytes": 18837,
+          "min": 12001,
+          "max": 14000,
+          "null_count": 0
+        },
+        "order_date": {
+          "compressed_bytes": 300,
+          "uncompressed_bytes": 293,
+          "min": "2024-08-07",
+          "max": "2024-09-13",
+          "null_count": 0
+        },
+        "customer_id": {
+          "compressed_bytes": 3950,
+          "uncompressed_bytes": 3940,
+          "min": 1,
+          "max": 987,
+          "null_count": 0
+        },
+        "status": {
+          "compressed_bytes": 867,
+          "uncompressed_bytes": 861,
+          "min": "cancelled",
+          "max": "shipped",
+          "null_count": 0
+        },
+        "quantity": {
+          "compressed_bytes": 1114,
+          "uncompressed_bytes": 1107,
+          "min": 1,
+          "max": 10,
+          "null_count": 0
+        },
+        "amount": {
+          "compressed_bytes": 12671,
+          "uncompressed_bytes": 18702,
+          "min": 2.31,
+          "max": 2485.78,
+          "null_count": 0
+        },
+        "note": {
+          "compressed_bytes": 19198,
+          "uncompressed_bytes": 47241,
+          "min": "as as",
+          "max": "wrap wrap invoice rear",
+          "null_count": 294
+        }
+      }
+    },
+    {
+      "rows": 2000,
+      "columns": {
+        "order_id": {
+          "compressed_bytes": 10857,
+          "uncompressed_bytes": 18837,
+          "min": 14001,
+          "max": 16000,
+          "null_count": 0
+        },
+        "order_date": {
+          "compressed_bytes": 294,
+          "uncompressed_bytes": 287,
+          "min": "2024-09-13",
+          "max": "2024-10-19",
+          "null_count": 0
+        },
+        "customer_id": {
+          "compressed_bytes": 4062,
+          "uncompressed_bytes": 4052,
+          "min": 1,
+          "max": 993,
+          "null_count": 0
+        },
+        "status": {
+          "compressed_bytes": 862,
+          "uncompressed_bytes": 865,
+          "min": "cancelled",
+          "max": "shipped",
+          "null_count": 0
+        },
+        "quantity": {
+          "compressed_bytes": 1114,
+          "uncompressed_bytes": 1107,
+          "min": 1,
+          "max": 10,
+          "null_count": 0
+        },
+        "amount": {
+          "compressed_bytes": 12711,
+          "uncompressed_bytes": 18766,
+          "min": 2.04,
+          "max": 2487.82,
+          "null_count": 0
+        },
+        "note": {
+          "compressed_bytes": 19324,
+          "uncompressed_bytes": 47209,
+          "min": "as as",
+          "max": "wrap wrap invoice time fragile",
+          "null_count": 299
+        }
+      }
+    },
+    {
+      "rows": 2000,
+      "columns": {
+        "order_id": {
+          "compressed_bytes": 10857,
+          "uncompressed_bytes": 18837,
+          "min": 16001,
+          "max": 18000,
+          "null_count": 0
+        },
+        "order_date": {
+          "compressed_bytes": 300,
+          "uncompressed_bytes": 293,
+          "min": "2024-10-19",
+          "max": "2024-11-25",
+          "null_count": 0
+        },
+        "customer_id": {
+          "compressed_bytes": 4046,
+          "uncompressed_bytes": 4036,
+          "min": 1,
+          "max": 997,
+          "null_count": 0
+        },
+        "status": {
+          "compressed_bytes": 867,
+          "uncompressed_bytes": 861,
+          "min": "cancelled",
+          "max": "shipped",
+          "null_count": 0
+        },
+        "quantity": {
+          "compressed_bytes": 1114,
+          "uncompressed_bytes": 1107,
+          "min": 1,
+          "max": 10,
+          "null_count": 0
+        },
+        "amount": {
+          "compressed_bytes": 12668,
+          "uncompressed_bytes": 18710,
+          "min": 4.72,
+          "max": 2469.75,
+          "null_count": 0
+        },
+        "note": {
+          "compressed_bytes": 19167,
+          "uncompressed_bytes": 46891,
+          "min": "as as",
+          "max": "wrap wrap reorder",
+          "null_count": 294
+        }
+      }
+    },
+    {
+      "rows": 2000,
+      "columns": {
+        "order_id": {
+          "compressed_bytes": 10862,
+          "uncompressed_bytes": 18837,
+          "min": 18001,
+          "max": 20000,
+          "null_count": 0
+        },
+        "order_date": {
+          "compressed_bytes": 294,
+          "uncompressed_bytes": 287,
+          "min": "2024-11-25",
+          "max": "2024-12-31",
+          "null_count": 0
+        },
+        "customer_id": {
+          "compressed_bytes": 4066,
+          "uncompressed_bytes": 4056,
+          "min": 1,
+          "max": 1000,
+          "null_count": 0
+        },
+        "status": {
+          "compressed_bytes": 868,
+          "uncompressed_bytes": 864,
+          "min": "cancelled",
+          "max": "shipped",
+          "null_count": 0
+        },
+        "quantity": {
+          "compressed_bytes": 1114,
+          "uncompressed_bytes": 1107,
+          "min": 1,
+          "max": 10,
+          "null_count": 0
+        },
+        "amount": {
+          "compressed_bytes": 12677,
+          "uncompressed_bytes": 18758,
+          "min": 2.63,
+          "max": 2490.45,
+          "null_count": 0
+        },
+        "note": {
+          "compressed_bytes": 19564,
+          "uncompressed_bytes": 47908,
+          "min": "as as",
+          "max": "wrap wrap invoice",
+          "null_count": 263
+        }
+      }
+    }
+  ],
+  "schema": [
+    {
+      "name": "order_id",
+      "type": "int64",
+      "nullable": false
+    },
+    {
+      "name": "order_date",
+      "type": "date32[day]",
+      "nullable": false
+    },
+    {
+      "name": "customer_id",
+      "type": "int32",
+      "nullable": false
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "quantity",
+      "type": "int32",
+      "nullable": false
+    },
+    {
+      "name": "amount",
+      "type": "double",
+      "nullable": false
+    },
+    {
+      "name": "note",
+      "type": "string",
+      "nullable": true
+    }
+  ],
+  "distinct": {
+    "order_id": 20000,
+    "order_date": 366,
+    "customer_id": 948,
+    "status": 5,
+    "quantity": 10,
+    "amount": 18712,
+    "note": 13305
+  },
+  "nulls": {
+    "order_id": 0,
+    "order_date": 0,
+    "customer_id": 0,
+    "status": 0,
+    "quantity": 0,
+    "amount": 0,
+    "note": 2981
+  },
+  "properties": {
+    "rows": 20000,
+    "row_group_size": 2000,
+    "customers": 1000,
+    "customer_skew": 1.1,
+    "sorted_by": [
+      "order_date",
+      "order_id"
+    ],
+    "top_customer_orders": 3583,
+    "customers_with_orders": 948
+  }
+}

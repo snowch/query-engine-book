@@ -1,0 +1,6 @@
+The text of this book (index.md, parts/, chapters/, appendices/) is licensed under the Creative
+Commons Attribution-NonCommercial 4.0 International licence (CC BY-NC 4.0):
+https://creativecommons.org/licenses/by-nc/4.0/
+
+The code (python/, exercises/, queries/, tools/, scripts/, tests/, web/, spikes/,
+fixtures/generate.py) is licensed under the Apache License, Version 2.0. See LICENSE-CODE.

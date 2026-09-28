@@ -1,0 +1,6 @@
+# Pinned to what Pyodide 0.27.7 ships, so the desk and the browser run the same engine and the
+# same kernels. Upgrading either is a deliberate commit that regenerates every fixture and figure.
+# See spikes/duckdb-pyodide/README.md for why these versions.
+duckdb==1.1.2
+pyarrow==18.1.0
+PyYAML>=6

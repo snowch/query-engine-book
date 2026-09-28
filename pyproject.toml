@@ -1,0 +1,21 @@
+# Python is the whole book: the engine (python/query_lab), its problems (exercises/), the fixture
+# generator, and the tooling (the site renderer and the checks). The scan layer is the Parquet
+# book's reader, python/parquet_lab in the external/parquet-book submodule.
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = ["_build", "external", "*.md", "node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+# Line length is the formatter's job. What it leaves long is a string: prose, or JavaScript.
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "python/tests"]
+pythonpath = [".", "python", "external/parquet-book/python"]
+
+[tool.ruff.lint.isort]
+# The engine is this repository's own package; the Parquet book's reader (parquet_lab) is a
+# dependency, and sorts with the others.
+known-first-party = ["query_lab", "tools"]

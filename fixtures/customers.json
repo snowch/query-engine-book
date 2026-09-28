@@ -1,0 +1,96 @@
+{
+  "name": "customers",
+  "why": "The dimension table orders.customer_id points into: one row per customer, small enough to be the build side of any join.",
+  "writer": "parquet-cpp-arrow version 18.1.0",
+  "file_bytes": 18117,
+  "rows": 1000,
+  "row_groups": [
+    {
+      "rows": 1000,
+      "columns": {
+        "customer_id": {
+          "compressed_bytes": 5328,
+          "uncompressed_bytes": 5318,
+          "min": 1,
+          "max": 1000,
+          "null_count": 0
+        },
+        "name": {
+          "compressed_bytes": 6353,
+          "uncompressed_bytes": 18325,
+          "min": "customer 0001",
+          "max": "customer 1000",
+          "null_count": 0
+        },
+        "country": {
+          "compressed_bytes": 620,
+          "uncompressed_bytes": 623,
+          "min": "BR",
+          "max": "US",
+          "null_count": 0
+        },
+        "segment": {
+          "compressed_bytes": 386,
+          "uncompressed_bytes": 379,
+          "min": "consumer",
+          "max": "small business",
+          "null_count": 0
+        },
+        "signup_date": {
+          "compressed_bytes": 4340,
+          "uncompressed_bytes": 4330,
+          "min": "2019-01-02",
+          "max": "2023-12-28",
+          "null_count": 0
+        }
+      }
+    }
+  ],
+  "schema": [
+    {
+      "name": "customer_id",
+      "type": "int32",
+      "nullable": false
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "country",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "segment",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "signup_date",
+      "type": "date32[day]",
+      "nullable": false
+    }
+  ],
+  "distinct": {
+    "customer_id": 1000,
+    "name": 1000,
+    "country": 12,
+    "segment": 4,
+    "signup_date": 753
+  },
+  "nulls": {
+    "customer_id": 0,
+    "name": 0,
+    "country": 0,
+    "segment": 0,
+    "signup_date": 0
+  },
+  "properties": {
+    "rows": 1000,
+    "sorted_by": [
+      "customer_id"
+    ]
+  }
+}

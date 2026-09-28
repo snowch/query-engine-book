@@ -1,0 +1,3 @@
+[submodule "external/parquet-book"]
+	path = external/parquet-book
+	url = https://github.com/snowch/parquet-book

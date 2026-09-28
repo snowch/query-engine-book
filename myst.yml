@@ -1,0 +1,57 @@
+# The book's table of contents, for MyST to parse and cross-check.
+#
+# MyST parses the pages and resolves every cross-reference (`myst build --strict`, no --html).
+# It does not render the site: scripts/build-site.py does, from the parse. The order here must
+# match tools/outline.py, and tests/test_book.py fails if the two disagree.
+version: 1
+project:
+  id: query-engine-book
+  title: Queries, operator by operator
+  subtitle: Build a query engine to learn what a query costs
+  description: >-
+    An interactive book about what queries cost. The reader builds a small query engine in
+    Python on Apache Arrow, one operator at a time, and measures each operator against DuckDB.
+  keywords: [query engines, query performance, apache arrow, duckdb, parquet, python]
+  authors:
+    - name: Chris Snow
+      url: https://snowch.github.io
+  github: https://github.com/snowch/query-engine-book
+  license:
+    content: CC-BY-NC-4.0
+    code: Apache-2.0
+  settings:
+    # The book prints no inline maths, and dollar signs in prose should stay dollar signs.
+    parser:
+      dollarmath: false
+  exclude:
+    - README.md
+    - PLAN.md
+    - CLAUDE.md
+    - AUTHORING_GUIDE.md
+    - STYLE.md
+    - COUNTERS.md
+    - fixtures/README.md
+    - spikes/**
+    - external/**
+    - node_modules/**
+    - _build/**
+  toc:
+    - file: index.md
+    - file: parts/seeing_a_query.md
+      children:
+        - file: chapters/the_plan_is_the_map.md
+        - file: chapters/batches_in_memory.md
+    - file: parts/reading_less.md
+      children:
+        - file: chapters/projection_and_filter_pushdown.md
+    - title: Appendices
+      children:
+        - file: appendices/running_the_lab.md
+        - file: appendices/the_fixtures.md
+        - file: appendices/glossary.md
+
+# MyST needs a site block to write its parse (_build/site/content). It never renders with this
+# theme: scripts/build-site.py renders the site, and scripts/parse-book.sh tolerates the theme
+# download failing where there is no network.
+site:
+  template: book-theme

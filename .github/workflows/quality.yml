@@ -1,0 +1,39 @@
+name: Quality
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The Parquet book's reader is the engine's scan layer.
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Python dependencies
+        # DuckDB and pyarrow are pinned to what Pyodide ships: the fixtures and figures were
+        # computed with them, and the browser runs the same versions.
+        run: python -m pip install -r requirements.txt -r requirements-dev.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: MyST (pinned), Pyodide for the parity test, and Playwright
+        run: |
+          npm install -g "mystmd@$(node -p "require('./package.json').devDependencies.mystmd")"
+          npm install --no-audit --no-fund
+          npm install -g playwright@1.56.1
+          playwright install --with-deps chromium
+
+      - name: Everything, exactly as `make check` runs it
+        run: ./scripts/ci-check.sh

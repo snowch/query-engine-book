@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en-GB">
+<meta charset="utf-8">
+<title>DuckDB in Pyodide: spike</title>
+<p>Loading Pyodide 0.27.7, DuckDB and pyarrow…</p>
+<pre id="out"></pre>
+<script type="module">
+  // The probe under Pyodide in a real browser. browser.mjs serves the repository and lists the
+  // files at files.json; nothing here is specific to the probe but its path.
+  const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/";
+  const out = document.getElementById("out");
+  try {
+    const { loadPyodide } = await import(`${PYODIDE}pyodide.mjs`);
+    const pyodide = await loadPyodide({ indexURL: PYODIDE });
+    await pyodide.loadPackage(["duckdb", "pyarrow"]);
+    const { files, run } = await (await fetch("/files.json")).json();
+    for (const file of files) {
+      const bytes = new Uint8Array(await (await fetch(`/${file}`)).arrayBuffer());
+      const target = `/book/${file}`;
+      pyodide.FS.mkdirTree(target.slice(0, target.lastIndexOf("/")));
+      pyodide.FS.writeFile(target, bytes);
+    }
+    const lines = [];
+    pyodide.setStdout({ batched: (s) => lines.push(s) });
+    pyodide.runPython(run);
+    out.textContent = lines.join("\n");
+    out.dataset.done = "ok";
+  } catch (error) {
+    out.textContent = String(error.stack || error);
+    out.dataset.done = "error";
+  }
+</script>
