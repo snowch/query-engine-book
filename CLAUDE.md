@@ -74,6 +74,13 @@ check, the number check, the MyST parse, the site render, the link check, pytest
 tests, the engine's, and desk-browser parity under Node), and, in headless Chromium, the probe,
 every panel, and the site's chrome served under a base path on a shared origin.
 
+## How changes land
+
+Work on a branch, open a pull request into `main`, and merge it as soon as CI (the Quality
+workflow) is green on its head: the owner does not review each one. Every merge to `main`
+deploys the site to GitHub Pages. Nothing is pushed to `main` directly. Before starting new work,
+bring the branch level with `main`.
+
 ## The invariants
 
 1. **Counters, not time.** Every number the book prints about a run is a counter from
