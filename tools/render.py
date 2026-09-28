@@ -13,8 +13,9 @@ Three node shapes are this book's own:
 
 - A fenced block in the language ``lab`` is an experiment: a panel. It becomes a mount point
   that ``web/lab/lab.js`` draws, carrying the panel's JSON as the build computed it
-  (``python -m query_lab figures``), so it draws with nothing to download. The renderer checks
-  that the experiment, the query and the fixtures it names exist, and that the JSON is there.
+  (``python -m query_lab figures``), so it draws with nothing to download. Without JavaScript it
+  says it needs JavaScript. The renderer checks that the experiment, the query and the fixtures
+  it names exist, and that the JSON is there.
 - A fenced block in the language ``problems`` is a chapter's workbench, where a reader edits the
   chapter's problems and runs their tests in the page. The renderer checks that the chapter it
   names has problems.
@@ -121,49 +122,13 @@ def _script_json(data: dict) -> str:
     return json.dumps(data, separators=(",", ":")).replace("</", "<\\/")
 
 
-def _plan_fallback(data: dict) -> str:
-    """The plan panel as a table: every operator, top down, with its rows in, the planner's
-    estimate and the measured rows out. What prints, and what a reader without JavaScript sees."""
-    rows = []
-
-    def walk(node: dict) -> None:
-        estimate = node["estimated_rows_out"]
-        cells = [
-            html.escape(node["operator"]),
-            f"{node['rows_in']:,}",
-            "none" if estimate is None else f"{estimate:,}",
-            f"{node['rows_out']:,}",
-        ]
-        rows.append("<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>")
-        for child in node["children"]:
-            walk(child)
-
-    walk(data["root"])
-    head = "".join(
-        f"<th>{h}</th>" for h in ("Operator", "Rows in", "Rows out, estimated", "Rows out, measured")
-    )
-    return (
-        f'<div class="table-wrap"><table><thead><tr>{head}</tr></thead><tbody>{"".join(rows)}</tbody></table></div>'
-        f'<p class="conditions">Computed by {html.escape(data["engine"])} with one thread on '
-        f"<code>queries/{html.escape(data['query'])}</code>, at build time.</p>"
-    )
-
-
-#: For each experiment, its panel as static HTML: the fallback a reader without JavaScript sees,
-#: and what prints. Drawn from the same JSON the panel draws.
-FALLBACKS = {"plan": _plan_fallback}
-
-
 def _lab(node: dict) -> str:
     config = parse_lab_block(str(node.get("value", "")))
-    data = panel_data(config)
     attrs = " ".join(f'data-{html.escape(k)}="{html.escape(v)}"' for k, v in config.items())
     return (
         f'<div class="lab" {attrs}>'
-        f'<script type="application/json" class="lab-data">{_script_json(data)}</script>'
-        '<div class="lab-fallback"><p>This is an interactive panel, and it needs JavaScript. Here is '
-        "what it shows, as the book's build computed it. The same engine runs at a desk: see "
-        f'<a href="running-the-lab.html">Appendix A</a>.</p>{FALLBACKS[config["experiment"]](data)}</div></div>'
+        f'<script type="application/json" class="lab-data">{_script_json(panel_data(config))}</script>'
+        '<p class="lab-fallback">This panel needs JavaScript.</p></div>'
     )
 
 

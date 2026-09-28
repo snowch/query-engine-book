@@ -48,8 +48,7 @@ function mount(el) {
   status.className = "lab-status";
   status.setAttribute("aria-live", "polite");
   foot.append(run, status);
-  // The fallback (the run as a table, for readers without JavaScript) stays in the page for
-  // printing; lab.css hides it on screen once the panel is drawn.
+  el.querySelector(".lab-fallback")?.remove();
   el.append(body);
 
   // The editor, for a panel whose report ran a query: the query as the build ran it, or the

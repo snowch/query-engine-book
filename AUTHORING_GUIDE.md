@@ -53,8 +53,7 @@ fragment. Point at what to notice, with a numbered list when there are several t
 (the generator's recipe, a manifest's facts, a simulator's parameters), then the panel, which asks
 for the prediction before it reveals the measurement and then draws the prediction, the engine's
 estimate and the measurement side by side. Show one exhibit of a run, not a table and a panel of
-the same numbers: the panel's fallback is the table, for print and for readers without
-JavaScript. Give the desk command that prints the same numbers. The discussion after the panel
+the same numbers. Give the desk command that prints the same numbers. The discussion after the panel
 compares the three and says what each gap means.
 
 **Building it** quotes the operator the measurement needed, in the order it runs. Each quote

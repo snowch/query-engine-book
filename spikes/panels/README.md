@@ -60,9 +60,8 @@ it, each operator has three bars on one scale: the reader's prediction, the esti
 measurement. Predictions and the reveal are kept in the browser's storage; *Predict again* clears
 them. A reader can reveal without predicting.
 
-The table the chapter used to include is now the panel's fallback: the renderer draws it from the
-same JSON (`tools/render.py`, `FALLBACKS`). A reader without JavaScript sees it in place of the
-panel, and it is what prints.
+Without JavaScript the panel says it needs JavaScript, and nothing else. A static copy of the
+numbers would be a second exhibit to keep in step with the first, for few readers.
 
 ## Editing the query
 
@@ -87,9 +86,9 @@ and the panel draws *none*, never a zero the planner did not claim.
 |---|---|
 | `figures --check` | Every panel's committed JSON is what `query_lab.report` computes now. |
 | `python/tests/test_report.py` | The plan report matches DuckDB's profile; it holds no timings; every panel in `figures.PANELS` is generated; an edited query runs and says so. |
-| `tests/test_render.py` | A `lab` block carries its JSON and a fallback table of the same numbers; a missing query or panel fails the build. |
-| `tests/test_book.py` | Every experiment has a mount, a report function and a fallback. |
-| `tests/browser/panels.mjs` | In Chromium: the panel asks before it answers and hides every measurement; typed predictions and the reveal draw the build's numbers beside the predictions and survive a reload; *Run it in your browser* gives the build's answer; an edited query draws the desk's answer for it; a broken one reports DuckDB's error; reset and *Predict again* work; without JavaScript and in print, the fallback table holds the same numbers. |
+| `tests/test_render.py` | A `lab` block carries its JSON; a missing query or panel fails the build. |
+| `tests/test_book.py` | Every experiment has a mount and a report function. |
+| `tests/browser/panels.mjs` | In Chromium: the panel asks before it answers and hides every measurement; typed predictions and the reveal draw the build's numbers beside the predictions and survive a reload; *Run it in your browser* gives the build's answer; an edited query draws the desk's answer for it; a broken one reports DuckDB's error; reset and *Predict again* work; without JavaScript, the panel says it needs it. |
 
 ## Findings
 

@@ -166,7 +166,7 @@ Decisions taken this week:
   DuckDB alone, and the page says whether the answers agree (`spikes/panels/README.md`).
 - **A run has one exhibit, and it asks before it answers.** The plan panel replaces the profile
   table: it takes the reader's prediction per operator, hides the measurement until they reveal
-  it, then draws prediction, estimate and measurement together. The table is the panel's fallback
-  for print and for readers without JavaScript. Queries in a panel can be edited and rerun.
+  it, then draws prediction, estimate and measurement together. Without JavaScript a panel says
+  it needs JavaScript; there is no static copy. Queries in a panel can be edited and rerun.
 - **DuckDB stays at 1.1.2.** DuckDB's own Pyodide wheels reach 1.2.0 at most; not worth leaving
   Pyodide's CDN for.

@@ -14,7 +14,7 @@
 // 4. An edited query draws what `python -m query_lab report … --sql` prints at a desk for the same
 //    text; a broken one reports DuckDB's error; reset restores the book's query. "Predict again"
 //    asks again.
-// 5. Without JavaScript, and in print, the panel is a table of the same numbers.
+// 5. Without JavaScript, the panel says it needs JavaScript.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
@@ -158,15 +158,6 @@ async function checkPanel(page, file, index) {
   return { label, want };
 }
 
-/** The fallback table, read back: operator, rows in, estimate, measured. */
-async function table(el) {
-  return el.$$eval(".lab-fallback tbody tr", (trs) => trs.map((tr) => {
-    const [operator, rowsIn, estimated, measured] = [...tr.cells].map((c) => c.textContent);
-    const n = (t) => (t === "none" ? "none" : Number(t.replace(/,/g, "")));
-    return { operator, estimated: n(estimated), rows_in: n(rowsIn), rows_out: n(measured), measured: n(measured) };
-  }));
-}
-
 const browser = await launch();
 let failures = 0;
 try {
@@ -177,20 +168,14 @@ try {
     const count = (await page.$$(".lab[data-experiment]")).length;
     for (let i = 0; i < count; i++) {
       try {
-        const { label, want } = await checkPanel(page, file, i);
-        // 5. Print, and no JavaScript.
-        await page.emulateMedia({ media: "print" });
-        const el = (await page.$$(".lab[data-experiment]"))[i];
-        const printed = await el.evaluate((e) => [getComputedStyle(e.querySelector(".lab-fallback")).display,
-          getComputedStyle(e.querySelector(".lab-body")).display]);
-        if (printed[0] === "none" || printed[1] !== "none") throw new Error(`${label}: print shows ${printed}`);
-        await page.emulateMedia({ media: "screen" });
+        const { label } = await checkPanel(page, file, i);
+        // 5. No JavaScript.
         const bare = await openPage(browser, directory(site), { javaScriptEnabled: false });
         await bare.goto(`${ORIGIN}/${file}`);
-        const plain = (await bare.$$(".lab[data-experiment]"))[i];
-        same(`${label}, without JavaScript`, await table(plain), want.map((o) => ({ ...o })));
+        const notice = await (await bare.$$(".lab[data-experiment]"))[i].evaluate((e) => e.textContent.trim());
         await bare.context().close();
-        console.log(`  ${label}: without JavaScript and in print, the same numbers as a table`);
+        if (!notice.endsWith("This panel needs JavaScript.")) throw new Error(`${label}, without JavaScript: ${notice}`);
+        console.log(`  ${label}: without JavaScript, says it needs it`);
       } catch (error) {
         failures += 1;
         console.error(`FAILED ${file} panel ${i}: ${error.message}`);
