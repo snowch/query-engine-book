@@ -41,8 +41,12 @@ from tools.outline import BY_ANCHOR, EXPERIMENTS
 
 ROOT = Path(__file__).resolve().parent.parent
 # The panels' file names are the engine's to decide (query_lab.report.panel_name): the figures
-# write the JSON and this renderer embeds it, so both must agree on where it lives.
-sys.path.insert(0, str(ROOT / "python"))
+# write the JSON and this renderer embeds it, so both must agree on where it lives. The engine
+# imports its scan layer, the Parquet book's reader, from the submodule, so both go on the path:
+# the site is built by workflows that set no PYTHONPATH.
+for path in (ROOT / "external" / "parquet-book" / "python", ROOT / "python"):
+    if str(path) not in sys.path:
+        sys.path.insert(0, str(path))
 from query_lab.report import panel_name  # noqa: E402
 
 REPO_URL = "https://github.com/snowch/query-engine-book/blob/main/"
