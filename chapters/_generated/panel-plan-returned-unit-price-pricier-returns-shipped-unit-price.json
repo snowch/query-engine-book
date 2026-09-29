@@ -1,0 +1,295 @@
+{
+ "experiment": "plan",
+ "query": "returned_unit_price.sql",
+ "edited": false,
+ "source": "-- ch01, The plan is the map: returned orders whose unit price was over 100.\n-- One predicate DuckDB can hand to the scan, one it cannot, and a projection.\nSELECT order_id, customer_id, amount / quantity AS unit_price\nFROM 'fixtures/orders-sorted.parquet'\nWHERE status = 'returned'\n  AND amount / quantity > 100;\n",
+ "engine": "DuckDB 1.1.2",
+ "result_rows": 729,
+ "preview": {
+  "columns": [
+   "order_id",
+   "customer_id",
+   "unit_price"
+  ],
+  "rows": [
+   [
+    30,
+    110,
+    226.1888888888889
+   ],
+   [
+    39,
+    13,
+    140.901
+   ],
+   [
+    61,
+    21,
+    108.01
+   ],
+   [
+    87,
+    9,
+    113.74000000000001
+   ],
+   [
+    97,
+    49,
+    207.98
+   ]
+  ]
+ },
+ "root": {
+  "operator": "PROJECTION",
+  "detail": [
+   [
+    "Projections",
+    "order_id",
+    "customer_id",
+    "unit_price"
+   ]
+  ],
+  "estimated_rows_out": 800,
+  "rows_in": 729,
+  "rows_out": 729,
+  "children": [
+   {
+    "operator": "FILTER",
+    "detail": [
+     [
+      "Expression",
+      "((amount / CAST(quantity AS DOUBLE)) > 100.0)"
+     ]
+    ],
+    "estimated_rows_out": 800,
+    "rows_in": 1183,
+    "rows_out": 729,
+    "children": [
+     {
+      "operator": "TABLE_SCAN",
+      "detail": [
+       [
+        "Function",
+        "PARQUET_SCAN"
+       ],
+       [
+        "Projections",
+        "amount",
+        "quantity",
+        "order_id",
+        "customer_id"
+       ],
+       [
+        "Filters",
+        "status='returned' AND status IS NOT NULL"
+       ]
+      ],
+      "estimated_rows_out": 4000,
+      "rows_in": 20000,
+      "rows_out": 1183,
+      "children": []
+     }
+    ]
+   }
+  ]
+ },
+ "label": "Returned orders whose unit price was over 100.",
+ "variants": [
+  {
+   "experiment": "plan",
+   "query": "pricier_returns.sql",
+   "edited": false,
+   "source": "-- ch01, a change to try: the price threshold raised to 200\nSELECT order_id, customer_id, amount / quantity AS unit_price\nFROM 'fixtures/orders-sorted.parquet'\nWHERE status = 'returned'\n  AND amount / quantity > 200;\n",
+   "engine": "DuckDB 1.1.2",
+   "result_rows": 249,
+   "preview": {
+    "columns": [
+     "order_id",
+     "customer_id",
+     "unit_price"
+    ],
+    "rows": [
+     [
+      30,
+      110,
+      226.1888888888889
+     ],
+     [
+      97,
+      49,
+      207.98
+     ],
+     [
+      197,
+      22,
+      241.81333333333336
+     ],
+     [
+      255,
+      132,
+      246.49
+     ],
+     [
+      510,
+      1,
+      221.395
+     ]
+    ]
+   },
+   "root": {
+    "operator": "PROJECTION",
+    "detail": [
+     [
+      "Projections",
+      "order_id",
+      "customer_id",
+      "unit_price"
+     ]
+    ],
+    "estimated_rows_out": 800,
+    "rows_in": 249,
+    "rows_out": 249,
+    "children": [
+     {
+      "operator": "FILTER",
+      "detail": [
+       [
+        "Expression",
+        "((amount / CAST(quantity AS DOUBLE)) > 200.0)"
+       ]
+      ],
+      "estimated_rows_out": 800,
+      "rows_in": 1183,
+      "rows_out": 249,
+      "children": [
+       {
+        "operator": "TABLE_SCAN",
+        "detail": [
+         [
+          "Function",
+          "PARQUET_SCAN"
+         ],
+         [
+          "Projections",
+          "amount",
+          "quantity",
+          "order_id",
+          "customer_id"
+         ],
+         [
+          "Filters",
+          "status='returned' AND status IS NOT NULL"
+         ]
+        ],
+        "estimated_rows_out": 4000,
+        "rows_in": 20000,
+        "rows_out": 1183,
+        "children": []
+       }
+      ]
+     }
+    ]
+   },
+   "label": "The price threshold raised to 200",
+   "variants": []
+  },
+  {
+   "experiment": "plan",
+   "query": "shipped_unit_price.sql",
+   "edited": false,
+   "source": "-- ch01, a change to try: shipped orders instead of returned ones\nSELECT order_id, customer_id, amount / quantity AS unit_price\nFROM 'fixtures/orders-sorted.parquet'\nWHERE status = 'shipped'\n  AND amount / quantity > 100;\n",
+   "engine": "DuckDB 1.1.2",
+   "result_rows": 8450,
+   "preview": {
+    "columns": [
+     "order_id",
+     "customer_id",
+     "unit_price"
+    ],
+    "rows": [
+     [
+      3,
+      1,
+      191.22
+     ],
+     [
+      5,
+      3,
+      180.73
+     ],
+     [
+      8,
+      1,
+      120.9725
+     ],
+     [
+      11,
+      812,
+      196.7525
+     ],
+     [
+      18,
+      467,
+      182.325
+     ]
+    ]
+   },
+   "root": {
+    "operator": "PROJECTION",
+    "detail": [
+     [
+      "Projections",
+      "order_id",
+      "customer_id",
+      "unit_price"
+     ]
+    ],
+    "estimated_rows_out": 800,
+    "rows_in": 8450,
+    "rows_out": 8450,
+    "children": [
+     {
+      "operator": "FILTER",
+      "detail": [
+       [
+        "Expression",
+        "((amount / CAST(quantity AS DOUBLE)) > 100.0)"
+       ]
+      ],
+      "estimated_rows_out": 800,
+      "rows_in": 13946,
+      "rows_out": 8450,
+      "children": [
+       {
+        "operator": "TABLE_SCAN",
+        "detail": [
+         [
+          "Function",
+          "PARQUET_SCAN"
+         ],
+         [
+          "Projections",
+          "amount",
+          "quantity",
+          "order_id",
+          "customer_id"
+         ],
+         [
+          "Filters",
+          "status='shipped' AND status IS NOT NULL"
+         ]
+        ],
+        "estimated_rows_out": 4000,
+        "rows_in": 20000,
+        "rows_out": 13946,
+        "children": []
+       }
+      ]
+     }
+    ]
+   },
+   "label": "Shipped orders instead of returned ones",
+   "variants": []
+  }
+ ]
+}

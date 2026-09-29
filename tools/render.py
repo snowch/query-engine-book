@@ -104,8 +104,10 @@ def parse_lab_block(value: str) -> dict:
     for fixture in filter(None, (config.get("fixture"), *config.get("fixtures", "").split(","))):
         if not (ROOT / "fixtures" / fixture.strip()).exists():
             raise LabBlockError(f"lab block names fixtures/{fixture.strip()}, which does not exist")
-    if "query" in config and not (ROOT / "queries" / config["query"]).is_file():
-        raise LabBlockError(f"lab block names queries/{config['query']}, which does not exist")
+    queries = [config.get("query", ""), *config.get("variants", "").split(",")]
+    for query in filter(None, (q.strip() for q in queries)):
+        if not (ROOT / "queries" / query).is_file():
+            raise LabBlockError(f"lab block names queries/{query}, which does not exist")
     return config
 
 

@@ -56,6 +56,11 @@ estimate and the measurement side by side. Show one exhibit of a run, not a tabl
 the same numbers. The discussion after the panel
 compares the three and says what each gap means.
 
+Ask for a prediction only once the chapter has taught what it needs: the reader should be able
+to reason to an answer, not guess one. Where the chapter cannot (ch01, before the reader has met
+a file's layout or a planner), the prediction is the engine's own estimate, and the panel lets the
+reader change the query, from variants the build computed, and watch which numbers move.
+
 **Building it** quotes the operator the measurement needed, in the order it runs. Each quote
 gets a paragraph before it saying what to look for. Say what the book's tests check, without a
 command: the reader runs nothing but the page.

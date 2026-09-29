@@ -4,17 +4,20 @@
 //
 // For each page with a panel, the check reads the panel back from the page and holds it to the
 // JSON the build embedded, which is query_lab.report's answer. Each experiment has a reader
-// (PANELS below) that says what its drawing shows, asking and revealed:
+// (PANELS below) that says what its drawing shows. A panel that asks for predictions:
 //
-// 1. It draws at once, asking: what the reader predicts from is shown, a box per prediction, and
-//    every measurement hidden (for a plan, down to the rows on the links).
-// 2. Predictions typed and revealed: every measurement is the JSON's, every prediction is what
-//    was typed, and both survive a reload.
+// 1. Draws at once, asking: what the reader predicts from is shown, a box per prediction, and
+//    every measurement hidden.
+// 2. With predictions typed and revealed, draws every measurement from the JSON beside every
+//    prediction as typed, and keeps both across a reload. "Predict again" asks again.
+//
+// A panel that does not ask (the plan, in ch01) draws every number at once, and each of its
+// variants' buttons redraws it from that variant's report. Then, for every panel:
+//
 // 3. "Run it in your browser" reruns the report under Pyodide; the page must say the answer is
 //    the build's and draw the same numbers.
 // 4. An edited query draws what `python -m query_lab report … --sql` prints at a desk for the same
-//    text; a broken one reports DuckDB's error; reset restores the book's query. "Predict again"
-//    asks again.
+//    text; a broken one reports DuckDB's error; reset restores the book's query.
 // 5. Without JavaScript, the panel says it needs JavaScript.
 
 import { execFileSync } from "node:child_process";
@@ -56,7 +59,6 @@ async function drawn(lab) {
   }));
 }
 
-const revealed = (want, guesses) => want.map((o, i) => ({ ...o, ...(guesses ? { predicted: guesses[i] } : {}) }));
 const none = (v) => (v === null ? "none" : v);
 const shown = (ops) => ops.map((o) => ({ ...o, estimated: none(o.estimated) }));
 
@@ -114,12 +116,12 @@ async function drawnFiles(lab) {
 const PANELS = {
   plan: {
     read: drawn,
-    asking: (data) => shown(expected(data.root)).map((o) => ({ operator: o.operator, estimated: o.estimated, measured: "hidden" })),
-    revealed: (data, guesses) => revealed(shown(expected(data.root)), guesses),
-    count: (data) => expected(data.root).length,
+    asks: false,
+    revealed: (data) => shown(expected(data.root)),
   },
   gather: {
     read: drawnGathers,
+    asks: true,
     asking: (data) => data.gathers.map((g) => ({ fixture: g.fixture, column_lines: data.column_lines, fetched: "hidden", dots: g.pattern.length })),
     revealed: (data, guesses) => data.gathers.map((g, i) => ({
       fixture: g.fixture, column_lines: data.column_lines, fetched: g.misses, dots: g.pattern.length,
@@ -129,6 +131,7 @@ const PANELS = {
   },
   pruning: {
     read: drawnFiles,
+    asks: true,
     // Asking, no row group is drawn: its range and its verdict are the answer.
     asking: (data) => data.files.map((f) => ({ fixture: f.fixture, row_groups: f.row_groups.length, read: "hidden", drawn: [] })),
     revealed: (data, guesses) => data.files.map((f, i) => ({
@@ -175,27 +178,45 @@ async function checkPanel(page, file, index) {
   if (!panel) throw new Error(`${label}: no reader for this experiment in tests/browser/panels.mjs`);
   const data = JSON.parse(await el.$eval("script.lab-data", (s) => s.textContent));
   const config = { experiment, query: await el.getAttribute("data-query") };
+  // The settings, as lab.js names the reader's storage for this panel: every one but the experiment.
+  const settings = await el.evaluate((e) => Object.keys(e.dataset).filter((k) => k !== "experiment" && e.getAttribute(`data-${k}`) !== null
+    && !["ready", "source", "agrees", "edited"].includes(k)).sort().map((k) => e.dataset[k]));
   const read = panel.read;
+  let guesses = [];
 
-  // 1. Asking.
-  same(`${label}, asking`, await read(el), panel.asking(data));
-  const links = await el.$$eval(".plan-link", (ls) => ls.map((l) => l.textContent));
-  if (links.some((t) => /\d/.test(t))) throw new Error(`${label}: a link gives away rows before the reveal: ${links}`);
-  if (await el.$(".plan-preview")) throw new Error(`${label}: the result shows before the reveal`);
+  if (panel.asks) {
+    // 1. Asking.
+    same(`${label}, asking`, await read(el), panel.asking(data));
+    if (await el.$(".plan-preview")) throw new Error(`${label}: the result shows before the reveal`);
 
-  // 2. Predict, reveal, reload.
-  const inputs = await el.$$(".plan-predict input");
-  const count = panel.count(data);
-  if (inputs.length !== count) throw new Error(`${label}: ${inputs.length} prediction boxes for ${count} predictions`);
-  const guesses = [...Array(count).keys()].map((i) => 1000 + 111 * i);
-  for (const [i, input] of inputs.entries()) await input.fill(String(guesses[i]));
-  await (await el.$(".plan-reveal")).click();
-  same(`${label}, revealed`, await read(el), panel.revealed(data, guesses));
-  await page.reload();
-  await ready(page);
-  el = await lab();
-  same(`${label}, after a reload`, await read(el), panel.revealed(data, guesses));
-  console.log(`  ${label}: asks first, reveals the build's numbers beside the predictions, and keeps both`);
+    // 2. Predict, reveal, reload.
+    const inputs = await el.$$(".plan-predict input");
+    const count = panel.count(data);
+    if (inputs.length !== count) throw new Error(`${label}: ${inputs.length} prediction boxes for ${count} predictions`);
+    guesses = [...Array(count).keys()].map((i) => 1000 + 111 * i);
+    for (const [i, input] of inputs.entries()) await input.fill(String(guesses[i]));
+    await (await el.$(".plan-reveal")).click();
+    same(`${label}, revealed`, await read(el), panel.revealed(data, guesses));
+    await page.reload();
+    await ready(page);
+    el = await lab();
+    same(`${label}, after a reload`, await read(el), panel.revealed(data, guesses));
+    console.log(`  ${label}: asks first, reveals the build's numbers beside the predictions, and keeps both`);
+  } else {
+    // 1 and 2. Every number at once, and each variant at a press.
+    same(`${label}, drawn`, await read(el), panel.revealed(data));
+    if (await el.$(".plan-predict input")) throw new Error(`${label}: asks for a prediction it should not`);
+    const buttons = await el.$$(".plan-variant");
+    const choices = [data, ...(data.variants || [])];
+    if (buttons.length !== (choices.length > 1 ? choices.length : 0)) {
+      throw new Error(`${label}: ${buttons.length} buttons for ${choices.length - 1} variants`);
+    }
+    for (let i = choices.length - 1; i >= 0 && buttons.length; i--) {
+      await (await el.$$(".plan-variant"))[i].click();
+      same(`${label}, showing ${choices[i].query}`, await read(el), panel.revealed(choices[i]));
+    }
+    console.log(`  ${label}: draws every number at once, and each variant at a press`);
+  }
 
   // 3. The same report, in the browser.
   await runAndWait(page, el);
@@ -220,7 +241,7 @@ async function checkPanel(page, file, index) {
     // Kept under a key named for this book (the site's directory), since other books share the origin.
     const kept = await page.evaluate((suffix) => Object.keys(localStorage)
       .filter((k) => k.startsWith("lab:") && k.endsWith(suffix)).map((k) => localStorage.getItem(k)),
-    `:${config.experiment}:${config.query}`);
+    `:${[config.experiment, ...settings].join(":")}`);
     if (kept.length !== 1 || kept[0] !== EDITED) {
       throw new Error(`${label}: the edit was not kept in the browser's storage`);
     }
@@ -233,14 +254,16 @@ async function checkPanel(page, file, index) {
       throw new Error(`${label}, broken query: ${broken}`);
     }
     await (await el.$(".lab-reset")).click();
-    same(`${label}, after reset`, await drawn(el), panel.revealed(data, guesses));
+    same(`${label}, after reset`, await read(el), panel.revealed(data, guesses));
     if (await editor.inputValue() !== data.source) throw new Error(`${label}: reset did not restore the query`);
     console.log(`  ${label}: a broken query reports DuckDB's error, and reset restores the book's query`);
   }
-  await (await el.$(".plan-again")).click();
-  same(`${label}, predicting again`, await read(el), panel.asking(data));
-  if ((await el.$$eval(".plan-predict input", (is) => is.map((i) => i.value))).some(Boolean)) {
-    throw new Error(`${label}: predicting again kept the old predictions`);
+  if (panel.asks) {
+    await (await el.$(".plan-again")).click();
+    same(`${label}, predicting again`, await read(el), panel.asking(data));
+    if ((await el.$$eval(".plan-predict input", (is) => is.map((i) => i.value))).some(Boolean)) {
+      throw new Error(`${label}: predicting again kept the old predictions`);
+    }
   }
   return { label };
 }

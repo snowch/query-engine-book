@@ -398,7 +398,11 @@ FIGURES = (
 #: Every panel a chapter embeds, as its ``lab`` block's settings. Each one's JSON is computed here
 #: at build time, embedded in the page by the renderer, and recomputed in the page on request.
 PANELS = (
-    {"experiment": "plan", "query": "returned_unit_price.sql"},
+    {
+        "experiment": "plan",
+        "query": "returned_unit_price.sql",
+        "variants": "pricier_returns.sql, shipped_unit_price.sql",
+    },
     {"experiment": "gather", "column": "amount"},
     {"experiment": "pruning", "query": "early_march.sql"},
 )
