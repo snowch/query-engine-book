@@ -382,3 +382,8 @@ td code { font-size: 12.5px; }
   main { padding-bottom: 4rem; }
   body { font-size: 17px; }
 }
+
+/* The foot of every page but the cover, which says the same itself: the author and the terms. */
+.colophon { margin: 1.5rem 0 0; padding-top: 1rem; border-top: 1px solid var(--edge);
+            font: 13px/1.5 var(--chrome); color: var(--muted); }
+.colophon a { color: inherit; }

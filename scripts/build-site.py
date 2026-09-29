@@ -582,6 +582,41 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>"""
 
 
+#: What each licence ``myst.yml`` may declare is called, and the file in the repository that
+#: holds its text. A licence the book declares and this table does not know stops the build,
+#: rather than publishing a page that names no terms.
+LICENCES = {
+    "CC-BY-NC-4.0": ("CC BY-NC 4.0", "LICENSE"),
+    "Apache-2.0": ("Apache 2.0", "LICENSE-CODE"),
+}
+
+#: How the book was written, said the same way on the cover and at the foot of every page.
+WRITTEN_WITH = "in collaboration with Claude (Anthropic)"
+
+
+def colophon() -> str:
+    """The foot of every page: who wrote the book, and the terms each part of it is under.
+
+    Read from ``myst.yml``, the one place the licences are declared, so a page cannot name other
+    terms than the repository's. Most readers arrive on a chapter rather than the cover, and a
+    figure or a listing copied from any page carries these terms with it.
+    """
+    import yaml  # noqa: PLC0415
+
+    config = yaml.safe_load((ROOT / "myst.yml").read_text())["project"]
+    repo = config["github"].rstrip("/")
+    author = config["authors"][0]["name"]
+
+    def terms(spdx: str) -> str:
+        name, file = LICENCES[spdx]
+        return f'<a href="{repo}/blob/main/{file}">{html.escape(name)}</a>'
+
+    return (
+        f'<footer class="colophon">By {html.escape(author)}, {WRITTEN_WITH} · Prose and figures: '
+        f"{terms(config['license']['content'])} · Code: {terms(config['license']['code'])}</footer>"
+    )
+
+
 def page_html(
     p: dict, body: str, nav: str, toc: str, prev: dict | None, nxt: dict | None, stamp: str, has_lab: bool
 ) -> str:
@@ -647,6 +682,7 @@ def page_html(
 {body}
 <nav class="prevnext" aria-label="Previous and next">{link(prev, "prev", "Previous")}{link(nxt, "next", "Next")}</nav>
 <p class="stamp">{html.escape(stamp)}</p>
+{"" if p["source"] == "cover.md" else colophon()}
 </article></main>
 {toc}
 </div>

@@ -85,3 +85,20 @@ def test_the_site_builds_with_no_pythonpath(tmp_path):
         check=True,
         capture_output=True,
     )
+
+
+def test_every_page_names_the_licences_the_book_declares():
+    """The foot of every page reads its terms from myst.yml, and the cover names the same."""
+    import yaml
+
+    declared = yaml.safe_load((ROOT / "myst.yml").read_text())["project"]["license"]
+    foot = site.colophon()
+    cover = (ROOT / "cover.md").read_text()
+    for spdx in declared.values():
+        assert spdx in site.LICENCES, f"myst.yml declares {spdx}, which the foot of a page cannot name"
+        name, file = site.LICENCES[spdx]
+        assert (ROOT / file).exists(), f"{file}, the text of {spdx}, is not in the repository"
+        assert name in foot, f"the foot of every page does not name {name}"
+        assert name in cover and file in cover, f"the cover does not name {name}, or its file"
+    # And how it was written, in the same words in both places.
+    assert site.WRITTEN_WITH in foot and site.WRITTEN_WITH in cover
