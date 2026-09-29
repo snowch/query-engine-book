@@ -53,6 +53,7 @@ project:
         - file: chapters/hash_aggregation.md
         - file: chapters/joins.md
         - file: chapters/sorting_and_top_k.md
+        - file: chapters/memory_limits_and_spilling.md
     - title: Appendices
       children:
         - file: appendices/running_the_lab.md

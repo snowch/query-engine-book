@@ -250,8 +250,10 @@ def sorting(root: Path) -> dict:
         )
     full = cases[0]["measured"]
     heap = []
+    scan = shuffled()
+    batches = list(scan.batches())
     for k in TOP_SWEEP:
-        op = TopK(shuffled(), plans.BY_AMOUNT, k)
+        op = TopK(_replay(batches, scan.schema()), plans.BY_AMOUNT, k)
         op.run()
         heap.append([k, op.comparisons.count])
     return {
@@ -274,9 +276,98 @@ def sorting(root: Path) -> dict:
     }
 
 
+#: The memory limits the spilling panel's chart sorts the orders within, as shares of the rows'
+#: bytes, and the fan-ins it merges with.
+SPILL_SHARES = (0.1, 0.2, 0.5, 1.0)
+SPILL_FAN_INS = (2, 8)
+
+
+def _replay(batches: list, schema):
+    """An operator that hands up ``batches`` again, from memory: a panel that sorts the same rows
+    many times reads the file once."""
+    from .operators import Operator
+
+    class Replay(Operator):
+        def __init__(self) -> None:
+            super().__init__("Replay", "the scan's batches", [])
+
+        def batches(self):
+            for batch in batches:
+                yield self.emit(batch)
+
+        def schema(self):
+            return schema
+
+    return Replay()
+
+
+def spilling(root: Path) -> dict:
+    """The shuffled orders sorted by amount within three memory limits, counting the bytes the sort
+    spilled; then the same sort within more limits, with a small fan-in and a larger one."""
+    from . import plans
+    from .spill import ExternalSort
+
+    scan = plans.orders_by_amount(root).child
+    batches = list(scan.batches())
+    total = sum(b.get_total_buffer_size() for b in batches)
+    runs = {}
+    for fan_in in SPILL_FAN_INS:
+        for share in SPILL_SHARES:
+            op = ExternalSort(
+                _replay(batches, scan.schema()), plans.BY_AMOUNT, int(total * share) + 1, fan_in
+            )
+            op.run()
+            runs[fan_in, share] = op
+    cases = []
+    for label, key in (
+        ("Memory for every row", (8, 1.0)),
+        ("Memory for half the rows", (8, 0.5)),
+        ("A tenth, merging two runs at a time", (2, 0.1)),
+    ):
+        op = runs[key]
+        cases.append(
+            {
+                "label": label,
+                "detail": f"memory limit {op.memory_limit:,} bytes, fan-in {op.fan_in}",
+                "reference": {"label": "Bytes of rows", "value": total},
+                "measured": op.temp.written,
+                "counters": [
+                    ["runs written", op.sorted_runs + op.merged_runs],
+                    ["merge passes", op.passes],
+                    ["bytes read back", op.temp.read],
+                ],
+            }
+        )
+    return {
+        "title": "Sorting within a memory limit",
+        "predict": {"label": "Bytes spilled", "ask": "the bytes each spills", "placeholder": "bytes spilled"},
+        "facts": (
+            f"The rows to sort take {total:,} bytes, in batches of a tenth of that. A run is spilled as "
+            "Arrow IPC, which adds a little to its rows' bytes."
+        ),
+        "cases": cases,
+        "chart": {
+            "x_label": "the memory limit, in bytes",
+            "y_label": "bytes spilled",
+            "x_scale": "log",
+            "series": [
+                {
+                    "label": f"Fan-in {fan_in}",
+                    "points": [
+                        [runs[fan_in, share].memory_limit, runs[fan_in, share].temp.written]
+                        for share in SPILL_SHARES
+                    ],
+                }
+                for fan_in in SPILL_FAN_INS
+            ],
+        },
+    }
+
+
 #: Every measure panel, by the name a lab block gives it as ``of``.
 MEASURES: dict[str, Callable[[Path], dict]] = {
     "aggregation": aggregation,
     "joins": joins,
     "sorting": sorting,
+    "spilling": spilling,
 }

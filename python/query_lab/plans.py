@@ -1,4 +1,4 @@
-"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch09).
+"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch10).
 
 The engine has no planner yet: that is Part IV. Until then, each query the book runs through
 the engine has a plan here, built from operators the way DuckDB's ``EXPLAIN`` drew its own,
@@ -24,6 +24,7 @@ from .join import HashJoin
 from .memory import fixed_width_array, gather
 from .operators import Comparison, Filter, Operator, Project, Scan, TableScan
 from .sort import Sort, TopK
+from .spill import ExternalSort
 from .storage import ComputingStore, StorageScan
 
 
@@ -246,6 +247,13 @@ def orders_by_amount(root: Path) -> Operator:
     """queries/orders_by_amount.sql: a scan, and a sort that holds every row (ch09)."""
     scan = Scan(root / "fixtures" / "orders-shuffled.parquet", ["order_id", "customer_id", "amount"])
     return Sort(scan, BY_AMOUNT)
+
+
+def orders_by_amount_within(root: Path, memory_limit: int, fan_in: int = 8) -> ExternalSort:
+    """queries/orders_by_amount.sql within a memory limit: the sort spills sorted runs and merges
+    them, ``fan_in`` at a time (ch10)."""
+    scan = Scan(root / "fixtures" / "orders-shuffled.parquet", ["order_id", "customer_id", "amount"])
+    return ExternalSort(scan, BY_AMOUNT, memory_limit, fan_in)
 
 
 def duckdb_partner(walk: list, name: str):

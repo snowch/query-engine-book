@@ -222,6 +222,16 @@ _CHAPTERS = (
         ("measure",),
         ("orders-sorted.parquet", "orders-shuffled.parquet"),
     ),
+    (
+        "memory_limits_and_spilling",
+        "Memory limits and spilling",
+        "computing",
+        "What does an engine do when an operator needs more memory than it is allowed?",
+        "An external sort that spills sorted runs within a memory limit and merges them a fan-in at "
+        "a time, counting the bytes written and read, beside DuckDB's memory limit.",
+        ("measure",),
+        ("orders-shuffled.parquet",),
+    ),
 )
 
 CHAPTERS = tuple(

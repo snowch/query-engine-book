@@ -215,4 +215,4 @@ not know without the `LIMIT`, and names the change to the query.
   sort finds runs and merges them, and why sorted input costs one comparison a row.
 - **DuckDB's sort.** Laurens Kuiper,
   [Fastest Table Sort in the West](https://duckdb.org/2021/08/27/external-sorting.html), on
-  sorting keys as bytes, sorting runs in parallel, and spilling them to disk.
+  sorting keys as bytes, sorting runs in parallel, and writing them to disk.

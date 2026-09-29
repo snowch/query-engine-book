@@ -182,6 +182,24 @@ Invariants: a sort of rows already in order compares each row once with the next
 comparisons; a top-k never holds more than `k` rows. `python/tests/test_sort.py` holds both, and
 the rows to DuckDB's order.
 
+**The external sort** (`python/query_lab/spill.py`, ch10) spills sorted runs to a temporary store,
+as Arrow IPC in batches, and counts what it writes and reads there. Its `peak_memory_bytes` is
+the Arrow bytes of the batches it holds at once, which stay within its memory limit unless one
+batch alone is larger.
+
+| Field | Meaning |
+|---|---|
+| `sorted_runs`, `run_rows` | Runs cut from the input, and the rows in each. |
+| `merged_runs` | Runs a merge pass wrote, before the last pass, which writes nothing. |
+| `passes` | Merge passes, the last included; nought when nothing was spilled. |
+| `rows_spilled` | Rows written to temporary storage, counted again each time a row is written. |
+| `bytes_spilled` (the temporary store's `written`) | The Arrow IPC bytes written: the `Metrics` field `bytes_spilled` specifies. |
+| `read` | The bytes read back, which is every byte written. |
+
+Invariants: every byte written is read back; each pass but the last writes every row, so
+`rows_spilled` is the rows times the passes; a larger fan-in never spills more.
+`python/tests/test_spill.py` holds all three, and the rows to DuckDB's order.
+
 ## What the counters leave out
 
 Counters say how much work was done, not how long it took. Two plans with the same counters can

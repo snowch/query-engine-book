@@ -321,8 +321,11 @@ class Scan(Operator):
         return to_arrow([value[row] for start, end in rows for row in range(start, end)], leaf)
 
     def schema(self) -> pa.Schema:
-        by_name = {leaf.dotted_path(): leaf for leaf in leaves(build(_footer(self.path).schema))}
-        return pa.schema([arrow_field(by_name[name]) for name in self.columns])
+        # Read from the footer once: an operator above may ask with every batch it builds.
+        if getattr(self, "_schema", None) is None:
+            by_name = {leaf.dotted_path(): leaf for leaf in leaves(build(_footer(self.path).schema))}
+            self._schema = pa.schema([arrow_field(by_name[name]) for name in self.columns])
+        return self._schema
 
 
 class TableScan(Operator):
