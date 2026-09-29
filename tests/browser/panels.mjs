@@ -139,6 +139,32 @@ async function drawnCases(lab) {
   return { cases, sweep };
 }
 
+/** The measure panel's cases, and its chart once revealed, as the page drew them. */
+async function drawnMeasures(lab) {
+  const cases = await lab.$$eval(".measure-case", (cards) => cards.map((card) => {
+    const value = (s) => {
+      const e = card.querySelector(s);
+      if (!e) return undefined;
+      const text = e.textContent;
+      return text === "none" || text === "no guess" || text === "hidden" ? text : Number(text.replace(/,/g, ""));
+    };
+    const out = {
+      label: card.dataset.case,
+      reference: value(".plan-bar.estimated .plan-bar-value"),
+      measured: value(".plan-bar.measured .plan-bar-value"),
+      counters: [...card.querySelectorAll("[data-counter]")].map((b) => Number(b.textContent.replace(/,/g, ""))),
+    };
+    const predicted = value(".plan-bar.predicted .plan-bar-value");
+    if (predicted !== undefined) out.predicted = predicted;
+    return out;
+  }));
+  const chart = await lab.$$eval(".measure-chart circle", (dots) => dots.map((d) => [Number(d.dataset.x), Number(d.dataset.y)]));
+  return { cases, chart };
+}
+
+/** A number as the panel prints it: grouped, at most two decimals. */
+const shownNumber = (n) => Number(Number(n).toLocaleString("en-GB", { maximumFractionDigits: 2 }).replace(/,/g, ""));
+
 /** For each experiment: how to read its drawing, and what it must show asking and revealed. */
 const PANELS = {
   plan: {
@@ -181,6 +207,23 @@ const PANELS = {
         branches: c.branches, mispredictions: c.mispredictions, kept: c.kept, predicted: guesses[i],
       })),
       sweep: ["with", "without"].flatMap((k) => data.sweep.map((p) => [k, p.kept, p[k]])),
+    }),
+    count: (data) => data.cases.length,
+  },
+  measure: {
+    read: drawnMeasures,
+    asks: true,
+    // Asking, the chart is not drawn: its points are the answer.
+    asking: (data) => ({
+      cases: data.cases.map((c) => ({ label: c.label, reference: shownNumber(c.reference.value), measured: "hidden", counters: [] })),
+      chart: [],
+    }),
+    revealed: (data, guesses) => ({
+      cases: data.cases.map((c, i) => ({
+        label: c.label, reference: shownNumber(c.reference.value), measured: shownNumber(c.measured),
+        counters: c.counters.map(([, v]) => shownNumber(v)), predicted: guesses[i],
+      })),
+      chart: data.chart ? data.chart.series.flatMap((s) => s.points.map(([x, y]) => [x, y])) : [],
     }),
     count: (data) => data.cases.length,
   },

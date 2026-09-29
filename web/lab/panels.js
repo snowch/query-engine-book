@@ -2,9 +2,10 @@
 
 import { mountBranches } from "./branches.js";
 import { mountGather } from "./gather.js";
+import { mountMeasure } from "./measure.js";
 import { mountPlan } from "./plan.js";
 import { mountPruning } from "./pruning.js";
 
 export const EXPERIMENTS = {
-  plan: mountPlan, gather: mountGather, pruning: mountPruning, branches: mountBranches,
+  plan: mountPlan, gather: mountGather, pruning: mountPruning, branches: mountBranches, measure: mountMeasure,
 };

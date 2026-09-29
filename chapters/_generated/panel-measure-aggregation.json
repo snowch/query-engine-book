@@ -1,0 +1,192 @@
+{
+ "experiment": "measure",
+ "of": "aggregation",
+ "engine": "the book's engine",
+ "title": "Grouping the orders",
+ "predict": {
+  "label": "Cache misses",
+  "ask": "the cache misses of each",
+  "placeholder": "cache misses"
+ },
+ "facts": "Each slot of the hash table takes 16 bytes, and the table doubles when three quarters full. The cache holds 512 lines of 64 bytes.",
+ "cases": [
+  {
+   "label": "GROUP BY status",
+   "detail": "5 groups",
+   "reference": {
+    "label": "Rows",
+    "value": 20000
+   },
+   "measured": 3,
+   "counters": [
+    [
+     "groups",
+     5
+    ],
+    [
+     "probes",
+     20000
+    ],
+    [
+     "resizes",
+     0
+    ],
+    [
+     "table bytes",
+     256
+    ]
+   ]
+  },
+  {
+   "label": "GROUP BY customer_id",
+   "detail": "948 groups",
+   "reference": {
+    "label": "Rows",
+    "value": 20000
+   },
+   "measured": 911,
+   "counters": [
+    [
+     "groups",
+     948
+    ],
+    [
+     "probes",
+     25371
+    ],
+    [
+     "resizes",
+     7
+    ],
+    [
+     "table bytes",
+     32768
+    ]
+   ]
+  },
+  {
+   "label": "GROUP BY order_id",
+   "detail": "20,000 groups",
+   "reference": {
+    "label": "Rows",
+    "value": 20000
+   },
+   "measured": 24217,
+   "counters": [
+    [
+     "groups",
+     20000
+    ],
+    [
+     "probes",
+     64864
+    ],
+    [
+     "resizes",
+     11
+    ],
+    [
+     "table bytes",
+     524288
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "groups",
+  "y_label": "cache misses",
+  "x_scale": "log",
+  "series": [
+   {
+    "label": "Hash table",
+    "points": [
+     [
+      4,
+      3
+     ],
+     [
+      16,
+      12
+     ],
+     [
+      64,
+      53
+     ],
+     [
+      256,
+      217
+     ],
+     [
+      512,
+      453
+     ],
+     [
+      1024,
+      903
+     ],
+     [
+      2048,
+      11143
+     ],
+     [
+      4096,
+      16236
+     ],
+     [
+      8192,
+      19293
+     ],
+     [
+      20000,
+      24218
+     ]
+    ]
+   },
+   {
+    "label": "Perfect hash table",
+    "points": [
+     [
+      4,
+      1
+     ],
+     [
+      16,
+      4
+     ],
+     [
+      64,
+      16
+     ],
+     [
+      256,
+      64
+     ],
+     [
+      512,
+      128
+     ],
+     [
+      1024,
+      256
+     ],
+     [
+      2048,
+      512
+     ],
+     [
+      4096,
+      5001
+     ],
+     [
+      8192,
+      5001
+     ],
+     [
+      20000,
+      5001
+     ]
+    ]
+   }
+  ]
+ }
+}

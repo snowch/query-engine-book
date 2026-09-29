@@ -446,7 +446,17 @@ def branches(root: Path, column: str) -> dict:
     }
 
 
-EXPERIMENTS = {"plan": plan, "gather": gather, "pruning": pruning, "branches": branches}
+def measure(root: Path, of: str) -> dict:
+    """A chapter's measure panel (from ch07): the cases the reader predicts, what the engine
+    counted for each, and a chart, from the function in ``query_lab.measures`` named ``of``."""
+    from .measures import MEASURES
+
+    if of not in MEASURES:
+        raise ReportError(f"no measure {of!r}; the measures are {', '.join(MEASURES)}")
+    return {"experiment": "measure", "of": of, "engine": "the book's engine", **MEASURES[of](root)}
+
+
+EXPERIMENTS = {"plan": plan, "gather": gather, "pruning": pruning, "branches": branches, "measure": measure}
 
 
 def panel_name(config: dict[str, str]) -> str:

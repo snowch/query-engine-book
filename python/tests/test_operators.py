@@ -19,11 +19,17 @@ SORTED = ROOT / "fixtures" / "orders-sorted.parquet"
 
 @pytest.mark.parametrize("query", sorted(PLANS))
 def test_every_plan_returns_duckdbs_rows_in_duckdbs_order(query):
+    """The same rows as DuckDB, in the same order where the query asks for one. A query with no
+    ORDER BY leaves the order to the engine, and a hash aggregate's order is its table's."""
     plan = plan_for(ROOT, query)
     ours = [tuple(row.values()) for row in plan.run().to_pylist()]
-    theirs = observe(read_query(ROOT / "queries" / query))
+    sql = read_query(ROOT / "queries" / query)
+    theirs = observe(sql)
     assert plan.schema().names == theirs.columns
-    assert ours == theirs.rows
+    if "ORDER BY" in sql.upper():
+        assert ours == theirs.rows
+    else:
+        assert sorted(ours) == sorted(theirs.rows)
 
 
 @pytest.mark.parametrize("query", sorted(PLANS))
