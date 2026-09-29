@@ -212,6 +212,16 @@ _CHAPTERS = (
         ("measure",),
         ("orders-sorted.parquet", "orders-shuffled.parquet", "customers.parquet"),
     ),
+    (
+        "sorting_and_top_k",
+        "Sorting and top-k",
+        "computing",
+        "What does putting rows in order cost, and how much of it does a LIMIT save?",
+        "A full sort and a top-k that keeps its rows in a heap, both counting their comparisons, "
+        "beside DuckDB's ORDER_BY and TOP_N.",
+        ("measure",),
+        ("orders-sorted.parquet", "orders-shuffled.parquet"),
+    ),
 )
 
 CHAPTERS = tuple(

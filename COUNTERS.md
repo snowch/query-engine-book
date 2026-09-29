@@ -170,6 +170,18 @@ The table's own counters (`lookups`, `probes`, `resizes`, `table_bytes`) count t
 inserts and the probe side's lookups together. `python/tests/test_join.py` checks the join's rows
 against DuckDB's, from either build side.
 
+**The sorts** (`python/query_lab/sort.py`, ch09) count the comparisons they make, through the one
+function both use to compare two rows' keys.
+
+| Field | Meaning |
+|---|---|
+| `comparisons` | Pairs of rows compared: by the sort (Python's own, which finds runs already in order), or by the top-k's heap and its final ordering of what it kept. |
+| `rows_held` | The most rows held at once: every row for a sort, at most `k` for a top-k. |
+
+Invariants: a sort of rows already in order compares each row once with the next, `rows - 1`
+comparisons; a top-k never holds more than `k` rows. `python/tests/test_sort.py` holds both, and
+the rows to DuckDB's order.
+
 ## What the counters leave out
 
 Counters say how much work was done, not how long it took. Two plans with the same counters can

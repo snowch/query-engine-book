@@ -201,8 +201,82 @@ def joins(root: Path) -> dict:
     }
 
 
+#: The numbers of rows the sorting panel's chart asks a top-k to keep.
+TOP_SWEEP = (1, 10, 100, 1000, 5000, 10_000, 20_000)
+
+
+def sorting(root: Path) -> dict:
+    """Three orders the orders can be put in, counting comparisons: the shuffled orders by amount,
+    the sorted orders by date, and the ten largest by amount. Then a top-k of more and more rows,
+    beside a full sort."""
+    from . import plans
+    from .operators import Scan
+    from .sort import Sort, TopK
+
+    fixtures = root / "fixtures"
+    shuffled = lambda: Scan(fixtures / "orders-shuffled.parquet", ["order_id", "amount"])  # noqa: E731
+    ways = [
+        (
+            "Sort the shuffled orders by amount",
+            "ORDER BY amount DESC, order_id",
+            lambda: Sort(shuffled(), plans.BY_AMOUNT),
+        ),
+        (
+            "Sort the orders by date, as stored",
+            "ORDER BY order_date, order_id",
+            lambda: Sort(
+                Scan(fixtures / "orders-sorted.parquet", ["order_id", "order_date"]),
+                [("order_date", False), ("order_id", False)],
+            ),
+        ),
+        (
+            "The ten largest by amount",
+            "ORDER BY amount DESC, order_id LIMIT 10",
+            lambda: TopK(shuffled(), plans.BY_AMOUNT, 10),
+        ),
+    ]
+    cases = []
+    for label, detail, make in ways:
+        op = make()
+        op.run()
+        cases.append(
+            {
+                "label": label,
+                "detail": detail,
+                "reference": {"label": "Rows", "value": op.metrics.rows_in},
+                "measured": op.comparisons.count,
+                "counters": [["rows held", op.rows_held], ["rows handed up", op.metrics.rows_out]],
+            }
+        )
+    full = cases[0]["measured"]
+    heap = []
+    for k in TOP_SWEEP:
+        op = TopK(shuffled(), plans.BY_AMOUNT, k)
+        op.run()
+        heap.append([k, op.comparisons.count])
+    return {
+        "title": "Putting the orders in order",
+        "predict": {"label": "Comparisons", "ask": "the comparisons of each", "placeholder": "comparisons"},
+        "facts": (
+            "A full sort holds every row and sorts them with Python's own sort; the top-k holds the "
+            "best rows so far in a heap and compares each new row with the worst of them."
+        ),
+        "cases": cases,
+        "chart": {
+            "x_label": "rows the top-k keeps",
+            "y_label": "comparisons",
+            "x_scale": "log",
+            "series": [
+                {"label": "Top-k in a heap", "points": heap},
+                {"label": "A full sort", "points": [[k, full] for k in TOP_SWEEP]},
+            ],
+        },
+    }
+
+
 #: Every measure panel, by the name a lab block gives it as ``of``.
 MEASURES: dict[str, Callable[[Path], dict]] = {
     "aggregation": aggregation,
     "joins": joins,
+    "sorting": sorting,
 }

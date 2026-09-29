@@ -52,6 +52,7 @@ project:
         - file: chapters/expressions_and_vectorised_kernels.md
         - file: chapters/hash_aggregation.md
         - file: chapters/joins.md
+        - file: chapters/sorting_and_top_k.md
     - title: Appendices
       children:
         - file: appendices/running_the_lab.md

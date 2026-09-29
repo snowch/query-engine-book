@@ -1,4 +1,4 @@
-"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch08).
+"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch09).
 
 The engine has no planner yet: that is Part IV. Until then, each query the book runs through
 the engine has a plan here, built from operators the way DuckDB's ``EXPLAIN`` drew its own,
@@ -23,6 +23,7 @@ from .expressions import Call, Column, Literal, evaluate
 from .join import HashJoin
 from .memory import fixed_width_array, gather
 from .operators import Comparison, Filter, Operator, Project, Scan, TableScan
+from .sort import Sort, TopK
 from .storage import ComputingStore, StorageScan
 
 
@@ -230,6 +231,23 @@ def customers_with_orders(root: Path) -> Operator:
     )
 
 
+#: queries/top_orders.sql's and orders_by_amount.sql's order: the largest amount first, ties by
+#: the order id (ch09).
+BY_AMOUNT = [("amount", True), ("order_id", False)]
+
+
+def top_orders(root: Path) -> Operator:
+    """queries/top_orders.sql: a scan, and a top-k that keeps ten rows (ch09)."""
+    scan = Scan(root / "fixtures" / "orders-shuffled.parquet", ["order_id", "customer_id", "amount"])
+    return TopK(scan, BY_AMOUNT, 10)
+
+
+def orders_by_amount(root: Path) -> Operator:
+    """queries/orders_by_amount.sql: a scan, and a sort that holds every row (ch09)."""
+    scan = Scan(root / "fixtures" / "orders-shuffled.parquet", ["order_id", "customer_id", "amount"])
+    return Sort(scan, BY_AMOUNT)
+
+
 def duckdb_partner(walk: list, name: str):
     """The operator of DuckDB's profile ``name`` names, in the order the profile walks its tree:
     ``TABLE_SCAN`` is the first scan, ``TABLE_SCAN#2`` the second."""
@@ -249,6 +267,8 @@ PLANS: dict[str, Callable[[Path], Operator]] = {
     "orders_per_status.sql": orders_per_status,
     "orders_with_country.sql": orders_with_country,
     "customers_with_orders.sql": customers_with_orders,
+    "top_orders.sql": top_orders,
+    "orders_by_amount.sql": orders_by_amount,
 }
 
 #: For each plan, the DuckDB operator that does the same job as each of the plan's operators,
@@ -268,6 +288,8 @@ DUCKDB_PARTNERS: dict[str, list[str | None]] = {
     "orders_per_status.sql": ["HASH_GROUP_BY", "TABLE_SCAN"],
     "orders_with_country.sql": ["HASH_JOIN", "TABLE_SCAN", "TABLE_SCAN#2"],
     "customers_with_orders.sql": ["HASH_JOIN", "TABLE_SCAN#2", "TABLE_SCAN"],
+    "top_orders.sql": ["TOP_N", "TABLE_SCAN"],
+    "orders_by_amount.sql": ["ORDER_BY", "TABLE_SCAN"],
 }
 
 

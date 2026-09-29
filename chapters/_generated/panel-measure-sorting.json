@@ -1,0 +1,144 @@
+{
+ "experiment": "measure",
+ "of": "sorting",
+ "engine": "the book's engine",
+ "title": "Putting the orders in order",
+ "predict": {
+  "label": "Comparisons",
+  "ask": "the comparisons of each",
+  "placeholder": "comparisons"
+ },
+ "facts": "A full sort holds every row and sorts them with Python's own sort; the top-k holds the best rows so far in a heap and compares each new row with the worst of them.",
+ "cases": [
+  {
+   "label": "Sort the shuffled orders by amount",
+   "detail": "ORDER BY amount DESC, order_id",
+   "reference": {
+    "label": "Rows",
+    "value": 20000
+   },
+   "measured": 259640,
+   "counters": [
+    [
+     "rows held",
+     20000
+    ],
+    [
+     "rows handed up",
+     20000
+    ]
+   ]
+  },
+  {
+   "label": "Sort the orders by date, as stored",
+   "detail": "ORDER BY order_date, order_id",
+   "reference": {
+    "label": "Rows",
+    "value": 20000
+   },
+   "measured": 19999,
+   "counters": [
+    [
+     "rows held",
+     20000
+    ],
+    [
+     "rows handed up",
+     20000
+    ]
+   ]
+  },
+  {
+   "label": "The ten largest by amount",
+   "detail": "ORDER BY amount DESC, order_id LIMIT 10",
+   "reference": {
+    "label": "Rows",
+    "value": 20000
+   },
+   "measured": 20315,
+   "counters": [
+    [
+     "rows held",
+     10
+    ],
+    [
+     "rows handed up",
+     10
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "rows the top-k keeps",
+  "y_label": "comparisons",
+  "x_scale": "log",
+  "series": [
+   {
+    "label": "Top-k in a heap",
+    "points": [
+     [
+      1,
+      19999
+     ],
+     [
+      10,
+      20315
+     ],
+     [
+      100,
+      24847
+     ],
+     [
+      1000,
+      61831
+     ],
+     [
+      5000,
+      171732
+     ],
+     [
+      10000,
+      244928
+     ],
+     [
+      20000,
+      293112
+     ]
+    ]
+   },
+   {
+    "label": "A full sort",
+    "points": [
+     [
+      1,
+      259640
+     ],
+     [
+      10,
+      259640
+     ],
+     [
+      100,
+      259640
+     ],
+     [
+      1000,
+      259640
+     ],
+     [
+      5000,
+      259640
+     ],
+     [
+      10000,
+      259640
+     ],
+     [
+      20000,
+      259640
+     ]
+    ]
+   }
+  ]
+ }
+}

@@ -13,4 +13,5 @@ processor, starting with how an engine evaluates an expression, and why engines 
 rows at a time rather than one row ([ch06](#expressions-and-vectorised-kernels)). Then it groups
 rows, and finds that what a group costs depends on how many there are, and on the cache
 ([ch07](#hash-aggregation)). A join holds one of its inputs in the same kind of table, and which
-input it holds decides what it costs ([ch08](#joins)).
+input it holds decides what it costs ([ch08](#joins)). Putting rows in order holds them all, unless
+a `LIMIT` says how few are wanted ([ch09](#sorting-and-top-k)).
