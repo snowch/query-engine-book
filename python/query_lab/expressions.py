@@ -81,6 +81,8 @@ KERNELS = {
     ">=": pc.greater_equal,
     "and": pc.and_kleene,
     "or": pc.or_kleene,
+    "not": pc.invert,
+    "lower": pc.utf8_lower,
 }
 
 #: The same operators, applied to one value at a time. Division borrows the kernel's, so that
@@ -98,6 +100,8 @@ SCALARS = {
     ">=": operator.ge,
     "and": lambda a, b: a and b,
     "or": lambda a, b: a or b,
+    "not": operator.not_,
+    "lower": str.lower,
 }
 
 

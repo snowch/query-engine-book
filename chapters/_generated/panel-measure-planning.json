@@ -1,0 +1,128 @@
+{
+ "experiment": "measure",
+ "of": "planning",
+ "engine": "the book's engine",
+ "title": "What the plain plan reads",
+ "predict": {
+  "label": "Bytes read",
+  "ask": "the bytes each plain plan reads",
+  "placeholder": "bytes read"
+ },
+ "facts": "The plain plan reads every column of every table the query names, and tests its conditions after the scan. The hand-written plans read only the columns they use, and test what they can inside the scan.",
+ "cases": [
+  {
+   "label": "returned_unit_price",
+   "detail": "queries/returned_unit_price.sql",
+   "reference": {
+    "label": "Hand-written plan",
+    "value": 302983
+   },
+   "measured": 497853,
+   "counters": [
+    [
+     "rows the scans hand up",
+     20000
+    ],
+    [
+     "operators",
+     3
+    ]
+   ]
+  },
+  {
+   "label": "early_march",
+   "detail": "queries/early_march.sql",
+   "reference": {
+    "label": "Hand-written plan",
+    "value": 63218
+   },
+   "measured": 497853,
+   "counters": [
+    [
+     "rows the scans hand up",
+     20000
+    ],
+    [
+     "operators",
+     3
+    ]
+   ]
+  },
+  {
+   "label": "enterprise_orders",
+   "detail": "queries/enterprise_orders.sql",
+   "reference": {
+    "label": "Hand-written plan",
+    "value": 301746
+   },
+   "measured": 515966,
+   "counters": [
+    [
+     "rows the scans hand up",
+     21000
+    ],
+    [
+     "operators",
+     7
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "days from the first of March",
+  "y_label": "bytes read",
+  "x_scale": "log",
+  "series": [
+   {
+    "label": "Plain plan",
+    "points": [
+     [
+      1,
+      497853
+     ],
+     [
+      7,
+      497853
+     ],
+     [
+      30,
+      497853
+     ],
+     [
+      91,
+      497853
+     ],
+     [
+      245,
+      497853
+     ]
+    ]
+   },
+   {
+    "label": "Hand-written plan",
+    "points": [
+     [
+      1,
+      35316
+     ],
+     [
+      7,
+      35316
+     ],
+     [
+      30,
+      63218
+     ],
+     [
+      91,
+      119005
+     ],
+     [
+      245,
+      230339
+     ]
+    ]
+   }
+  ]
+ }
+}

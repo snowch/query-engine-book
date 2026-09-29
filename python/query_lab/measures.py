@@ -364,10 +364,89 @@ def spilling(root: Path) -> dict:
     }
 
 
+#: The queries the planning panel plans the plain way, beside the plans earlier chapters wrote.
+PLAIN_QUERIES = ("returned_unit_price.sql", "early_march.sql", "enterprise_orders.sql")
+#: The days the planning panel's chart widens early March to, counted from the first of March.
+WINDOW_DAYS = (1, 7, 30, 91, 245)
+
+
+def planning(root: Path) -> dict:
+    """Three of the book's queries planned the plain way, counting the bytes each reads, beside
+    the plans earlier chapters wrote by hand. Then the orders from the first of March, over a
+    wider and wider window, planned both ways."""
+    import datetime as dt
+
+    from . import plans
+    from .operators import Comparison, Scan
+    from .planner import plan
+    from .reference import read_query
+
+    def run(operator):
+        operator.run()
+        scans = [m for m in operator.metrics.walk() if m.operator == "Scan"]
+        return sum(m.bytes_read for m in scans), sum(m.rows_out for m in scans)
+
+    cases = []
+    for query in PLAIN_QUERIES:
+        plain = plan(root, read_query(root / "queries" / query))
+        read, rows = run(plain)
+        written, _ = run(plans.plan_for(root, query))
+        cases.append(
+            {
+                "label": query.removesuffix(".sql"),
+                "detail": f"queries/{query}",
+                "reference": {"label": "Hand-written plan", "value": written},
+                "measured": read,
+                "counters": [
+                    ["rows the scans hand up", rows],
+                    ["operators", sum(1 for _ in plain.metrics.walk())],
+                ],
+            }
+        )
+    first = dt.date(2024, 3, 1)
+    plain_points, written_points = [], []
+    for days in WINDOW_DAYS:
+        last = first + dt.timedelta(days=days)
+        text = (
+            "SELECT order_id, customer_id, amount FROM 'fixtures/orders-sorted.parquet' "
+            f"WHERE order_date >= DATE '{first}' AND order_date < DATE '{last}'"
+        )
+        plain_points.append([days, run(plan(root, text))[0]])
+        window = [Comparison("order_date", ">=", first), Comparison("order_date", "<", last)]
+        scan = Scan(
+            root / "fixtures" / "orders-sorted.parquet", ["order_id", "customer_id", "amount"], window
+        )
+        written_points.append([days, run(scan)[0]])
+    return {
+        "title": "What the plain plan reads",
+        "predict": {
+            "label": "Bytes read",
+            "ask": "the bytes each plain plan reads",
+            "placeholder": "bytes read",
+        },
+        "facts": (
+            "The plain plan reads every column of every table the query names, and tests its "
+            "conditions after the scan. The hand-written plans read only the columns they use, and "
+            "test what they can inside the scan."
+        ),
+        "cases": cases,
+        "chart": {
+            "x_label": "days from the first of March",
+            "y_label": "bytes read",
+            "x_scale": "log",
+            "series": [
+                {"label": "Plain plan", "points": plain_points},
+                {"label": "Hand-written plan", "points": written_points},
+            ],
+        },
+    }
+
+
 #: Every measure panel, by the name a lab block gives it as ``of``.
 MEASURES: dict[str, Callable[[Path], dict]] = {
     "aggregation": aggregation,
     "joins": joins,
     "sorting": sorting,
     "spilling": spilling,
+    "planning": planning,
 }
