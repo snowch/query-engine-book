@@ -87,7 +87,7 @@ question, asked of the column index's bounds for one page:
 ```{literalinclude} ../python/query_lab/operators.py
 :language: python
 :start-at: def against_page(
-:end-before: #: The kernel that tests each row
+:end-before: def against_bounds(self, comparator
 ```
 
 ### The rows worth reading
@@ -123,7 +123,7 @@ by row group, exactly as chapter 3's did:
 ```{literalinclude} ../python/query_lab/plans.py
 :language: python
 :start-at: def early_march_by_page(
-:end-before: def early_march_above(
+:end-before: def early_march_table(
 ```
 
 The book's tests run the scan by page with several predicates and compare its rows with DuckDB's.

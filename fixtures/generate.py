@@ -21,6 +21,8 @@ The first datasets are the ones the pilot chapters need:
 - ``orders``, a fact table, written twice: sorted by date, and shuffled. The same rows in two
   orders are the whole of the pruning argument, and of the cache argument in ch02.
 - ``orders-paged``, the sorted orders in one row group with a page index (ch04).
+- ``orders-by-month``, the sorted orders as a table of monthly files with the table's metadata
+  (ch05).
 - ``customers``, the small dimension table ``orders.customer_id`` points into, with a skewed
   distribution of orders per customer ready for the join and skew chapters.
 """
@@ -31,6 +33,7 @@ import argparse
 import datetime as dt
 import json
 import random
+import shutil
 import sys
 import tempfile
 from collections import Counter
@@ -39,6 +42,7 @@ from pathlib import Path
 
 import duckdb
 import pyarrow as pa
+import pyarrow.compute as pc
 import pyarrow.parquet as pq
 
 HERE = Path(__file__).resolve().parent
@@ -211,6 +215,80 @@ def fixtures(n: int = ORDERS, row_group: int = ROW_GROUP) -> list[Fixture]:
     ]
 
 
+#: The table of many files (ch05): the sorted orders, one file per month, in Hive's layout
+#: (a directory per value of the partition column), and the table's metadata beside them.
+TABLE = "orders-by-month"
+TABLE_METADATA = "metadata.json"
+
+
+def write_table(sorted_orders: pa.Table, out: Path) -> dict:
+    """Write the orders as a table of monthly files, and the table's metadata: a list of its files,
+    each with its row count, its size and the bounds of every column, as Iceberg keeps them in its
+    manifests. The bounds are the files' own statistics, PLAIN-encoded and written as hex, with the
+    comparator a reader needs to order them. Returns the fixture's manifest."""
+    sys.path.insert(0, str(HERE.parent / "external" / "parquet-book" / "python"))
+    from parquet_lab.object_store import MemoryStore, NetworkModel, TracingStore  # noqa: PLC0415
+    from parquet_lab.reader import FooterOptions, read_footer  # noqa: PLC0415
+    from parquet_lab.schema import build, leaves  # noqa: PLC0415
+    from parquet_lab.stats import Comparator  # noqa: PLC0415
+
+    root = out / TABLE
+    if root.exists():
+        shutil.rmtree(root)
+    months = pc.strftime(sorted_orders.column("order_date"), format="%Y-%m")
+    files = []
+    for month in sorted(set(months.to_pylist())):
+        part = sorted_orders.filter(pc.equal(months, month))
+        path = root / f"month={month}" / "part-0.parquet"
+        path.parent.mkdir(parents=True)
+        pq.write_table(part, path, row_group_size=len(part), compression="snappy", write_statistics=True)
+        data = path.read_bytes()
+        store = MemoryStore()
+        store.put("f", data)
+        md = read_footer(TracingStore(store, NetworkModel()), "f", FooterOptions()).metadata
+        bounds = {}
+        for leaf in leaves(build(md.schema)):
+            st = md.row_groups[0].columns[leaf.column].statistics
+            converted = md.schema[leaf.element].converted_type
+            bounds[leaf.dotted_path()] = {
+                "comparator": Comparator.for_leaf(leaf, converted).name,
+                "lower": st.min_value.hex(),
+                "upper": st.max_value.hex(),
+            }
+        files.append(
+            {
+                "path": path.relative_to(root).as_posix(),
+                "partition": {"month": month},
+                "rows": part.num_rows,
+                "bytes": len(data),
+                "bounds": bounds,
+            }
+        )
+    metadata = {
+        "table": TABLE,
+        "schema": [f"{f.name}: {f.type}" for f in sorted_orders.schema],
+        "files": files,
+    }
+    # Compact, as a table format keeps its metadata: every byte of it is read before any file.
+    (root / TABLE_METADATA).write_text(json.dumps(metadata, separators=(",", ":")) + "\n")
+    return {
+        "name": TABLE,
+        "why": "The sorted orders as a table of twelve monthly files in Hive's layout, with the table's "
+        "metadata listing each file and the bounds of every column. A reader of the metadata can skip "
+        "a file without opening it; a reader of the files alone must open each footer.",
+        "writer": md.created_by,
+        "file_bytes": sum(f["bytes"] for f in files),
+        "rows": sum(f["rows"] for f in files),
+        "files": [f["path"] for f in files],
+        "row_groups": [{"rows": f["rows"]} for f in files],
+        "properties": {
+            "partitioned_by": ["month"],
+            "sorted_by": ["order_date", "order_id"],
+            "files": len(files),
+        },
+    }
+
+
 def write(f: Fixture, out: Path) -> None:
     pages = {"data_page_size": f.data_page_size} if f.data_page_size is not None else {}
     if f.dictionary is not None:
@@ -284,7 +362,8 @@ def _json(v: object) -> object:
 
 def readme(entries: list[dict]) -> str:
     rows = "\n".join(
-        f"| `{e['name']}.parquet` | {e['rows']:,} | {len(e['row_groups'])} | {e['file_bytes']:,} | {e['why']} |"
+        f"| `{e['name']}{'/' if 'files' in e else '.parquet'}` | {e['rows']:,} | {len(e['row_groups'])} | "
+        f"{e['file_bytes']:,} | {e['why']} |"
         for e in entries
     )
     return f"""# Fixtures
@@ -307,6 +386,9 @@ def generate(out: Path, n: int, row_group: int) -> list[dict]:
         entry = manifest(f, out / f"{f.name}.parquet")
         (out / f"{f.name}.json").write_text(json.dumps(entry, indent=2) + "\n")
         entries.append(entry)
+    table = write_table(orders(n)[0], out)
+    (out / f"{TABLE}.json").write_text(json.dumps(table, indent=2) + "\n")
+    entries.append(table)
     return entries
 
 
@@ -331,11 +413,16 @@ def main() -> int:
             entries = generate(Path(tmp), ORDERS, ROW_GROUP)
             stale = []
             for e in entries:
-                for suffix in (".parquet", ".json"):
-                    fresh = (Path(tmp) / f"{e['name']}{suffix}").read_bytes()
-                    committed = HERE / f"{e['name']}{suffix}"
+                names = [f"{e['name']}.json"]
+                if "files" in e:
+                    names += [f"{e['name']}/{f}" for f in e["files"]] + [f"{e['name']}/{TABLE_METADATA}"]
+                else:
+                    names.append(f"{e['name']}.parquet")
+                for name in names:
+                    fresh = (Path(tmp) / name).read_bytes()
+                    committed = HERE / name
                     if not committed.exists() or committed.read_bytes() != fresh:
-                        stale.append(committed.name)
+                        stale.append(name)
             if (HERE / "README.md").read_text() != readme(entries):
                 stale.append("README.md")
         if stale:
@@ -347,7 +434,10 @@ def main() -> int:
     if args.out.resolve() == HERE:
         (HERE / "README.md").write_text(readme(entries))
     for e in entries:
-        print(f"wrote {e['name']}.parquet: {e['rows']} rows, {len(e['row_groups'])} row groups")
+        if "files" in e:
+            print(f"wrote {e['name']}/: {e['rows']} rows in {len(e['files'])} files")
+        else:
+            print(f"wrote {e['name']}.parquet: {e['rows']} rows, {len(e['row_groups'])} row groups")
     return 0
 
 

@@ -14,6 +14,7 @@ them with DuckDB's.
 from __future__ import annotations
 
 import datetime as dt
+import json
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,7 +25,7 @@ from parquet_lab import page_index, prune, stats
 from parquet_lab.bytes import Span
 from parquet_lab.column import read_column, read_column_pages
 from parquet_lab.metadata import FileMetaData, RowGroup
-from parquet_lab.object_store import Bounded, MemoryStore, NetworkModel, TracingStore
+from parquet_lab.object_store import All, Bounded, MemoryStore, NetworkModel, TracingStore
 from parquet_lab.reader import FooterOptions, read_footer
 from parquet_lab.scan import Fetched
 from parquet_lab.schema import Leaf, build, leaves
@@ -130,6 +131,17 @@ class Comparison:
         found = (index.min_values[page], index.max_values[page]) if type_order else None
         return prune.against_bounds(predicate, found, nulls, rows)
 
+    def against_bounds(self, comparator: stats.Comparator, lower: bytes, upper: bytes) -> prune.Decision:
+        """Whether a whole file can be skipped, from the bounds a table's metadata keeps for it (ch05).
+
+        The metadata stores each column's bounds as the file's statistics store them, PLAIN-encoded,
+        with the comparator that orders them, so the Parquet book's reader can decide as it does for
+        a row group, before the file is opened.
+        """
+        value = prune.literal(comparator, _literal(self.value))
+        predicate = prune.Predicate(0, prune.Op(self.op), value, comparator)
+        return prune.against_bounds(predicate, (lower, upper), None, 1)
+
 
 #: The kernel that tests each row, for each comparison.
 KERNELS = {
@@ -160,7 +172,12 @@ class Scan(Operator):
     """
 
     def __init__(
-        self, path: str | Path, columns: list[str], filters: list[Comparison] = (), page_index: bool = False
+        self,
+        path: str | Path,
+        columns: list[str],
+        filters: list[Comparison] = (),
+        page_index: bool = False,
+        store: tuple[TracingStore, str] | None = None,
     ) -> None:
         detail = f"{Path(path).name}: {', '.join(columns)}"
         if filters:
@@ -173,6 +190,9 @@ class Scan(Operator):
         self.filters = list(filters)
         self.page_index = page_index
         """Whether to consult each row group's page index and read only the pages it keeps (ch04)."""
+        self.store = store
+        """A store the scan shares, and the file's key in it: a table's files share one (ch05).
+        Without one, the scan puts the file in a store of its own."""
         self.skipped: dict[int, str] = {}
         """Each row group the scan skipped, by its position in the file, with the reason."""
         self.kept: dict[int, list[tuple[int, int]]] = {}
@@ -181,14 +201,18 @@ class Scan(Operator):
     # Row group by row group: one the statistics rule out is never requested at all.
     def batches(self) -> Iterator[pa.RecordBatch]:
         data = self.path.read_bytes()
-        key = self.path.name
-        objects = MemoryStore()
-        objects.put(key, data)
-        store = TracingStore(objects, NetworkModel())
+        if self.store is None:
+            key = self.path.name
+            objects = MemoryStore()
+            objects.put(key, data)
+            store = TracingStore(objects, NetworkModel())
+        else:
+            store, key = self.store
+        before = len(store.requests)
         footer = read_footer(store, key, FooterOptions())
         # The reader decodes only bytes the store returned; anything else reads as zeros.
         have = Fetched(len(data))
-        for request in store.requests:
+        for request in store.requests[before:]:
             if request.returned is not None:
                 have.add(request.returned, data[request.returned.start : request.returned.end])
         by_name = {leaf.dotted_path(): leaf for leaf in leaves(build(footer.metadata.schema))}
@@ -299,6 +323,93 @@ class Scan(Operator):
     def schema(self) -> pa.Schema:
         by_name = {leaf.dotted_path(): leaf for leaf in leaves(build(_footer(self.path).schema))}
         return pa.schema([arrow_field(by_name[name]) for name in self.columns])
+
+
+class TableScan(Operator):
+    """Read a table of many Parquet files, one batch per row group of each file it opens (ch05).
+
+    With ``metadata``, the scan first reads the table's metadata: a list of the table's files,
+    each with the bounds of every column, as Iceberg keeps them in its manifests. A file whose
+    bounds rule out every row is never opened. Without it, the scan lists the table's files and
+    opens every one, and only a file's own footer can rule its rows out. Either way, each file it
+    opens is read by a :class:`Scan` with the same filters, sharing one store, so the table's
+    counters are every request the scan made.
+    """
+
+    #: The table's metadata, in the table's directory.
+    METADATA = "metadata.json"
+
+    def __init__(
+        self, table: str | Path, columns: list[str], filters: list[Comparison] = (), metadata: bool = True
+    ) -> None:
+        detail = f"{Path(table).name}/: {', '.join(columns)}"
+        if filters:
+            detail += f"; {' AND '.join(map(str, filters))}"
+        detail += "; by its metadata" if metadata else "; by its files"
+        super().__init__("TableScan", detail, [])
+        self.table = Path(table)
+        self.columns = columns
+        self.filters = list(filters)
+        self.metadata = metadata
+        self.skipped: dict[str, str] = {}
+        """Each file the scan never opened, with the reason."""
+        self.opened: list[str] = []
+        """Each file the scan opened, in the order it opened them."""
+
+    def batches(self) -> Iterator[pa.RecordBatch]:
+        objects = MemoryStore()
+        for path in sorted(self.table.rglob("*")):
+            if path.is_file():
+                objects.put(path.relative_to(self.table).as_posix(), path.read_bytes())
+        store = TracingStore(objects, NetworkModel())
+        if self.metadata:
+            listing = json.loads(store.get(self.METADATA, All(), "the table's metadata").data)["files"]
+        else:
+            found = store.list("", "list the table's files")
+            listing = [{"path": key} for key, _ in found if key.endswith(".parquet")]
+        self.skipped, self.opened = {}, []
+        self.count_requests(store)
+
+        for entry in listing:
+            why = self.ruled_out(entry) if self.metadata else None
+            if why is not None:
+                self.skipped[entry["path"]] = why
+                continue
+            self.opened.append(entry["path"])
+            scan = Scan(self.table / entry["path"], self.columns, self.filters, store=(store, entry["path"]))
+            for batch in scan.batches():
+                self.count_requests(store)
+                yield self.emit(batch)
+            # The file's scan counted the rows it decoded and held; the table's are the sum.
+            self.metrics.rows_in += scan.metrics.rows_in
+            self.metrics.batches_in += scan.metrics.batches_in
+            self.metrics.peak_memory_bytes = max(
+                self.metrics.peak_memory_bytes, scan.metrics.peak_memory_bytes
+            )
+        self.count_requests(store)
+
+    def ruled_out(self, entry: dict) -> str | None:
+        """Why no row of a file can pass the filters, from its bounds in the table's metadata, or
+        None if some row might."""
+        for f in self.filters:
+            bounds = entry["bounds"].get(f.column)
+            if bounds is None:
+                continue
+            comparator = stats.Comparator[bounds["comparator"]]
+            decision = f.against_bounds(
+                comparator, bytes.fromhex(bounds["lower"]), bytes.fromhex(bounds["upper"])
+            )
+            if decision.skip:
+                return f"{f}: {decision.why}"
+        return None
+
+    def count_requests(self, store: TracingStore) -> None:
+        self.metrics.bytes_read = store.bytes_returned()
+        self.metrics.requests = len(store.requests)
+
+    def schema(self) -> pa.Schema:
+        first = next(p for p in sorted(self.table.rglob("*.parquet")))
+        return Scan(first, self.columns).schema()
 
 
 class Filter(Operator):

@@ -16,6 +16,7 @@ object whose ``experiment`` names it.
 from __future__ import annotations
 
 import datetime as dt
+import json
 import struct
 from pathlib import Path
 
@@ -165,29 +166,38 @@ def gather(root: Path, column: str) -> dict:
     }
 
 
-def pruning(root: Path, query: str, fixtures: str = "") -> dict:
+def pruning(root: Path, query: str, fixtures: str = "", scans: str = "") -> dict:
     """The engine's scan for a query in ``queries/``, pushed down as its plan in
     ``query_lab.plans`` pushes it, run against each of ``fixtures`` (the two orders files unless
     the block names others): what the scan skipped and why, each unit's range of the filtered
     column, and the scan's counters.
 
     A unit is a row group, or, where the scan reads the page index and the file has one, a page of
-    the filtered column (ch04).
+    the filtered column (ch04), or, for a table of many files, a file (ch05). ``scans`` names
+    scans in ``query_lab.plans.SCANS`` to set side by side instead, where the query's file cannot
+    say which way each reads.
     """
     # The engine needs pyarrow, which the plan panel does not load in the page.
-    from .operators import Scan
-    from .plans import PLANS
+    from .operators import Scan, TableScan
+    from .plans import PLANS, SCANS
 
-    if query not in PLANS:
-        raise ReportError(f"no hand-written plan for queries/{query}")
-    # Only a plan that is a scan with filters can be run against another file, by naming it.
-    scan = PLANS[query](root)
-    if not isinstance(scan, Scan) or not scan.filters:
-        raise ReportError(f"the plan for queries/{query} is not a scan with filters")
+    if scans:
+        runs = [(name, SCANS[name](root)) for name in _names(scans)]
+    else:
+        if query not in PLANS:
+            raise ReportError(f"no hand-written plan for queries/{query}")
+        # Only a plan that is a scan with filters can be run against another file, by naming it.
+        scan = PLANS[query](root)
+        if not isinstance(scan, Scan) or not scan.filters:
+            raise ReportError(f"the plan for queries/{query} is not a scan with filters")
+        runs = [(fixture, PLANS[query](root, fixture)) for fixture in _names(fixtures) or GATHER_FIXTURES]
     files = []
-    for fixture in _names(fixtures) or GATHER_FIXTURES:
-        scan = PLANS[query](root, fixture)
+    for label, scan in runs:
         scan.run()
+        if isinstance(scan, TableScan):
+            files.append({**_table_units(scan, label), **_counters(scan)})
+            continue
+        fixture = label
         column = scan.filters[0].column
         data = (root / "fixtures" / fixture).read_bytes()
         footer = read_footer(_store(root / "fixtures" / fixture), fixture, FooterOptions())
@@ -204,21 +214,21 @@ def pruning(root: Path, query: str, fixtures: str = "") -> dict:
                 units.append(
                     _unit(row_group.num_rows, low, high, index not in scan.skipped, scan.skipped.get(index))
                 )
-        m = scan.metrics
         files.append(
             {
                 "fixture": fixture,
                 "unit": "page" if by_page else "row group",
                 "units": units,
                 "units_read": sum(u["read"] for u in units),
-                "rows_decoded": m.rows_in,
-                "rows_out": m.rows_out,
-                "bytes_read": m.bytes_read,
-                "requests": m.requests,
+                **_counters(scan),
                 "file_bytes": len(data),
             }
         )
-    low, high = _window(scan.filters, leaf)
+    column = scan.filters[0].column
+    if isinstance(scan, TableScan):
+        low, high = _window_of_values(scan.filters, _is_date(scan, column))
+    else:
+        low, high = _window(scan.filters, leaf)
     return {
         "experiment": "pruning",
         "query": query,
@@ -228,6 +238,68 @@ def pruning(root: Path, query: str, fixtures: str = "") -> dict:
         "window": {"min": low[0], "max": high[0], "min_label": low[1], "max_label": high[1]},
         "files": files,
     }
+
+
+def _counters(scan) -> dict:
+    m = scan.metrics
+    return {
+        "rows_decoded": m.rows_in,
+        "rows_out": m.rows_out,
+        "bytes_read": m.bytes_read,
+        "requests": m.requests,
+    }
+
+
+#: How to read a bound the table's metadata keeps, by the comparator that orders it.
+BOUND_FORMATS = {"I32": "<i", "I64": "<q", "F64": "<d", "F32": "<f"}
+
+
+def _is_date(scan, column: str) -> bool:
+    metadata = json.loads((scan.table / scan.METADATA).read_text())
+    return any(entry.startswith(f"{column}: date") for entry in metadata["schema"])
+
+
+def _typed(value: float, is_date: bool) -> tuple[float, str]:
+    if is_date:
+        return value, (dt.date(1970, 1, 1) + dt.timedelta(days=value)).isoformat()
+    return value, f"{value:,}" if isinstance(value, int) else f"{value:g}"
+
+
+def _table_units(scan, label: str) -> dict:
+    """A table's files as units: each file's bounds of the filtered column, from the table's
+    metadata, and whether the scan opened it."""
+    column = scan.filters[0].column
+    is_date = _is_date(scan, column)
+    metadata = json.loads((scan.table / scan.METADATA).read_text())
+    units = []
+    for entry in metadata["files"]:
+        bounds = entry["bounds"][column]
+        fmt = BOUND_FORMATS[bounds["comparator"]]
+        low = _typed(struct.unpack(fmt, bytes.fromhex(bounds["lower"]))[0], is_date)
+        high = _typed(struct.unpack(fmt, bytes.fromhex(bounds["upper"]))[0], is_date)
+        read = entry["path"] in scan.opened
+        units.append(_unit(entry["rows"], low, high, read, scan.skipped.get(entry["path"])))
+    return {
+        "fixture": f"{scan.table.name}/",
+        "label": label,
+        "unit": "file",
+        "units": units,
+        "units_read": len(scan.opened),
+        "file_bytes": sum(e["bytes"] for e in metadata["files"]),
+    }
+
+
+def _window_of_values(filters, is_date: bool) -> tuple[tuple, tuple]:
+    low, high = (None, ""), (None, "")
+    for f in filters:
+        value = (f.value - dt.date(1970, 1, 1)).days if isinstance(f.value, dt.date) else f.value
+        if f.op in (">", ">="):
+            low = _typed(value, is_date)
+        elif f.op in ("<", "<="):
+            high = _typed(value, is_date)
+        elif f.op == "=":
+            low = high = _typed(value, is_date)
+    return low, high
 
 
 def _unit(rows: int, low: tuple, high: tuple, read: bool, why: str | None) -> dict:

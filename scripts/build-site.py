@@ -826,10 +826,12 @@ def build(out: Path) -> None:
         listing[name] = sorted(f.name for f in package.glob("*.py"))
         for module in listing[name]:
             shutil.copy(package / module, out / "lab" / "py" / name / module)
-    # Every fixture, with its manifest.
+    # Every fixture, with its manifest, and every table of many files, as a directory.
     for f in sorted((ROOT / "fixtures").glob("*")):
         if f.suffix in (".parquet", ".json"):
             shutil.copy(f, out / "fixtures" / f.name)
+        elif f.is_dir() and (f / "metadata.json").is_file():
+            shutil.copytree(f, out / "fixtures" / f.name, ignore=shutil.ignore_patterns("__pycache__"))
     fixtures = sorted(
         str(f.relative_to(out / "fixtures")) for f in (out / "fixtures").rglob("*") if f.is_file()
     )

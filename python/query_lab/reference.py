@@ -96,9 +96,19 @@ def bytes_read(sql: str) -> int:
     installs: the figures that print this count are computed when the book is built, never in
     the page.
     """
+    return _counted(sql)[0]
+
+
+def files_opened(sql: str) -> int:
+    """How many files DuckDB opens to run ``sql``, counted at the same file system (ch05)."""
+    return _counted(sql)[1]
+
+
+def _counted(sql: str) -> tuple[int, int]:
     from fsspec.implementations.local import LocalFileSystem  # noqa: PLC0415
 
     served: list[int] = []
+    opened: set[str] = set()
 
     class Counting(LocalFileSystem):
         protocol = "counted"
@@ -108,6 +118,7 @@ def bytes_read(sql: str) -> int:
             return super()._strip_protocol(str(path).removeprefix("counted://"))
 
         def _open(self, path, mode="rb", **kwargs):
+            opened.add(str(path))
             f = super()._open(path, mode, **kwargs)
             read = f.read
 
@@ -122,4 +133,4 @@ def bytes_read(sql: str) -> int:
     con = connect()
     con.register_filesystem(Counting())
     con.execute(sql.replace("'fixtures/", f"'counted://{Path.cwd()}/fixtures/")).fetchall()
-    return sum(served)
+    return sum(served), len(opened)
