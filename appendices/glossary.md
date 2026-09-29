@@ -14,6 +14,9 @@ batches laid out as they are in memory. [ch05](#where-work-happens)
 **Batch.** A slice of a table, a few thousand rows held column by column as Arrow arrays: what
 one operator hands the next. [ch01](#the-plan-is-the-map)
 
+**Binding.** Resolving every name a query uses to what it names: each column to the table it belongs
+to, checked against the tables' schemas. [ch11](#from-sql-to-a-logical-plan)
+
 **Branch predictor.** The part of a processor that guesses which way a branch will go, from the
 way it went before, so the processor can start on the guessed path at once.
 [ch06](#expressions-and-vectorised-kernels)
@@ -84,6 +87,9 @@ instruction. [ch06](#expressions-and-vectorised-kernels)
 **Linear probing.** Looking in the next slot, and the next, when a key's slot in a hash table
 holds another key. [ch07](#hash-aggregation)
 
+**Logical plan.** A query's meaning as a tree of steps, such as reading a table, joining, filtering
+and grouping, each saying what it hands up and not how. [ch11](#from-sql-to-a-logical-plan)
+
 **Memory limit.** The most memory an engine, or a query, may use; an operator that needs more must
 spill or fail. [ch10](#memory-limits-and-spilling)
 
@@ -140,6 +146,10 @@ needs one, so the top of the plan drives the run. [ch01](#the-plan-is-the-map)
 **Pushdown.** Handing work to the operator that reads the data, so that data never has to leave
 it. [ch03](#projection-and-filter-pushdown)
 
+**Recursive descent.** Parsing with one function for each kind of phrase in a grammar, each calling
+the functions for the phrases inside it; precedence is one function per level.
+[ch11](#from-sql-to-a-logical-plan)
+
 **Row group.** A horizontal slice of a Parquet file: every column's values for a run of rows,
 with statistics for each column. [ch01](#the-plan-is-the-map)
 
@@ -158,9 +168,15 @@ piece of a large sort written to disk, to be merged with the others. [ch09](#sor
 query finishes in less memory, and pays in bytes written and read.
 [ch10](#memory-limits-and-spilling)
 
+**Syntax tree.** The parts of a query's text as a tree, as the text wrote them, before any name in it
+is checked. [ch11](#from-sql-to-a-logical-plan)
+
 **Table metadata.** A file kept beside a table's data files that lists each of them with the
 smallest and largest value of every column, so a reader can rule out a file without opening it.
 [ch05](#where-work-happens)
+
+**Token.** One word, number, string or operator of a query's text: what a parser reads, once the
+spaces and comments are dropped. [ch11](#from-sql-to-a-logical-plan)
 
 **Top-k.** The first k rows in some order, found without sorting every row: an engine keeps the
 best k seen so far and compares each new row with the worst of them. [ch09](#sorting-and-top-k)

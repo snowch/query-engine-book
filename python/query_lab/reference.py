@@ -62,11 +62,15 @@ def read_query(path: str | Path) -> str:
     return clean_sql(Path(path).read_text())
 
 
-def explain(sql: str, con: duckdb.DuckDBPyConnection | None = None) -> dict:
-    """DuckDB's physical plan for ``sql``, as the JSON ``EXPLAIN (FORMAT JSON)`` returns: the top
-    operator, with its children below it. Nothing is run."""
+def explain(sql: str, con: duckdb.DuckDBPyConnection | None = None, plan: str = "physical_plan") -> dict:
+    """DuckDB's plan for ``sql``, as the JSON ``EXPLAIN (FORMAT JSON)`` returns: the top operator,
+    with its children below it. Nothing is run. ``plan`` asks for the physical plan, or for
+    ``logical_plan``, the plan as the query was bound, or ``logical_opt``, once rewritten (ch11)."""
     con = con or connect()
-    return json.loads(con.execute(f"EXPLAIN (FORMAT JSON) {sql}").fetchall()[0][1])[0]
+    if plan != "physical_plan":
+        con.execute("PRAGMA explain_output = 'all'")
+    plans = dict(con.execute(f"EXPLAIN (FORMAT JSON) {sql}").fetchall())
+    return json.loads(plans[plan])[0]
 
 
 def observe(sql: str, con: duckdb.DuckDBPyConnection | None = None) -> Observation:

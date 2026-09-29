@@ -54,6 +54,9 @@ project:
         - file: chapters/joins.md
         - file: chapters/sorting_and_top_k.md
         - file: chapters/memory_limits_and_spilling.md
+    - file: parts/planning.md
+      children:
+        - file: chapters/from_sql_to_a_logical_plan.md
     - title: Appendices
       children:
         - file: appendices/running_the_lab.md

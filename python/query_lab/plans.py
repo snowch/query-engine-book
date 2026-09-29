@@ -1,9 +1,10 @@
-"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch10).
+"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch11).
 
-The engine has no planner yet: that is Part IV. Until then, each query the book runs through
-the engine has a plan here, built from operators the way DuckDB's ``EXPLAIN`` drew its own,
-and registered under the query's file name so the figures, the tests and the command line find
-it from the query.
+Until Part IV, the engine had no planner. Each query the book runs through the engine has a plan
+here, built from operators the way DuckDB's ``EXPLAIN`` drew its own, and registered under the
+query's file name so the figures, the tests and the command line find it from the query. From
+ch11, :mod:`query_lab.planner` builds plans from the text, and these are what it is measured
+against.
 """
 
 from __future__ import annotations
@@ -232,6 +233,22 @@ def customers_with_orders(root: Path) -> Operator:
     )
 
 
+def enterprise_orders(root: Path) -> Operator:
+    """queries/enterprise_orders.sql as DuckDB runs it (ch11): each condition tested on its own
+    table's rows, below the join, and the segment inside the customers' scan."""
+    fixtures = root / "fixtures"
+    orders = Scan(fixtures / "orders-sorted.parquet", ["order_id", "customer_id", "amount", "quantity"])
+    pricey = Filter(orders, "amount / quantity > 100", lambda b: pc.greater(unit_price(b), 100))
+    enterprise = [Comparison("segment", "=", "enterprise")]
+    customers = Scan(fixtures / "customers.parquet", ["customer_id", "country"], filters=enterprise)
+    columns = [("probe", "order_id"), ("build", "country"), ("probe", "amount"), ("probe", "quantity")]
+    joined = HashJoin(pricey, customers, "customer_id", "customer_id", columns)
+    return Project(
+        joined,
+        {"order_id": _column("order_id"), "country": _column("country"), "unit_price": unit_price},
+    )
+
+
 #: queries/top_orders.sql's and orders_by_amount.sql's order: the largest amount first, ties by
 #: the order id (ch09).
 BY_AMOUNT = [("amount", True), ("order_id", False)]
@@ -277,6 +294,7 @@ PLANS: dict[str, Callable[[Path], Operator]] = {
     "customers_with_orders.sql": customers_with_orders,
     "top_orders.sql": top_orders,
     "orders_by_amount.sql": orders_by_amount,
+    "enterprise_orders.sql": enterprise_orders,
 }
 
 #: For each plan, the DuckDB operator that does the same job as each of the plan's operators,
@@ -298,6 +316,9 @@ DUCKDB_PARTNERS: dict[str, list[str | None]] = {
     "customers_with_orders.sql": ["HASH_JOIN", "TABLE_SCAN#2", "TABLE_SCAN"],
     "top_orders.sql": ["TOP_N", "TABLE_SCAN"],
     "orders_by_amount.sql": ["ORDER_BY", "TABLE_SCAN"],
+    # DuckDB hands the join's build-side key range to the orders' scan as it runs, so its scan and
+    # its filter see a few orders fewer than this plan's.
+    "enterprise_orders.sql": ["PROJECTION", "HASH_JOIN", None, None, "TABLE_SCAN#2"],
 }
 
 

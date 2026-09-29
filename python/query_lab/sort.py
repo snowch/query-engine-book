@@ -42,8 +42,12 @@ class Comparisons:
 def _rows(batch: pa.RecordBatch, keys: list[str]) -> list[tuple]:
     """Each row of the batch as its sort key, then its whole row: ``(key tuple, row tuple)``."""
     columns = [c.to_pylist() for c in batch.columns]
+    rows = list(zip(*columns, strict=True))
+    if not keys:
+        # With no keys every row's key is the same, empty: a top-k keeps the first rows it is given.
+        return [((), row) for row in rows]
     key_columns = [batch.column(k).to_pylist() for k in keys]
-    return list(zip(zip(*key_columns, strict=True), zip(*columns, strict=True), strict=True))
+    return list(zip(zip(*key_columns, strict=True), rows, strict=True))
 
 
 class Sort(Operator):

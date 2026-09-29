@@ -127,6 +127,11 @@ PARTS = (
         "Part III: Computing",
         "Once the rows are in memory, what does each operator cost the processor?",
     ),
+    Part(
+        "planning",
+        "Part IV: Planning",
+        "How does an engine decide what to run for a query, from its text alone?",
+    ),
 )
 
 _P = {p.slug: p.title for p in PARTS}
@@ -231,6 +236,16 @@ _CHAPTERS = (
         "a time, counting the bytes written and read, beside DuckDB's memory limit.",
         ("measure",),
         ("orders-shuffled.parquet",),
+    ),
+    (
+        "from_sql_to_a_logical_plan",
+        "From SQL to a logical plan",
+        "planning",
+        "How does an engine turn the text of a query into a plan it can run, and what does the plainest plan cost?",
+        "A tokenizer and a recursive-descent parser for the book's SQL, binding against each file's "
+        "schema, and a planner that builds the plain logical plan and the operators to run it.",
+        ("measure",),
+        ("orders-sorted.parquet", "customers.parquet"),
     ),
 )
 

@@ -57,8 +57,10 @@ def duckdb_conditions(fixture: str) -> str:
     return conditions(f"DuckDB {duckdb.__version__} with one thread", fixture)
 
 
-def plan_of(query: str, fixture: str) -> Callable[[], str]:
+def plan_of(query: str, fixture: str, plan: str = "physical_plan") -> Callable[[], str]:
     """DuckDB's plan for a query, before it runs, as a table: one row per operator, top down.
+    ``plan`` names which of DuckDB's plans (:func:`query_lab.reference.explain`); the logical
+    plan as bound has no estimates, and its table no column for them.
 
     DuckDB draws its plan in box-drawing characters, and a monospace font without them (Android's,
     for one) pulls the boxes apart. A table reads the same on every screen, and the panel beside
@@ -67,21 +69,25 @@ def plan_of(query: str, fixture: str) -> Callable[[], str]:
 
     def make() -> str:
         rows = []
+        estimated = plan != "logical_plan"
 
         def walk(node: dict) -> None:
-            extra = dict(node.get("extra_info") or {})
+            extra = {k: v for k, v in (node.get("extra_info") or {}).items() if v}
             estimate = extra.pop("Estimated Cardinality", None)
             # The scan's function repeats its operator's name; the rest says what the operator does.
             extra.pop("Function", None)
             does = "; ".join(f"{k}: {_cell(v)}" for k, v in extra.items())
             # The estimate sits beside the name, and the long details last, where a phone wraps them.
             guess = f"{int(estimate):,}" if estimate else "none"
-            rows.append(f"| {node['name'].strip()} | {guess} | {does} |")
+            rows.append(f"| {node['name'].strip()} | " + (f"{guess} | " if estimated else "") + f"{does} |")
             for child in node.get("children", []):
                 walk(child)
 
-        walk(explain(read_query(ROOT / "queries" / query)))
-        head = "| Operator | Rows out, estimated | What it does |\n|---|---:|---|\n"
+        walk(explain(read_query(ROOT / "queries" / query), plan=plan))
+        if estimated:
+            head = "| Operator | Rows out, estimated | What it does |\n|---|---:|---|\n"
+        else:
+            head = "| Operator | What it does |\n|---|---|\n"
         return head + "\n".join(rows) + "\n" + duckdb_conditions(fixture)
 
     make.query = query
@@ -717,7 +723,7 @@ def build_sides_table() -> str:
         + "\n"
         + conditions(
             f"the book's engine and cache model, and DuckDB {duckdb.__version__} with one thread",
-            "orders-sorted.parquet` and `fixtures/customers.parquet",
+            ORDERS_AND_CUSTOMERS,
         )
     )
 
@@ -823,6 +829,102 @@ def fan_in_table() -> str:
     return "\n".join(lines) + "\n" + conditions("the book's engine", "orders-shuffled.parquet")
 
 
+def logical_of(query: str, fixture: str) -> Callable[[], str]:
+    """The engine's plain logical plan for a query (ch11), as a table: one row per step, top down."""
+
+    def make() -> str:
+        from .planner import logical_plan
+        from .sql import parse
+
+        steps = logical_plan(ROOT, parse(read_query(ROOT / "queries" / query))).walk()
+        rows = [f"| {type(s).__name__} | `{str(s).partition(' ')[2]}` |" for s in steps]
+        return (
+            "| Step | What it does |\n|---|---|\n"
+            + "\n".join(rows)
+            + "\n"
+            + conditions("the book's planner", fixture)
+        )
+
+    make.query = query
+    return make
+
+
+def _scanned(metrics: Metrics, scan: str) -> tuple[int, str]:
+    """The rows a plan's scans handed up, and its operators' names, top down."""
+    walk = list(metrics.walk())
+    return sum(m.rows_out for m in walk if m.operator == scan), ", ".join(m.operator for m in walk)
+
+
+def plain_compare_of(query: str, fixture: str) -> Callable[[], str]:
+    """The engine's plain plan for a query beside DuckDB's (ch11): the operators, the rows the
+    scans handed up, the bytes read and the rows out."""
+
+    def make() -> str:
+        from .planner import plan
+
+        text = read_query(ROOT / "queries" / query)
+        ours = plan(ROOT, text)
+        ours.run()
+        seen = observe(text)
+        rows = []
+        for who, metrics, scan, read in (
+            ("Your plain plan", ours.metrics, "Scan", sum(m.bytes_read for m in ours.metrics.walk())),
+            ("DuckDB's plan", seen.metrics, "TABLE_SCAN", bytes_read(text)),
+        ):
+            scanned, operators = _scanned(metrics, scan)
+            rows.append(f"| {who} | {operators} | {scanned:,} | {read:,} | {metrics.rows_out:,} |")
+        head = "| Plan | Operators, top down | Rows from the scans | Bytes read | Rows out |\n|---|---|---:|---:|---:|\n"
+        return (
+            head
+            + "\n".join(rows)
+            + "\n"
+            + conditions(
+                f"the book's planner and engine, and DuckDB {duckdb.__version__} with one thread", fixture
+            )
+        )
+
+    make.query = query
+    return make
+
+
+#: The fixtures a figure of the chapter's join query reads, as its conditions line names them.
+ORDERS_AND_CUSTOMERS = "orders-sorted.parquet` and `fixtures/customers.parquet"
+
+#: The queries problem 11.3 sets the plain plan against the hand-written ones for.
+PLAIN_OR_WRITTEN = (
+    "returned_unit_price.sql",
+    "early_march.sql",
+    "orders_per_customer.sql",
+    "enterprise_orders.sql",
+    "top_orders.sql",
+)
+
+
+def plain_or_written_table() -> str:
+    """Five of the book's queries planned the plain way and by hand: the operators and the bytes
+    read of each (ch11, problem 11.3)."""
+    from .planner import plan
+
+    rows = []
+    for query in PLAIN_OR_WRITTEN:
+        plain, written = plan(ROOT, read_query(ROOT / "queries" / query)), plans.plan_for(ROOT, query)
+        cells = []
+        for op in (plain, written):
+            op.run()
+            cells.append((_scanned(op.metrics, "Scan")[1], sum(m.bytes_read for m in op.metrics.walk())))
+        rows.append(f"| `{query}` | {cells[0][0]} | {cells[0][1]:,} | {cells[1][0]} | {cells[1][1]:,} |")
+    head = "| Query | Plain plan | Bytes read | Hand-written plan | Bytes read |\n|---|---|---:|---|---:|\n"
+    return (
+        head
+        + "\n".join(rows)
+        + "\n"
+        + conditions(
+            "the book's planner and engine",
+            "orders-sorted.parquet`, `fixtures/orders-shuffled.parquet` and `fixtures/customers.parquet",
+        )
+    )
+
+
 def orders_recipe() -> str:
     """How the orders were generated, from the generator's own constants and manifest."""
     sys.path.insert(0, str(ROOT / "fixtures"))
@@ -907,6 +1009,17 @@ FIGURES = (
     Figure("sort-or-top", sort_or_top_table, query="orders_by_amount.sql"),
     Figure("memory-limits", memory_limits_table, query="orders_by_amount.sql"),
     Figure("fan-in", fan_in_table, query="orders_by_amount.sql"),
+    Figure(
+        "enterprise-orders-logical",
+        plan_of("enterprise_orders.sql", ORDERS_AND_CUSTOMERS, "logical_plan"),
+    ),
+    Figure("enterprise-orders-plan", plan_of("enterprise_orders.sql", ORDERS_AND_CUSTOMERS)),
+    Figure("enterprise-orders-plain", logical_of("enterprise_orders.sql", ORDERS_AND_CUSTOMERS)),
+    Figure(
+        "enterprise-orders-compare",
+        plain_compare_of("enterprise_orders.sql", ORDERS_AND_CUSTOMERS),
+    ),
+    Figure("plain-or-written", plain_or_written_table),
 )
 
 
@@ -931,6 +1044,7 @@ PANELS = (
     {"experiment": "measure", "of": "joins"},
     {"experiment": "measure", "of": "sorting"},
     {"experiment": "measure", "of": "spilling"},
+    {"experiment": "measure", "of": "planning"},
 )
 
 
