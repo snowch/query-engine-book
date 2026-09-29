@@ -203,6 +203,11 @@ Decisions taken this week:
 - **Cache counts join the counters.** The cache model's reads, hits, misses and bytes fetched
   are counters too, specified in COUNTERS.md beside the operators', and printed with the model's
   settings in the conditions line. They are the first of the simulators in section 2.
+- **Plans are drawn as DuckDB draws them.** The book ships a monospace font with every
+  box-drawing character (JetBrains Mono, SIL Open Font License, in `public/fonts`), so DuckDB's
+  `EXPLAIN` output stays joined on a phone, whose own monospace font may lack those characters.
+  Pictures drawn in text use a ```` ```diagram ```` fence; ch01 shows DuckDB's plans that way,
+  and a generated journey of rows from the file to the result.
 - **One appendix section for running the book from a clone.** The chapters stay browser-only;
   *Running the lab* keeps the commands for a reader who wants them, and is the one page a test
   lets hold a shell command.

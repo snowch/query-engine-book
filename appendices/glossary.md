@@ -109,7 +109,8 @@ instruction. [ch06](#expressions-and-vectorised-kernels)
 holds another key. [ch07](#hash-aggregation)
 
 **Logical plan.** A query's meaning as a tree of steps, such as reading a table, joining, filtering
-and grouping, each saying what it hands up and not how. [ch11](#from-sql-to-a-logical-plan)
+and grouping, each saying what it hands up and not how. [ch01](#the-plan-is-the-map) names it, and
+[ch11](#from-sql-to-a-logical-plan) builds one.
 
 **Memory limit.** The most memory an engine, or a query, may use; an operator that needs more must
 spill or fail. [ch10](#memory-limits-and-spilling)

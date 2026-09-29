@@ -9,69 +9,83 @@ title: The plan is the map
 
 What does an engine do with your query, and where can you see what each step costs?
 
-You hand an engine a sentence of SQL and it hands back rows. Between the two it does a fixed
-sequence of jobs: read some columns, throw away some rows, compute some values. Each job has a
-cost you pay in bytes read and rows moved. Every later chapter changes one of those jobs and
-measures what moved. That needs two things first: a map of the jobs for a real query, and a way
-to count what flows between them. DuckDB gives you both before you build anything.
+A query engine is a machine for moving and transforming data. You hand it a sentence of SQL, and
+it reads data from storage, passes it from one step to the next, holds some of it and computes
+with it, until the rows you asked for come out. Three questions describe what it did, and each has
+its own answer:
+
+| The question | What answers it |
+|---|---|
+| What does the query mean? | A **logical plan**: the steps the SQL asks for, such as *read the orders*, *keep the returned ones*, *compute a unit price*, with nothing yet decided about how. [ch11](#from-sql-to-a-logical-plan) builds one. |
+| How will the engine run it? | The **physical plan**: the operators the engine chose to do those steps. `EXPLAIN` prints it. |
+| What did running it do? | The **profile**: the same operators, each with what it counted as it ran. |
+
+**The plan is the map, and the profile is the journey.** The plan says where the data is meant to
+go; the profile says how much of it went through each part of the map. This chapter reads both for
+one query, then builds the same plan and checks it against them.
+
+A query pays in four ways, and the rest of the book measures each:
+
+| What a query pays | The question it asks | Where the book measures it |
+|---|---|---|
+| Bytes read | How much did the engine fetch from storage? | [Part II](#part-reading-less) |
+| Rows moved | How many rows passed from one step to the next? | This chapter, and every one after |
+| Memory held | How much did a step hold at once? | [Part III](#part-computing) |
+| Rows sent between machines | How much crossed from one machine to another? | [Part V](#part-scaling-out) |
+
+Every design choice in the book makes an engine read less, move less, hold less or send less, and
+every chapter measures which.
 
 ## Observe
 
-The query asks for the returned orders whose unit price was over a threshold. It reads
-`orders-sorted`, one of the book's fixtures: a year of orders, one row each, written by a real
-Parquet writer from a seeded generator. The query is a file in the repository, and this page
-quotes it, so the SQL you read is the SQL every figure below ran.
+The first query asks for the returned orders. It reads `orders-sorted`, one of the book's
+fixtures: a year of orders, one row each, written by a real Parquet writer from a seeded
+generator. The query is a file in the repository, and this page quotes it, so the SQL you read is
+the SQL every figure below ran.
 
-```{literalinclude} ../queries/returned_unit_price.sql
+```{literalinclude} ../queries/returned_orders.sql
 :language: sql
 ```
 
 Every query the book quotes can be changed and run in your browser: press **Edit and run** above
 it. Your version runs under DuckDB in the page, and draws its plan and its first rows.
 
-Ask DuckDB how it will run the query, without running it, by putting `EXPLAIN` in front. What
-comes back is the **physical plan**: the steps the engine will take, one to a row of the table
-below. Each step is an **operator**, one job with one input and one output. Rows flow from the
-bottom operator to the top one.
+Ask DuckDB how it will run a query, without running it, by putting `EXPLAIN` in front. What comes
+back is the physical plan, drawn as DuckDB draws it in a terminal:
 
-This plan has one operator for each of the three jobs in the question. A **scan** reads rows
-from storage: here, from the Parquet file. A **filter** keeps the rows for which a
-**predicate** is true, where a predicate is a condition, such as `status = 'returned'`, that
-each row either meets or does not. A **projection** computes the columns the query returns
-from the columns it is given, and drops the rest. DuckDB calls them `PARQUET_SCAN`, `FILTER` and
-`PROJECTION`.
-
-```{include} _generated/returned-unit-price-plan.md
+```{include} _generated/returned-orders-explain.md
 ```
 
-Read the plan from the bottom, as the rows travel, and three things stand out.
+The whole plan is one box. Each box is an **operator**: one job, with one input and one output.
+This one is a **scan**, the operator that reads rows from storage, and it does three things at
+once. It reads only the columns the query names, its `Projections`. It tests each row's status as
+it reads it, its `Filters`. And it hands up only the rows that pass. The status test is a
+**predicate**: a condition, such as `status = 'returned'`, that each row either meets or does
+not. **An operator describes a job, not a separate piece of code**: reading, testing and dropping
+rows are all the scan's work here. The last line of the box is the operator's **cardinality
+estimate**: how many rows the planner, the part of the engine that turned the SQL into this plan,
+expects it to produce. It was made before a single row was read.
 
-1. **The scan reads fewer columns than the file has.** The `Projections` list in the scan's row
-   names the columns it passes up. `note` and `order_date` are not there: nothing above needs
-   them, so the scan never reads them.
-2. **One predicate moved into the scan.** `status = 'returned'` compares a column with a
-   constant, and the plan lists it under the scan's `Filters`. The scan tests each row as it
-   reads it and passes up only the rows that match. `status` is read for that test and then
-   dropped. The unit price predicate divides one column by another, and it gets an operator of
-   its own, `FILTER`.
-3. **Every operator comes with a guess.** The second column is the operator's **cardinality
-   estimate**: how many rows the planner, the part of the engine that turned the SQL into this
-   plan, expects the operator to produce. It was made before a
-   single row was read.
+Now ask for the returned orders whose unit price was over a threshold:
 
-A plan tells you what the engine intends. To see what it did, you run the query with profiling
-on. DuckDB then writes a **profile**: the same tree of operators, each with counters from the
-run. The book runs every query through one function, which asks for the plan, then runs the
-query once with a JSON profile and reads it back:
-
-```{literalinclude} ../python/query_lab/reference.py
-:language: python
-:start-at: def observe(
-:end-before: def bytes_read(
+```{literalinclude} ../queries/returned_unit_price.sql
+:language: sql
 ```
 
-The profile's counters are the measurement in the next section. Before you look at them, you
-make a prediction.
+```{include} _generated/returned-unit-price-explain.md
+```
+
+The plan grew two operators. The new predicate divides one column by another, and a scan tests
+only a column against a constant, so the price test gets an operator of its own: a **filter**,
+which keeps the rows for which a predicate is true. The unit price is computed, not read, so a
+**projection** computes the columns the query returns from the columns it is given. The status
+test stayed in the scan. Read the plan from the bottom, as the rows travel: the scan hands up the
+returned orders, the filter keeps the dear ones, and the projection computes their unit price.
+
+A plan tells you what the engine intends. To see what it did, you run the query with profiling on,
+and DuckDB writes the profile: the same operators, each with the rows it took in and handed out.
+The book runs every query this way, through one function in `query_lab.reference`, and the next
+section sets the profile beside the plan.
 
 ## Predict, then measure
 
@@ -93,8 +107,7 @@ variants: pricier_returns.sql, shipped_unit_price.sql
 ```
 
 The panel draws what DuckDB measured when the book was built. Its button runs the same report
-again in your browser, under Pyodide, a build of Python compiled to WebAssembly so that it runs
-in the page, and says whether your browser's DuckDB gave the same answer.
+again in your browser, and says whether your browser's DuckDB gave the same answer.
 
 Now press them, and check your answers.
 
@@ -108,8 +121,7 @@ Now press them, and check your answers.
   gives every predicate the same default **selectivity**, the fraction of rows a predicate keeps.
 - **An estimate can be wrong in either direction.** For the returned orders it is too high; for
   the shipped ones it is far too low. A planner that chooses between plans with guesses like
-  these can choose the wrong one. The chapters on planning are about where better estimates come
-  from.
+  these can choose the wrong one.
 - **Rows in, for each operator above the scan, is the output of the operator below.** Nothing is
   lost between operators. That makes the profile a ledger: each operator's reduction is its rows
   out against its rows in.
@@ -118,20 +130,25 @@ Now press them, and check your answers.
   scan skips most of the file, so it tells you what the scan was responsible for, not what it
   decoded.
 
-The measurements are no mystery. They follow from how the generator wrote the orders:
+**A query engine plans with predictions and runs on what is there.** The distance between the two
+is where a planner earns its keep, and [Part IV](#part-planning) is about narrowing it.
+
+The profile, read as a journey from the file to the result:
+
+```{include} _generated/returned-unit-price-journey.md
+```
+
+That is the book in miniature. Every later chapter asks what happened to a flow of rows like this
+one, and what each step of it cost.
+
+The measurements are no mystery. They follow from the generator's recipe:
 
 ```{include} _generated/orders-recipe.md
 ```
 
-The scan keeps the returned orders, which are the returned share of all the orders. The filter
-keeps those whose unit price, `amount / quantity`, is over the query's threshold, which is the
-share of the price range above it, since prices were drawn evenly across the range. The
-projection changes no row count. You could have worked the measurements out from this recipe.
-The planner could not, because nobody gave it the recipe. Later chapters give you what a
-prediction needs before they ask you for one.
-
-To go further, open the editor under the plan and run a query of your own. It runs in your
-browser.
+You know the recipe, and the planner does not. Problem 1.2 asks you to work the measurements out
+from it; [ch13](#statistics-cost-and-join-order) gives a planner part of the same knowledge, from
+what a file says about itself.
 
 Keep the book's three measurements. When you build the same plan in the next section, your
 operators report the same counters, and they must agree with these.
@@ -214,6 +231,10 @@ columns' bytes were never requested. The rows it handed up, and the bytes of eve
 every one of them, all went to the first filter, which kept few of them. The cheapest row to
 filter is the one the scan never hands up.
 
+**The same logical work does not mean the same physical work.** Your plan and DuckDB's do the same
+jobs and hand up the same rows; DuckDB's does one of the jobs inside its scan, where yours gives it
+an operator of its own, and pays for it in rows moved.
+
 ## What this cannot tell you
 
 - **How long anything took.** The counters say how much work each operator did, not how fast.
@@ -237,6 +258,19 @@ filter is the one the scan never hands up.
 
 ## What this means for your design
 
+Read any plan in five steps, and each step points at a part of the book:
+
+1. **Start at the scan.** What enters the engine: which files, which columns, which rows?
+2. **Move up.** Where are rows dropped, computed or combined?
+3. **Compare the estimates with the measurements.** Where did the planner guess wrong, and did it
+   matter? ([Part IV](#part-planning))
+4. **Ask what could have been avoided.** Could the scan have read fewer columns, fewer row groups,
+   fewer rows? ([Part II](#part-reading-less))
+5. **Ask what the rest cost.** What did each step compute and hold, and would it have to be sent
+   between machines? ([Part III](#part-computing), [Part V](#part-scaling-out))
+
+Then:
+
 - **Read the profile before you change anything.** Rows in and rows out, operator by operator,
   show where the work goes. The operator with the largest rows in, and the one that throws most
   of them away, are where a change pays.
@@ -253,8 +287,10 @@ filter is the one the scan never hands up.
 :::{div}
 :class: takeaways
 
-- **A plan is a tree of operators, and rows flow up it.** The physical plan names each operator;
-  the profile says how many rows each took in and handed out.
+- **The plan is the map; the profile is the journey.** The physical plan names each operator; the
+  profile says how many rows each took in and handed out.
+- **An operator is a job, not a piece of code.** DuckDB's scan read, tested and dropped rows in
+  one operator; a predicate it cannot test there gets a filter of its own.
 - **Estimates come before the run; counters come from it.** The planner's estimate and the
   measured rows can be far apart, and only the profile says which was right.
 - **An engine pulls.** Each operator asks the one below it for a batch when it needs one, so
@@ -287,14 +323,20 @@ rows the chapter's query keeps, for any status and any price threshold. The grad
 answer with DuckDB's count for several of each. It is the estimate the planner could not make,
 because nobody gave it the recipe.
 
-**1.3 Diagnose the slow query.** No test. A colleague finds the same returned orders with this
-query:
+**1.3 Find where the filtering stopped happening early.** No test. A colleague finds the same
+returned orders with this query:
 
 ```{literalinclude} ../queries/lower_status.sql
 :language: sql
 ```
 
-It returns the same rows as the chapter's query, and DuckDB profiles it like this:
+It returns the same rows as the chapter's query. DuckDB plans it like this; set it beside the
+chapter's plan in *Observe*:
+
+```{include} _generated/lower-status-explain.md
+```
+
+And DuckDB profiles it like this:
 
 ```{include} _generated/lower-status-profile.md
 ```

@@ -197,6 +197,17 @@ def test_prose_avoids_the_words_style_md_bans(page):
     assert not found, f"STYLE.md rule 13: {found}"
 
 
+@pytest.mark.parametrize("page", BOOK_PAGES, ids=lambda p: str(p.relative_to(ROOT)))
+def test_a_diagram_typed_into_a_page_carries_no_number(page):
+    """A ```diagram block is a picture, not code, so the book lets a page draw one; but the number
+    check skips fenced blocks, so a diagram with a count in it must be generated, like any figure."""
+    for lang, body in fences(page.read_text()):
+        if lang == "diagram":
+            assert not re.search(r"\d{2,}", body), (
+                "a number in a drawn diagram: generate it (query_lab.figures)"
+            )
+
+
 def glossary() -> list[tuple[str, str]]:
     """Each glossary entry as (term, the anchor of the chapter that introduces it)."""
     text = (ROOT / "appendices" / "glossary.md").read_text()

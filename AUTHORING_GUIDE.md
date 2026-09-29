@@ -128,7 +128,11 @@ code later chapters add lands between the anchors unseen, and a chapter once quo
 chapters after it wrote. `tests/test_book.py` fails a listing over 80 lines, and the page folds
 one over 30 behind a button. Quote the part of an operator the chapter explains: when a later
 chapter grows a method, give the growth a method of its own, so each chapter quotes its part. The MyST parse fails if an anchor stops matching. Generated output, such as a
-plan, is an `{include}` of a fragment. A page gives no shell commands: the reader needs only a
+plan, is an `{include}` of a fragment. A picture drawn in text goes in a ```` ```diagram ````
+fence, which renders in the book's monospace font at a line height that joins box-drawing
+characters; a diagram with a count in it comes from a fragment (`figures.explain_of` draws
+DuckDB's `EXPLAIN` this way), since the number check skips fenced blocks and a test refuses
+numbers typed into one. A page gives no shell commands: the reader needs only a
 browser. The one exception is the *On your own machine* section of *Running the lab*; keep
 anything about running the book from a clone there.
 

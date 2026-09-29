@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import sys
+import textwrap
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -89,6 +90,57 @@ def plan_of(query: str, fixture: str, plan: str = "physical_plan") -> Callable[[
         else:
             head = "| Operator | What it does |\n|---|---|\n"
         return head + "\n".join(rows) + "\n" + duckdb_conditions(fixture)
+
+    make.query = query
+    return make
+
+
+def explain_of(query: str, fixture: str) -> Callable[[], str]:
+    """DuckDB's plan for a query, as ``EXPLAIN`` draws it in a terminal, boxes and all (ch01).
+
+    The page shows it in the book's own monospace font, which has every box-drawing character, so
+    the boxes stay joined on any screen.
+    """
+
+    def make() -> str:
+        con = connect()
+        drawn = con.execute(f"EXPLAIN {read_query(ROOT / 'queries' / query)}").fetchall()[0][1]
+        return "```diagram\n" + drawn.rstrip() + "\n```\n" + duckdb_conditions(fixture)
+
+    make.query = query
+    return make
+
+
+#: What each kind of DuckDB operator says it did, for the journey of rows (``journey_of``).
+JOURNEY_DETAIL = {"PARQUET_SCAN": "Filters", "FILTER": "Expression", "PROJECTION": "Projections"}
+
+
+def journey_of(query: str, fixture: str) -> Callable[[], str]:
+    """The rows of a one-path plan as they travel up it, from the file to the result: DuckDB's
+    operators, bottom up, each with what it tests or computes and the rows it handed up (ch01)."""
+
+    def make() -> str:
+        text = read_query(ROOT / "queries" / query)
+        steps = []
+        node = explain(text)
+        while True:
+            steps.append(node)
+            if not node.get("children"):
+                break
+            node = node["children"][0]
+        measured = list(observe(text).metrics.walk())
+        width = 44
+        lines = [f"{'the file':<{width - 12}}{measured[-1].rows_in:>8,} rows"]
+        for step, m in zip(reversed(steps), reversed(measured), strict=True):
+            name = step["name"].strip()
+            detail = (step.get("extra_info") or {}).get(JOURNEY_DETAIL.get(name, ""), "")
+            detail = ", ".join(detail) if isinstance(detail, list) else str(detail)
+            wrapped = textwrap.wrap(detail, 40) or [""]
+            lines.append(f"  │  {name}")
+            lines += [f"  │    {part}" for part in wrapped]
+            lines.append("  ▼")
+            lines.append(f"{'':<{width - 12}}{m.rows_out:>8,} rows")
+        return "```diagram\n" + "\n".join(lines) + "\n```\n" + duckdb_conditions(fixture)
 
     make.query = query
     return make
@@ -1268,7 +1320,10 @@ def fixtures_table() -> str:
 
 
 FIGURES = (
-    Figure("returned-unit-price-plan", plan_of("returned_unit_price.sql", "orders-sorted.parquet")),
+    Figure("returned-orders-explain", explain_of("returned_orders.sql", "orders-sorted.parquet")),
+    Figure("returned-unit-price-explain", explain_of("returned_unit_price.sql", "orders-sorted.parquet")),
+    Figure("returned-unit-price-journey", journey_of("returned_unit_price.sql", "orders-sorted.parquet")),
+    Figure("lower-status-explain", explain_of("lower_status.sql", "orders-sorted.parquet")),
     Figure("orders-recipe", orders_recipe),
     Figure("returned-unit-price-engine", engine_of("returned_unit_price.sql", "orders-sorted.parquet")),
     Figure("returned-unit-price-compare", compare_of("returned_unit_price.sql", "orders-sorted.parquet")),
