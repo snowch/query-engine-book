@@ -89,8 +89,8 @@ variants: pricier_returns.sql, shipped_unit_price.sql
 ```
 
 The panel draws what DuckDB measured when the book was built. Its button runs the same report
-again in your browser, under Pyodide, and says whether your browser's DuckDB gave the same
-answer.
+again in your browser, under Pyodide, a build of Python compiled to WebAssembly so that it runs
+in the page, and says whether your browser's DuckDB gave the same answer.
 
 Now press them, and check your answers.
 
@@ -231,9 +231,12 @@ filter is the one the scan never hands up.
 ## What this cannot tell you
 
 - **How long anything took.** The counters say how much work each operator did, not how fast.
-  Your engine decodes Parquet in Python, many times slower than DuckDB's C++, and its times would
-  say nothing about the design. The chapters that are about time use small simulators; the book
-  never prints a time.
+  In the page, both engines run inside your browser: yours as Python under Pyodide, DuckDB as its
+  C++ compiled to WebAssembly. Each is slower there than on a server, by an amount that depends
+  on your browser and your machine, and your engine decodes Parquet in Python besides, many times
+  slower than DuckDB's C++ anywhere. A time would measure all of that, not the design. The
+  counters come out the same in your browser as when the book was built. The chapters that are
+  about time use small simulators; the book never prints a time.
 - **What DuckDB's scan decoded.** DuckDB reports the rows in the files its scan opened, not the
   rows it decoded. [ch03](#projection-and-filter-pushdown) counts that with your own scan.
 - **Anything about statistics.** Your scan, as this chapter uses it, reads every row group,
