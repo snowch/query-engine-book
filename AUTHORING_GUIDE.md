@@ -118,11 +118,16 @@ Quote Python from `python/` and SQL from `queries/`:
 ```{literalinclude} ../python/query_lab/reference.py
 :language: python
 :start-at: def observe(
+:end-before: def bytes_read(
 ```
 ````
 
 Anchor on text that survives `ruff format`: a signature's opening, a docstring's first words.
-Never `:lines:`. The MyST parse fails if an anchor stops matching. Generated output, such as a
+Never `:lines:`. End every listing at the next thing in the file, never at a marker further down:
+code later chapters add lands between the anchors unseen, and a chapter once quoted every plan the
+chapters after it wrote. `tests/test_book.py` fails a listing over 80 lines, and the page folds
+one over 30 behind a button. Quote the part of an operator the chapter explains: when a later
+chapter grows a method, give the growth a method of its own, so each chapter quotes its part. The MyST parse fails if an anchor stops matching. Generated output, such as a
 plan, is an `{include}` of a fragment. A page gives no shell commands: the reader needs only a
 browser. The one exception is the *On your own machine* section of *Running the lab*; keep
 anything about running the book from a clone there.

@@ -198,8 +198,30 @@ function mountEdit(figure, then) {
   if (store.get(key) !== null && store.get(key) !== listing) start();
 }
 
-/** Make every quoted query, and every engine listing a `run` block follows, editable. */
+/** Lines a listing shows before it folds: the rest sit behind a button, so a long listing does
+ * not push the prose around it off the screen. */
+const FOLD_AT = 30;
+
+function fold(figure) {
+  const pre = figure.querySelector(":scope > pre");
+  if (!pre) return;
+  const lines = pre.textContent.replace(/\n$/, "").split("\n").length;
+  if (lines <= FOLD_AT) return;
+  figure.dataset.folded = "true";
+  const toggle = el("button", "fold-toggle", `Show all ${lines} lines`);
+  toggle.type = "button";
+  toggle.addEventListener("click", () => {
+    const folded = figure.dataset.folded === "true";
+    figure.dataset.folded = String(!folded);
+    toggle.textContent = folded ? "Show fewer lines" : `Show all ${lines} lines`;
+  });
+  pre.after(toggle);
+}
+
+/** Make every quoted query, and every engine listing a `run` block follows, editable, and fold
+ * every long listing. */
 export function mountEdits() {
+  for (const figure of document.querySelectorAll("#main figure.quoted")) fold(figure);
   for (const figure of document.querySelectorAll("#main figure.quoted[data-file]")) {
     const next = figure.nextElementSibling;
     const then = next && next.matches("script.run-then") ? JSON.parse(next.textContent) : null;

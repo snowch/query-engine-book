@@ -8,6 +8,8 @@
 // edit it failed on, and a run after it must give the build's answer again: the edit was undone.
 // The edit is kept in the browser's storage, and reopens its editor on a reload.
 //
+// A listing over thirty lines is folded, with a button that shows the rest.
+//
 // A quoted query, the first on each page: an edited query must draw what a desk's report prints
 // for the same text, and mark every figure and panel computed for the book's query as the book's,
 // until reset; a broken one must report DuckDB's error.
@@ -68,6 +70,25 @@ try {
     const page = await openPage(browser, directory(site));
     await page.goto(`${ORIGIN}/${file}`);
     await page.waitForLoadState("load");
+    // A listing over thirty lines is folded, and its button shows the rest.
+    const folds = await page.$$eval("#main figure.quoted", (fs) => fs.map((f) => {
+      const lines = f.querySelector(":scope > pre").textContent.replace(/\n$/, "").split("\n").length;
+      return [lines > 30, f.dataset.folded === "true", !!f.querySelector(":scope > .fold-toggle")];
+    }));
+    if (folds.some(([long, folded, button]) => long !== folded || long !== button)) {
+      failures += 1;
+      console.error(`FAILED ${file}: a long listing is not folded, or a short one is`);
+    }
+    const first = await page.$('#main figure.quoted[data-folded="true"]');
+    if (first) {
+      await (await first.$(".fold-toggle")).click();
+      if (await first.getAttribute("data-folded") !== "false") {
+        failures += 1;
+        console.error(`FAILED ${file}: the fold's button did not show the rest`);
+      } else {
+        console.log(`  ${file}: long listings fold, and a button shows the rest`);
+      }
+    }
     const kinds = await page.$$eval("figure.quoted[data-editable]", (fs) => fs.map((f) => [f.dataset.editable, f.dataset.file]));
     // Every listing of the engine, and the first query on the page.
     const firstQuery = kinds.findIndex(([kind]) => kind === "query");

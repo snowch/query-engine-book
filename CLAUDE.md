@@ -172,6 +172,7 @@ without following its order or examples; each chapter keeps a list of its primar
 ## Things that break the build
 
 - Renaming or reformatting a line a `{literalinclude}` anchors on. Search `chapters/` for the text.
+- A listing over 80 lines, usually code added between a listing's anchors by a later chapter.
 - Changing the engine, a query or a fixture so a generated number moves, without `make figures`.
 - Upgrading DuckDB or pyarrow without regenerating fixtures (the generator refuses other versions).
 - A new MyST directive or node type without a branch in `tools/render.py`.

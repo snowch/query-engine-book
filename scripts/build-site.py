@@ -784,8 +784,9 @@ def build(out: Path) -> None:
         mdast = parse[p["source"]]["mdast"]
         normalise_headings(mdast)
         body = renderer.render_page(mdast)
-        # Only a page that mounts a panel or a workbench loads the lab's script.
-        markers = ('class="lab"', 'class="workbench"')
+        # Only a page that mounts a panel or a workbench, or quotes a listing (which may be edited,
+        # and folded when long), loads the lab's script.
+        markers = ('class="lab"', 'class="workbench"', 'class="quoted"')
         has_lab = any(m in body for m in markers)
         text = page_html(
             p,

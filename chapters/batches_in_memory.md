@@ -206,7 +206,7 @@ order:
 ```{literalinclude} ../python/query_lab/plans.py
 :language: python
 :start-at: def in_date_order(
-:end-before: #: Each plan, by the query file it answers.
+:end-before: #: Every column of the orders files
 ```
 
 The book's tests check that each array your engine builds is the array pyarrow builds from the

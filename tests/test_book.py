@@ -110,6 +110,37 @@ def test_a_run_block_follows_a_listing_of_the_engine(page):
         )
 
 
+#: The most lines one quoted listing may hold. A listing is bounded by text anchors, and code added
+#: later between them lands in it unseen: a chapter's listing once grew to quote every plan the
+#: chapters after it added. A listing longer than this is quoting too much, or the wrong thing.
+LISTING_LINES = 80
+
+
+def listings(page: Path) -> list[tuple[str, int]]:
+    """Each ``{literalinclude}`` of a page, as its file and the lines it quotes, found as MyST
+    finds them: from the first line holding ``start-at``, to the first after it holding
+    ``end-before``."""
+    out = []
+    for m in re.finditer(r"```\{literalinclude\} \.\./(\S+)\n(.*?)```", page.read_text(), re.S):
+        lines = (ROOT / m.group(1)).read_text().splitlines()
+        start = re.search(r":start-at: (.+)", m.group(2))
+        end = re.search(r":end-before: (.+)", m.group(2))
+        i = next(k for k, line in enumerate(lines) if start.group(1).strip() in line) if start else 0
+        j = (
+            next((k for k in range(i + 1, len(lines)) if end.group(1).strip() in lines[k]), len(lines))
+            if end
+            else len(lines)
+        )
+        out.append((m.group(1), j - i))
+    return out
+
+
+@pytest.mark.parametrize("page", BOOK_PAGES, ids=lambda p: str(p.relative_to(ROOT)))
+def test_no_listing_quotes_more_than_a_reader_will_read(page):
+    long = [(f, n) for f, n in listings(page) if n > LISTING_LINES]
+    assert not long, f"listings over {LISTING_LINES} lines: {long}; tighten their anchors, or split the code"
+
+
 #: The longest line of a query that still fits the prose's measure in the code's font, with room
 #: to spare for a reader's fonts. A longer line pushes its listing into the wide column, where a
 #: short query leaves most of the width empty beside the prose's narrower listings.

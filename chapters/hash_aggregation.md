@@ -99,7 +99,7 @@ doubles if it is now more than three quarters full:
 ```{literalinclude} ../python/query_lab/aggregate.py
 :language: python
 :start-at: def find(self, key: object)
-:end-before: def _grow(
+:end-before: def get(self, key
 ```
 
 ```run
