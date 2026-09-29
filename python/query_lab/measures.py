@@ -442,6 +442,51 @@ def planning(root: Path) -> dict:
     }
 
 
+def rules(root: Path) -> dict:
+    """ch11's enterprise orders planned the plain way, then with each of ch12's first two rules
+    alone and with both, counting the bytes read and the rows that reach the join."""
+    from .planner import plan
+    from .reference import read_query
+    from .rules import prune_columns, push_filters
+
+    text = read_query(root / "queries" / "enterprise_orders.sql")
+
+    def run(rules: tuple):
+        operator = plan(root, text, rules)
+        operator.run()
+        walk = list(operator.metrics.walk())
+        join = next(m for m in walk if m.operator == "HashJoin")
+        scans = [m for m in walk if m.operator == "Scan"]
+        return sum(m.bytes_read for m in scans), sum(m.rows_out for m in scans), join.rows_in
+
+    plain, _, _ = run(())
+    cases = []
+    for label, chosen in (
+        ("Push the filters down", (push_filters,)),
+        ("Prune the columns", (prune_columns,)),
+        ("Both rules", (push_filters, prune_columns)),
+    ):
+        read, scanned, joined = run(chosen)
+        cases.append(
+            {
+                "label": label,
+                "detail": ", then ".join(r.__name__ for r in chosen),
+                "reference": {"label": "The plain plan", "value": plain},
+                "measured": read,
+                "counters": [["rows from the scans", scanned], ["rows into the join", joined]],
+            }
+        )
+    return {
+        "title": "Two rules, one at a time",
+        "predict": {"label": "Bytes read", "ask": "the bytes each plan reads", "placeholder": "bytes read"},
+        "facts": (
+            "The query keeps enterprise customers, a quarter of them, and orders over a unit price, "
+            "from two tables of seven and five columns. The customers are one row group."
+        ),
+        "cases": cases,
+    }
+
+
 #: Every measure panel, by the name a lab block gives it as ``of``.
 MEASURES: dict[str, Callable[[Path], dict]] = {
     "aggregation": aggregation,
@@ -449,4 +494,5 @@ MEASURES: dict[str, Callable[[Path], dict]] = {
     "sorting": sorting,
     "spilling": spilling,
     "planning": planning,
+    "rules": rules,
 }

@@ -135,6 +135,17 @@ class Take(Node):
         return f"Limit {self.n}"
 
 
+@dataclass
+class Top(Node):
+    """Hand up the first ``n`` rows in the order of ``keys``: a sort and a limit as one step (ch12)."""
+
+    keys: list[tuple[str, bool]] = field(default_factory=list)
+    n: int = 0
+
+    def __str__(self) -> str:
+        return f"Top {self.n} by " + ", ".join(f"{c} {'DESC' if d else 'ASC'}" for c, d in self.keys)
+
+
 def show(node: Node, depth: int = 0) -> str:
     """The logical plan as indented lines, the root first."""
     return "\n".join(["  " * depth + str(node), *(show(c, depth + 1) for c in node.children)])
@@ -206,7 +217,7 @@ def logical_plan(root: Path, query: Query) -> Node:
         plan = Select(children=[plan], condition=scope.bind(query.where))
 
     if query.star:
-        items = [(c, Column(c)) for g in gets for c in _output(g)]
+        items = [(c, Column(c)) for g in gets for c in output(g)]
     else:
         items = [(item.alias or name_of(item.expr), scope.bind(item.expr)) for item in query.items]
     if query.group_by or any(_aggregate(e) for _, e in items):
@@ -274,18 +285,18 @@ def name_of(e: Expression) -> str:
     return "count_star()" if isinstance(e, Call) and e.op == "count" and not e.args else str(e)
 
 
-def _output(node: Node) -> list[str]:
+def output(node: Node) -> list[str]:
     """The columns a logical step hands up, by the names the plan uses."""
     match node:
         case Get(table=t, columns=columns, qualified=qualified):
             return [f"{t.alias}.{c}" for c in columns] if qualified else list(columns)
         case Join():
-            return [*_output(node.children[0]), *_output(node.children[1])]
+            return [*output(node.children[0]), *output(node.children[1])]
         case Group(keys=keys, aggregates=aggregates):
             return [*keys, *(n for n, _, _ in aggregates)]
         case Compute(items=items):
             return [n for n, _ in items]
-    return _output(node.children[0])
+    return output(node.children[0])
 
 
 # The physical plan. ------------------------------------------------------------------------------
@@ -304,8 +315,8 @@ def physical_plan(root: Path, node: Node) -> Operator:
         case Select(condition=condition):
             return Filter(kids[0], str(condition), partial(evaluate, condition))
         case Join(left_key=left, right_key=right):
-            columns = [("probe", c) for c in _output(node.children[0])]
-            columns += [("build", c) for c in _output(node.children[1])]
+            columns = [("probe", c) for c in output(node.children[0])]
+            columns += [("build", c) for c in output(node.children[1])]
             return HashJoin(kids[0], kids[1], left, right, columns)
         case Group(keys=keys, aggregates=aggregates):
             return HashAggregate(kids[0], keys, [Aggregate(n, f, c) for n, f, c in aggregates])
@@ -316,9 +327,15 @@ def physical_plan(root: Path, node: Node) -> Operator:
         case Take(n=n):
             # The first rows as they come: ch09's top-k, with nothing to order them by.
             return TopK(kids[0], [], n)
+        case Top(keys=keys, n=n):
+            return TopK(kids[0], keys, n)
     raise PlanError(f"no operator for {node}")
 
 
-def plan(root: Path, text: str) -> Operator:
-    """The engine's operators for a query's text: parsed, bound, planned the plain way."""
-    return physical_plan(root, logical_plan(root, parse(text)))
+def plan(root: Path, text: str, rules: tuple = ()) -> Operator:
+    """The engine's operators for a query's text: parsed, bound, planned the plain way, then
+    rewritten by each of ``rules`` in turn (ch12's :mod:`query_lab.rules`)."""
+    logical = logical_plan(root, parse(text))
+    for rule in rules:
+        logical = rule(logical)
+    return physical_plan(root, logical)

@@ -10,4 +10,6 @@ title: "Part IV: Planning"
 Every plan in Parts I to III was written by hand, from DuckDB's `EXPLAIN`. An engine has only the
 query's text. This part writes the planner that turns the text into a plan: it reads the text,
 checks every name in it, and builds the plan the text describes in the plainest way, then
-measures what the plainest way costs ([ch11](#from-sql-to-a-logical-plan)).
+measures what the plainest way costs ([ch11](#from-sql-to-a-logical-plan)). Then it teaches the
+planner rules that rewrite the plan into a cheaper one with the same rows, whatever the
+data, and finds they rebuild every plan the book wrote by hand ([ch12](#optimiser-rules)).

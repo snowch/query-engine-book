@@ -247,6 +247,16 @@ _CHAPTERS = (
         ("measure",),
         ("orders-sorted.parquet", "customers.parquet"),
     ),
+    (
+        "optimiser_rules",
+        "Optimiser rules",
+        "planning",
+        "Which rewrites of a plan save work whatever the data, and what does each one save?",
+        "Rules that push each condition down to its table and into the scan, read only the columns "
+        "used, and turn a sort under a limit into a top-k, rebuilding every hand-written plan.",
+        ("measure",),
+        ("orders-sorted.parquet", "customers.parquet"),
+    ),
 )
 
 CHAPTERS = tuple(

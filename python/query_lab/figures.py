@@ -829,20 +829,25 @@ def fan_in_table() -> str:
     return "\n".join(lines) + "\n" + conditions("the book's engine", "orders-shuffled.parquet")
 
 
-def logical_of(query: str, fixture: str) -> Callable[[], str]:
-    """The engine's plain logical plan for a query (ch11), as a table: one row per step, top down."""
+def logical_of(query: str, fixture: str, rewritten: bool = False) -> Callable[[], str]:
+    """The engine's plain logical plan for a query (ch11), or with ``rewritten`` the plan after
+    ch12's rules, as a table: one row per step, top down."""
 
     def make() -> str:
         from .planner import logical_plan
+        from .rules import RULES
         from .sql import parse
 
-        steps = logical_plan(ROOT, parse(read_query(ROOT / "queries" / query))).walk()
+        logical = logical_plan(ROOT, parse(read_query(ROOT / "queries" / query)))
+        for rule in RULES if rewritten else ():
+            logical = rule(logical)
+        steps = logical.walk()
         rows = [f"| {type(s).__name__} | `{str(s).partition(' ')[2]}` |" for s in steps]
         return (
             "| Step | What it does |\n|---|---|\n"
             + "\n".join(rows)
             + "\n"
-            + conditions("the book's planner", fixture)
+            + conditions("the book's planner and its rules" if rewritten else "the book's planner", fixture)
         )
 
     make.query = query
@@ -921,6 +926,95 @@ def plain_or_written_table() -> str:
         + conditions(
             "the book's planner and engine",
             "orders-sorted.parquet`, `fixtures/orders-shuffled.parquet` and `fixtures/customers.parquet",
+        )
+    )
+
+
+#: The rules DuckDB turns off in ch12's figure, alone and together, by DuckDB's names for them.
+DUCKDB_RULES_OFF = ("", "filter_pushdown", "unused_columns")
+
+
+def rules_off_table() -> str:
+    """ch11's enterprise orders run by DuckDB with its rules on, and with each of two turned off
+    (ch12): the operators, the rows from the scans and the bytes read."""
+    text = read_query(ROOT / "queries" / "enterprise_orders.sql")
+    rows = []
+    for off in DUCKDB_RULES_OFF:
+        setup = f"SET disabled_optimizers = '{off}'" if off else ""
+        con = connect()
+        if setup:
+            con.execute(setup)
+        seen = observe(text, con)
+        scanned, operators = _scanned(seen.metrics, "TABLE_SCAN")
+        label = f"`{off.replace(',', '`, `')}` off" if off else "every rule on"
+        rows.append(f"| {label} | {operators} | {scanned:,} | {bytes_read(text, setup):,} |")
+    head = "| DuckDB, with | Operators, top down | Rows from the scans | Bytes read |\n|---|---|---:|---:|\n"
+    return head + "\n".join(rows) + "\n" + duckdb_conditions(ORDERS_AND_CUSTOMERS)
+
+
+def rules_rebuild_table() -> str:
+    """Every query with a plan written by hand, planned from its text by ch12's rules: the bytes
+    each reads, beside the hand-written plan's."""
+    from .planner import PlanError, plan
+    from .rules import RULES
+
+    rows = []
+    for query in plans.PLANS:
+        text = read_query(ROOT / "queries" / query)
+        try:
+            ours = plan(ROOT, text, RULES)
+        except PlanError:
+            continue
+        written = plans.plan_for(ROOT, query)
+        read = []
+        for op in (ours, written):
+            op.run()
+            read.append(sum(m.bytes_read for m in op.metrics.walk()))
+        rows.append(f"| `{query}` | {read[0]:,} | {read[1]:,} |")
+    head = "| Query | Your rules' plan, bytes read | Hand-written plan, bytes read |\n|---|---:|---:|\n"
+    return (
+        head
+        + "\n".join(rows)
+        + "\n"
+        + conditions(
+            "the book's planner and rules",
+            "orders-sorted.parquet`, `fixtures/orders-paged.parquet`, `fixtures/orders-shuffled.parquet` and "
+            "`fixtures/customers.parquet",
+        )
+    )
+
+
+def either_side_table() -> str:
+    """Problem 12.3's query, whose condition reads both tables, planned by the rules and by DuckDB:
+    where each put the condition, and what each read."""
+    from .planner import plan
+    from .rules import RULES
+
+    text = read_query(ROOT / "queries" / "enterprise_or_large.sql")
+    ours = plan(ROOT, text, RULES)
+    ours.run()
+    seen = observe(text)
+    rows = []
+    for who, metrics, scan, read in (
+        ("Your rules' plan", ours.metrics, "Scan", sum(m.bytes_read for m in ours.metrics.walk())),
+        ("DuckDB's plan", seen.metrics, "TABLE_SCAN", bytes_read(text)),
+    ):
+        scanned, operators = _scanned(metrics, scan)
+        join = next(m for m in metrics.walk() if m.operator in ("HashJoin", "HASH_JOIN"))
+        rows.append(
+            f"| {who} | {operators} | {scanned:,} | {join.rows_out:,} | {read:,} | {metrics.rows_out:,} |"
+        )
+    head = (
+        "| Plan | Operators, top down | Rows from the scans | Rows out of the join | Bytes read | Rows out |\n"
+        "|---|---|---:|---:|---:|---:|\n"
+    )
+    return (
+        head
+        + "\n".join(rows)
+        + "\n"
+        + conditions(
+            f"the book's planner and rules, and DuckDB {duckdb.__version__} with one thread",
+            ORDERS_AND_CUSTOMERS,
         )
     )
 
@@ -1020,6 +1114,13 @@ FIGURES = (
         plain_compare_of("enterprise_orders.sql", ORDERS_AND_CUSTOMERS),
     ),
     Figure("plain-or-written", plain_or_written_table),
+    Figure("enterprise-orders-rules-off", rules_off_table, query="enterprise_orders.sql"),
+    Figure("rules-rebuild", rules_rebuild_table),
+    Figure("either-side", either_side_table, query="enterprise_or_large.sql"),
+    Figure(
+        "enterprise-orders-rewritten",
+        logical_of("enterprise_orders.sql", ORDERS_AND_CUSTOMERS, rewritten=True),
+    ),
 )
 
 
@@ -1045,6 +1146,7 @@ PANELS = (
     {"experiment": "measure", "of": "sorting"},
     {"experiment": "measure", "of": "spilling"},
     {"experiment": "measure", "of": "planning"},
+    {"experiment": "measure", "of": "rules"},
 )
 
 

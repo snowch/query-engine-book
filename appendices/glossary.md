@@ -38,6 +38,9 @@ before the query runs. [ch01](#the-plan-is-the-map)
 **Column index.** Part of a Parquet file's page index: the smallest and largest value of each
 page of a column chunk. [ch04](#statistics-and-pruning)
 
+**Conjunct.** One of the parts of a condition joined by `AND`: each must hold, so each can be tested
+on its own, wherever its columns are. [ch12](#optimiser-rules)
+
 **Constant folding.** Computing every part of an expression that depends on no column once, when the
 query is planned, instead of for every row. [ch06](#expressions-and-vectorised-kernels)
 
@@ -111,6 +114,9 @@ hanging off them. [ch07](#hash-aggregation)
 **Operator.** One step of a plan: a job with one input and one output, such as a scan, a filter
 or a projection. [ch01](#the-plan-is-the-map)
 
+**Optimiser.** The part of a planner that rewrites the logical plan by rules, and chooses between
+plans that give the same rows. [ch12](#optimiser-rules)
+
 **Partial aggregate.** A group's aggregates over part of its rows, such as a count and a sum,
 combined later with the other parts' into the group's aggregates over all of them.
 [ch07](#hash-aggregation)
@@ -149,6 +155,9 @@ it. [ch03](#projection-and-filter-pushdown)
 **Recursive descent.** Parsing with one function for each kind of phrase in a grammar, each calling
 the functions for the phrases inside it; precedence is one function per level.
 [ch11](#from-sql-to-a-logical-plan)
+
+**Rewrite rule.** A change to a logical plan that gives the same rows for no more work, whatever the
+data: moving a condition down, reading fewer columns. [ch12](#optimiser-rules)
 
 **Row group.** A horizontal slice of a Parquet file: every column's values for a run of rows,
 with statistics for each column. [ch01](#the-plan-is-the-map)
