@@ -770,6 +770,59 @@ def sort_or_top_table() -> str:
     )
 
 
+#: The memory limits ch10 runs DuckDB's sort within, around the smallest that lets it finish.
+DUCKDB_LIMITS = ("1.5MB", "2MB", "2.5MB")
+
+
+def memory_limits_table() -> str:
+    """ch10's sort and top ten, run by DuckDB within small memory limits, with a temporary
+    directory to spill to and without one."""
+    import tempfile
+
+    queries = [
+        ("orders_by_amount.sql", True, "`orders_by_amount.sql`, with a temporary directory"),
+        ("orders_by_amount.sql", False, "`orders_by_amount.sql`, with none"),
+        ("top_orders.sql", False, "`top_orders.sql`, with none"),
+    ]
+    lines = ["| Query | " + " | ".join(DUCKDB_LIMITS) + " |", "|---|" + "---|" * len(DUCKDB_LIMITS)]
+    for query, spill, label in queries:
+        cells = []
+        for limit in DUCKDB_LIMITS:
+            con = connect()
+            con.execute(f"SET memory_limit = '{limit}'")
+            with tempfile.TemporaryDirectory() as temp:
+                con.execute(f"SET temp_directory = '{temp if spill else ''}'")
+                try:
+                    con.execute(read_query(ROOT / "queries" / query)).fetchall()
+                    cells.append("finishes")
+                except duckdb.OutOfMemoryException:
+                    cells.append("out of memory")
+            con.close()
+        lines.append(f"| {label} | " + " | ".join(cells) + " |")
+    return "\n".join(lines) + "\n" + duckdb_conditions("orders-shuffled.parquet")
+
+
+#: The fan-ins ch10's problem 10.3 sorts with, within a tenth of the rows' bytes.
+FAN_INS = (2, 4, 8, 16)
+
+
+def fan_in_table() -> str:
+    """The shuffled orders sorted within a tenth of their bytes, merging more and more runs at once."""
+    total = sum(b.get_total_buffer_size() for b in plans.orders_by_amount(ROOT).child.batches())
+    lines = [
+        "| Fan-in | Runs written | Merge passes | Rows spilled | Bytes spilled | Bytes read back |",
+        "|---:|---:|---:|---:|---:|---:|",
+    ]
+    for fan_in in FAN_INS:
+        op = plans.orders_by_amount_within(ROOT, total // 10 + 1, fan_in)
+        op.run()
+        lines.append(
+            f"| {fan_in} | {op.sorted_runs + op.merged_runs:,} | {op.passes:,} | {op.rows_spilled:,} | {op.temp.written:,} | {op.temp.read:,} |"
+        )
+    lines += ["", f"The rows take {total:,} bytes; the memory limit is {total // 10 + 1:,}."]
+    return "\n".join(lines) + "\n" + conditions("the book's engine", "orders-shuffled.parquet")
+
+
 def orders_recipe() -> str:
     """How the orders were generated, from the generator's own constants and manifest."""
     sys.path.insert(0, str(ROOT / "fixtures"))
@@ -852,6 +905,8 @@ FIGURES = (
     Figure("orders-by-amount-plan", plan_of("orders_by_amount.sql", "orders-shuffled.parquet")),
     Figure("top-orders-compare", compare_of("top_orders.sql", "orders-shuffled.parquet")),
     Figure("sort-or-top", sort_or_top_table, query="orders_by_amount.sql"),
+    Figure("memory-limits", memory_limits_table, query="orders_by_amount.sql"),
+    Figure("fan-in", fan_in_table, query="orders_by_amount.sql"),
 )
 
 
@@ -875,6 +930,7 @@ PANELS = (
     {"experiment": "measure", "of": "aggregation"},
     {"experiment": "measure", "of": "joins"},
     {"experiment": "measure", "of": "sorting"},
+    {"experiment": "measure", "of": "spilling"},
 )
 
 

@@ -48,6 +48,13 @@ values, which every data page of the chunk refers to by number. [ch04](#statisti
 an operator at each inner node, applied to the values of the nodes below it.
 [ch06](#expressions-and-vectorised-kernels)
 
+**External sort.** A sort of more rows than memory holds: sorted runs that fit, spilled, then
+merged a fan-in at a time until one merge hands the rows up in order.
+[ch10](#memory-limits-and-spilling)
+
+**Fan-in.** The number of runs one merge reads at once; each needs a batch of memory, and fewer
+passes are needed the larger it is. [ch10](#memory-limits-and-spilling)
+
 **Filter.** The operator that keeps the rows for which a predicate is true.
 [ch01](#the-plan-is-the-map)
 
@@ -76,6 +83,9 @@ instruction. [ch06](#expressions-and-vectorised-kernels)
 
 **Linear probing.** Looking in the next slot, and the next, when a key's slot in a hash table
 holds another key. [ch07](#hash-aggregation)
+
+**Memory limit.** The most memory an engine, or a query, may use; an operator that needs more must
+spill or fail. [ch10](#memory-limits-and-spilling)
 
 **Merge join.** A join of two inputs sorted by the join key, which walks both from the front
 together and needs no table. [ch08](#joins)
@@ -143,6 +153,10 @@ a wide register at once. [ch06](#expressions-and-vectorised-kernels)
 
 **Sorted run.** A sequence of rows already in order: part of the input a sort finds in order, or a
 piece of a large sort written to disk, to be merged with the others. [ch09](#sorting-and-top-k)
+
+**Spilling.** Writing what does not fit in memory to temporary storage, to read it back later: a
+query finishes in less memory, and pays in bytes written and read.
+[ch10](#memory-limits-and-spilling)
 
 **Table metadata.** A file kept beside a table's data files that lists each of them with the
 smallest and largest value of every column, so a reader can rule out a file without opening it.

@@ -1,0 +1,132 @@
+{
+ "experiment": "measure",
+ "of": "spilling",
+ "engine": "the book's engine",
+ "title": "Sorting within a memory limit",
+ "predict": {
+  "label": "Bytes spilled",
+  "ask": "the bytes each spills",
+  "placeholder": "bytes spilled"
+ },
+ "facts": "The rows to sort take 400,000 bytes, in batches of a tenth of that. A run is spilled as Arrow IPC, which adds a little to its rows' bytes.",
+ "cases": [
+  {
+   "label": "Memory for every row",
+   "detail": "memory limit 400,001 bytes, fan-in 8",
+   "reference": {
+    "label": "Bytes of rows",
+    "value": 400000
+   },
+   "measured": 0,
+   "counters": [
+    [
+     "runs written",
+     0
+    ],
+    [
+     "merge passes",
+     0
+    ],
+    [
+     "bytes read back",
+     0
+    ]
+   ]
+  },
+  {
+   "label": "Memory for half the rows",
+   "detail": "memory limit 200,001 bytes, fan-in 8",
+   "reference": {
+    "label": "Bytes of rows",
+    "value": 400000
+   },
+   "measured": 419712,
+   "counters": [
+    [
+     "runs written",
+     2
+    ],
+    [
+     "merge passes",
+     1
+    ],
+    [
+     "bytes read back",
+     419712
+    ]
+   ]
+  },
+  {
+   "label": "A tenth, merging two runs at a time",
+   "detail": "memory limit 40,001 bytes, fan-in 2",
+   "reference": {
+    "label": "Bytes of rows",
+    "value": 400000
+   },
+   "measured": 1681680,
+   "counters": [
+    [
+     "runs written",
+     20
+    ],
+    [
+     "merge passes",
+     4
+    ],
+    [
+     "bytes read back",
+     1681680
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "the memory limit, in bytes",
+  "y_label": "bytes spilled",
+  "x_scale": "log",
+  "series": [
+   {
+    "label": "Fan-in 2",
+    "points": [
+     [
+      40001,
+      1681680
+     ],
+     [
+      80001,
+      1259920
+     ],
+     [
+      200001,
+      419712
+     ],
+     [
+      400001,
+      0
+     ]
+    ]
+   },
+   {
+    "label": "Fan-in 8",
+    "points": [
+     [
+      40001,
+      841232
+     ],
+     [
+      80001,
+      420480
+     ],
+     [
+      200001,
+      419712
+     ],
+     [
+      400001,
+      0
+     ]
+    ]
+   }
+  ]
+ }
+}

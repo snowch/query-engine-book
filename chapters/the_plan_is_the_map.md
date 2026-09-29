@@ -258,7 +258,7 @@ filter is the one the scan never hands up.
   reader decodes each column into Python values before your scan builds its arrays, and those
   are not counted.
 - **Plans with more than one input, or more rows than memory.** One file, one thread, and every
-  batch small. Joins, spilling and parallelism are later parts of the book.
+  batch small. Joins, running out of memory, and parallelism are later parts of the book.
 - **How a planner chooses.** You wrote this plan. The planner that writes plans, and the
   statistics it guesses with, are Part IV.
 
