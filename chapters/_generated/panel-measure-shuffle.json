@@ -1,0 +1,139 @@
+{
+ "experiment": "measure",
+ "of": "shuffle",
+ "engine": "the book's engine",
+ "title": "Four nodes",
+ "predict": {
+  "label": "Bytes shuffled",
+  "ask": "the bytes each sends between nodes",
+  "placeholder": "bytes"
+ },
+ "facts": "The orders' row groups are dealt out to the nodes in turn. The customers are one row group, on one node. A row costs its Arrow IPC bytes to send, and nothing to keep.",
+ "cases": [
+  {
+   "label": "Aggregate after shuffling every order",
+   "detail": "GROUP BY customer_id",
+   "reference": {
+    "label": "Bytes of the rows",
+    "value": 403424
+   },
+   "measured": 307808,
+   "counters": [
+    [
+     "rows out",
+     948
+    ]
+   ]
+  },
+  {
+   "label": "Aggregate in two phases",
+   "detail": "GROUP BY customer_id",
+   "reference": {
+    "label": "Bytes of the rows",
+    "value": 403424
+   },
+   "measured": 45568,
+   "counters": [
+    [
+     "rows out",
+     948
+    ]
+   ]
+  },
+  {
+   "label": "Join, shuffling both sides",
+   "detail": "orders JOIN customers",
+   "reference": {
+    "label": "Bytes of the rows",
+    "value": 253128
+   },
+   "measured": 195632,
+   "counters": [
+    [
+     "rows out",
+     20000
+    ]
+   ]
+  },
+  {
+   "label": "Join, broadcasting the customers",
+   "detail": "orders JOIN customers",
+   "reference": {
+    "label": "Bytes of the rows",
+    "value": 253128
+   },
+   "measured": 31224,
+   "counters": [
+    [
+     "rows out",
+     20000
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "nodes",
+  "y_label": "bytes shuffled by the join",
+  "x_scale": "linear",
+  "series": [
+   {
+    "label": "Shuffling both sides",
+    "points": [
+     [
+      2,
+      128232
+     ],
+     [
+      4,
+      195632
+     ],
+     [
+      8,
+      250832
+     ],
+     [
+      16,
+      302056
+     ],
+     [
+      32,
+      378568
+     ],
+     [
+      64,
+      521224
+     ]
+    ]
+   },
+   {
+    "label": "Broadcasting the customers",
+    "points": [
+     [
+      2,
+      10408
+     ],
+     [
+      4,
+      31224
+     ],
+     [
+      8,
+      72856
+     ],
+     [
+      16,
+      156120
+     ],
+     [
+      32,
+      322648
+     ],
+     [
+      64,
+      655704
+     ]
+    ]
+   }
+  ]
+ }
+}
