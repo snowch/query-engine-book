@@ -153,6 +153,10 @@ DuckDB draws it for `EXPLAIN`. [ch01](#the-plan-is-the-map)
 **Pipeline.** The operators a morsel passes through, from the scan up to the first operator that must
 see all its input before it can hand anything up. [ch14](#parallelism-on-one-machine)
 
+**Pipeline breaker.** An operator that must see all its input before it hands anything up, such as an
+aggregate, a sort or a join's build side. A pushed plan is cut into pipelines at each.
+[ch18](#pushing-instead-of-pulling)
+
 **Predicate.** A condition that each row either meets or does not, such as
 `status = 'returned'`. [ch01](#the-plan-is-the-map)
 
@@ -173,6 +177,9 @@ the query's predicates. [ch03](#projection-and-filter-pushdown)
 
 **Pull model.** Running a plan by having each operator ask the one below it for a batch when it
 needs one, so the top of the plan drives the run. [ch01](#the-plan-is-the-map)
+
+**Push model.** Running a plan by having the source loop over its input and hand each batch to the
+operator above it, and so on up to a sink. [ch18](#pushing-instead-of-pulling)
 
 **Pushdown.** Handing work to the operator that reads the data, so that data never has to leave
 it. [ch03](#projection-and-filter-pushdown)
@@ -201,6 +208,9 @@ equal keys meet. [ch15](#partitioning-and-shuffle)
 **SIMD.** Single instruction, multiple data: instructions that apply one operation to every lane of
 a wide register at once. [ch06](#expressions-and-vectorised-kernels)
 
+**Sink.** An operator that keeps the batches it is handed instead of handing them on: an aggregate's
+table, a join's build side, a query's result. [ch18](#pushing-instead-of-pulling)
+
 **Sorted run.** A sequence of rows already in order: part of the input a sort finds in order, or a
 piece of a large sort written to disk, to be merged with the others. [ch09](#sorting-and-top-k)
 
@@ -222,6 +232,9 @@ smallest and largest value of every column, so a reader can rule out a file with
 [ch05](#where-work-happens)
 
 **Task.** One machine's run of a stage. [ch17](#stages-and-distributed-execution)
+
+**Tee.** A step that hands every batch it is pushed to several consumers, so they share one read of
+their input. [ch18](#pushing-instead-of-pulling)
 
 **Token.** One word, number, string or operator of a query's text: what a parser reads, once the
 spaces and comments are dropped. [ch11](#from-sql-to-a-logical-plan)

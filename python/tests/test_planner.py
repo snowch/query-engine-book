@@ -16,6 +16,9 @@ QUERIES = sorted(p.name for p in (ROOT / "queries").glob("*.sql"))
 #: The queries that read a glob of files, or pass read_parquet options: the plain planner reads
 #: one plain file, and says so.
 UNPLANNED = {"early_march_partition.sql", "early_march_table.sql", "orders_by_date.sql"}
+#: The queries whose SQL ch11's parser does not read: each asks a question inside another, with
+#: ``EXISTS`` or ``WITH`` (ch18).
+BEYOND_THE_PARSER = {"any_returned.sql", "big_returners.sql", "big_returners_materialized.sql"}
 ORDERS = f"'{ROOT / 'fixtures' / 'orders-sorted.parquet'}'"
 
 
@@ -39,10 +42,16 @@ def where(text: str):
     return sql.parse(f"SELECT x FROM 't' WHERE {text}").where
 
 
-@pytest.mark.parametrize("query", QUERIES)
+@pytest.mark.parametrize("query", sorted(set(QUERIES) - BEYOND_THE_PARSER))
 def test_every_query_in_the_book_parses(query):
     parsed = sql.parse(read_query(ROOT / "queries" / query))
     assert parsed.star or parsed.items
+
+
+@pytest.mark.parametrize("query", sorted(BEYOND_THE_PARSER))
+def test_a_query_beyond_the_parser_is_refused_with_a_message(query):
+    with pytest.raises(sql.SQLError):
+        sql.parse(read_query(ROOT / "queries" / query))
 
 
 def test_precedence_and_binds_tighter_than_or():
@@ -74,7 +83,7 @@ def test_the_parser_says_what_it_expected_and_where(text, message):
         sql.parse(text)
 
 
-@pytest.mark.parametrize("query", sorted(set(QUERIES) - UNPLANNED))
+@pytest.mark.parametrize("query", sorted(set(QUERIES) - UNPLANNED - BEYOND_THE_PARSER))
 def test_the_plain_plan_gives_duckdbs_rows(query):
     text = read_query(ROOT / "queries" / query)
     ordered = "order by" in text.lower()

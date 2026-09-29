@@ -849,6 +849,91 @@ def stages(root: Path) -> dict:
 
 
 #: Every measure panel, by the name a lab block gives it as ``of``.
+def pushing(root: Path) -> dict:
+    """ch18's two queries pushed and pulled, counting the bytes their scans read: a sink that wants
+    one row, with a source that listens and one that does not, and two consumers of the returned
+    orders, with a scan each and with one scan through a tee; then the bytes as consumers grow."""
+    from .aggregate import Aggregate
+    from .push import AVERAGE, TOTALS, any_returned, big_returners, big_returners_pulled
+
+    def read(scans) -> int:
+        return sum(s.metrics.bytes_read for s in scans)
+
+    listening, _ = any_returned(root, listen=True)
+    deaf, _ = any_returned(root, listen=False)
+    pushed, groups = big_returners(root)
+    pulled, _ = big_returners_pulled(root)
+    whole = read(pushed)
+    cases = [
+        {
+            "label": "Is there a returned order? The source listens",
+            "detail": "scan → Exists",
+            "reference": {"label": "Bytes read to the end", "value": deaf.metrics.bytes_read},
+            "measured": listening.metrics.bytes_read,
+            "counters": [
+                ["row groups read", listening.metrics.batches_out],
+                ["rows handed up", listening.metrics.rows_out],
+            ],
+        },
+        {
+            "label": "Is there a returned order? The source never listens",
+            "detail": "scan → Exists",
+            "reference": {"label": "Bytes read to the end", "value": deaf.metrics.bytes_read},
+            "measured": deaf.metrics.bytes_read,
+            "counters": [
+                ["row groups read", deaf.metrics.batches_out],
+                ["rows handed up", deaf.metrics.rows_out],
+            ],
+        },
+        {
+            "label": "Big returners, pulled: a scan for each consumer",
+            "detail": "scan → totals; scan → average",
+            "reference": {"label": "Bytes of one scan", "value": whole},
+            "measured": read(pulled),
+            "counters": [["scans", len(pulled)], ["rows handed up", sum(s.metrics.rows_out for s in pulled)]],
+        },
+        {
+            "label": "Big returners, pushed: one scan through a tee",
+            "detail": "scan → tee → totals, average",
+            "reference": {"label": "Bytes of one scan", "value": whole},
+            "measured": whole,
+            "counters": [
+                ["scans", len(pushed)],
+                ["rows handed up", sum(s.metrics.rows_out for s in pushed)],
+                ["rows each consumer took in", groups[0].metrics.rows_in],
+            ],
+        },
+    ]
+    sweep = [
+        TOTALS,
+        AVERAGE,
+        (["customer_id"], [Aggregate("orders", "count")]),
+        ([], [Aggregate("largest", "max", "amount")]),
+    ]
+    series = [
+        {
+            "label": label,
+            "points": [[k, read(way(root, tuple(sweep[:k]))[0])] for k in range(1, len(sweep) + 1)],
+        }
+        for label, way in (("pulled, a scan each", big_returners_pulled), ("pushed, one scan", big_returners))
+    ]
+    return {
+        "title": "Pushing the orders",
+        "predict": {"label": "Bytes read", "ask": "the bytes each way reads", "placeholder": "bytes"},
+        "facts": (
+            "The sorted orders are ten row groups, and returned orders are spread through all of them. "
+            "Each scan tests the status itself, reads the footer once, and then a row group at a time."
+        ),
+        "cases": cases,
+        "chart": {
+            "x_label": "consumers of the returned orders",
+            "y_label": "bytes read",
+            "x_scale": "linear",
+            "series": series,
+        },
+    }
+
+
 MEASURES: dict[str, Callable[[Path], dict]] = {
     "aggregation": aggregation,
     "joins": joins,
@@ -861,4 +946,5 @@ MEASURES: dict[str, Callable[[Path], dict]] = {
     "shuffle": shuffle,
     "skew": skew,
     "stages": stages,
+    "pushing": pushing,
 }
