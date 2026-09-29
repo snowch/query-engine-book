@@ -47,6 +47,7 @@
 .plan-op-flow b { color: var(--ink); font-weight: 600; margin-right: .6rem; }
 
 /* Changes to the query the book computed ahead: one press redraws the plan from that report. */
+.plan-variants-ask { margin: 0; padding: .7rem 1rem 0; font-size: 13px; color: var(--ink); }
 .plan-variants { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; padding: .7rem 1rem 0; }
 .plan-variants-label { font-size: 12.5px; color: var(--muted); margin-right: .2rem; }
 .lab .plan-variant { font-size: 12.5px; border-radius: 999px; padding: .2rem .7rem; }

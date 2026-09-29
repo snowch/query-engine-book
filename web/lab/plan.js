@@ -124,6 +124,10 @@ export function mountPlan(root, data, ctx, chosen = 0) {
   root.append(head);
 
   if (choices.length > 1) {
+    // The question comes before the buttons: the reader decides where a change will land first.
+    root.append(el("p", "plan-variants-ask",
+      "Before you press a change, look at the plan: which operators will it reach, and will their "
+      + "estimates move, their measurements, or both?"));
     const picker = el("div", "plan-variants");
     picker.append(el("span", "plan-variants-label", "Try a change:"));
     choices.forEach((choice, i) => {
