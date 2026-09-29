@@ -8,6 +8,8 @@
 //    that book reads.
 // 2. This book's own place is offered on the cover, and links to a page it has.
 // 3. The cover's picture sits in the text column, aligned with the paragraphs.
+// 4. On a phone, the list of chapters opens below the bar, starting at the cover, and scrolls
+//    within the screen when it is taller than the screen.
 
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -54,6 +56,24 @@ try {
   });
   check(Math.abs(img[0] - text[0]) <= 1 && img[1] <= text[1] + 1, `the cover's picture spans ${img}, the text ${text}`);
   console.log("  the cover's picture sits in the text column");
+
+  for (const height of [900, 480]) {
+    await page.setViewportSize({ width: 390, height });
+    await page.goto(`${ORIGIN}/${BASE}joins.html`);
+    await page.click("#menu");
+    const drawer = await page.evaluate(() => {
+      const nav = document.querySelector("#nav").getBoundingClientRect();
+      const bar = document.querySelector(".top").getBoundingClientRect();
+      const first = document.querySelector("#nav li a");
+      const list = document.querySelector("#nav");
+      return { top: nav.top, bottom: nav.bottom, bar: bar.bottom, first: first.getBoundingClientRect().top,
+               text: first.textContent, scrolls: list.scrollHeight > list.clientHeight, innerHeight };
+    });
+    check(Math.abs(drawer.top - drawer.bar) <= 1 && drawer.first >= drawer.bar, `the chapter list opens under the bar: ${JSON.stringify(drawer)}`);
+    check(drawer.text === "Cover" && drawer.bottom <= drawer.innerHeight + 1, `the chapter list fits the screen from the cover: ${JSON.stringify(drawer)}`);
+    check(height > 600 || drawer.scrolls, "a short screen's chapter list scrolls");
+  }
+  console.log("  on a phone, the chapter list opens under the bar, starts at the cover, and scrolls");
 } finally {
   await browser.close();
 }
