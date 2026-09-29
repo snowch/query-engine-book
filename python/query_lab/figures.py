@@ -605,6 +605,71 @@ def sorted_branches_table() -> str:
     )
 
 
+def _grouped(keys: list[str], table) -> tuple[dict, int]:
+    """The sorted orders' keys looked up in ``table`` through the cache model: its counters and
+    the cache's misses."""
+    from .cache import Cache
+
+    table.cache = Cache()
+    data = Scan(ROOT / "fixtures" / "orders-sorted.parquet", keys).run()
+    columns = [data.column(k).to_pylist() for k in keys]
+    for row in zip(*columns, strict=True):
+        table.find(row[0] if len(row) == 1 else row)
+    return table.counters(), table.cache.misses
+
+
+def hash_and_perfect_table() -> str:
+    """queries/orders_per_customer.sql's grouping through a hash table and a perfect one."""
+    from .aggregate import HashTable, PerfectTable
+
+    low, high = plans.customer_id_range(ROOT / "fixtures" / "orders-sorted.parquet")
+    lines = [
+        "| Table | Groups | Lookups | Slots probed | Resizes | Table bytes | Cache misses |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for label, table in (("A hash table", HashTable()), ("A perfect hash table", PerfectTable(low, high))):
+        c, misses = _grouped(["customer_id"], table)
+        lines.append(
+            f"| {label} | {c['groups']:,} | {c['lookups']:,} | {c['probes']:,} | {c['resizes']:,} | "
+            f"{c['table_bytes']:,} | {misses:,} |"
+        )
+    return (
+        "\n".join(lines)
+        + "\n"
+        + conditions(
+            f"the book's engine and cache model ({LINES} lines of {LINE_BYTES} bytes)",
+            "orders-sorted.parquet",
+        )
+    )
+
+
+#: The keys of the slow query in ch07's problem 7.3: the chapter's key, then with a second column.
+WIDER_KEYS = (["customer_id"], ["customer_id", "status"], ["customer_id", "order_date"])
+
+
+def wider_keys_table() -> str:
+    """The orders grouped by the customer, then by the customer and a second column."""
+    from .aggregate import HashTable
+
+    lines = [
+        "| GROUP BY | Groups | Slots probed | Table bytes | Cache misses |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for keys in WIDER_KEYS:
+        c, misses = _grouped(keys, HashTable())
+        lines.append(
+            f"| `{', '.join(keys)}` | {c['groups']:,} | {c['probes']:,} | {c['table_bytes']:,} | {misses:,} |"
+        )
+    return (
+        "\n".join(lines)
+        + "\n"
+        + conditions(
+            f"the book's engine and cache model ({LINES} lines of {LINE_BYTES} bytes)",
+            "orders-sorted.parquet",
+        )
+    )
+
+
 def orders_recipe() -> str:
     """How the orders were generated, from the generator's own constants and manifest."""
     sys.path.insert(0, str(ROOT / "fixtures"))
@@ -674,6 +739,11 @@ FIGURES = (
     Figure("with-tax-compare", compare_of("with_tax.sql", "orders-sorted.parquet")),
     Figure("batch-sizes", batch_sizes_table),
     Figure("sorted-branches", sorted_branches_table),
+    Figure("orders-per-customer-plan", plan_of("orders_per_customer.sql", "orders-sorted.parquet")),
+    Figure("orders-per-status-plan", plan_of("orders_per_status.sql", "orders-sorted.parquet")),
+    Figure("orders-per-customer-compare", compare_of("orders_per_customer.sql", "orders-sorted.parquet")),
+    Figure("hash-and-perfect", hash_and_perfect_table),
+    Figure("wider-keys", wider_keys_table),
 )
 
 
@@ -694,6 +764,7 @@ PANELS = (
     },
     {"experiment": "pruning", "query": "early_march_table.sql", "scans": "by its metadata, by its files"},
     {"experiment": "branches", "column": "amount"},
+    {"experiment": "measure", "of": "aggregation"},
 )
 
 

@@ -138,6 +138,24 @@ the kernel without one mispredicts at most twice (its loop's first and last); a 
 over `r` rows makes `k × r` dispatches a row at a time and `k` per batch a batch at a time.
 `python/tests/test_expressions.py` holds the models to them.
 
+**The hash table** (`python/query_lab/aggregate.py`, ch07): open addressing with linear probing,
+16-byte slots (a hash and a group number), doubling when three quarters full; and the perfect
+table, a slot for every whole number in a known range. Keys are hashed by the book's own function,
+the same in every process and in the browser. Given a cache, every slot a probe looks at is a read
+of the cache model.
+
+| Field | Meaning |
+|---|---|
+| `groups` | Distinct keys found. |
+| `lookups` | Keys looked up: one per row. |
+| `probes` | Slots looked at. A lookup that finds its key, or an empty slot, first time probes one; a perfect table always probes one. |
+| `resizes` | Times the table doubled. Each doubling moves every group to a new slot array, a new buffer to the cache model. |
+| `table_bytes` | The slot array's size, at its largest: slots times 16. |
+
+Invariants: `probes >= lookups`, and no more than three quarters of a hash table's slots are
+full; a perfect table's `probes` is its `lookups`. `python/tests/test_aggregate.py` holds the
+table to them, and its groups to DuckDB's.
+
 ## What the counters leave out
 
 Counters say how much work was done, not how long it took. Two plans with the same counters can

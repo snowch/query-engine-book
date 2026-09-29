@@ -1,4 +1,4 @@
-"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch06).
+"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch07).
 
 The engine has no planner yet: that is Part IV. Until then, each query the book runs through
 the engine has a plan here, built from operators the way DuckDB's ``EXPLAIN`` drew its own,
@@ -15,7 +15,9 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.parquet as pq
 
+from .aggregate import Aggregate, HashAggregate, HashTable, PerfectTable
 from .cache import Cache
 from .expressions import Call, Column, Literal, evaluate
 from .memory import fixed_width_array, gather
@@ -175,6 +177,35 @@ def with_tax(root: Path) -> Operator:
     )
 
 
+#: The aggregates of queries/orders_per_customer.sql and orders_per_status.sql (ch07).
+ORDERS_AND_SPEND = [Aggregate("orders", "count"), Aggregate("spent", "sum", "amount")]
+
+
+def orders_per_customer(root: Path, perfect: bool = False) -> Operator:
+    """queries/orders_per_customer.sql: a scan and a hash aggregate (ch07). With ``perfect``, the
+    aggregate uses a slot for every customer id the file's statistics say it holds, as DuckDB's
+    perfect hash aggregate does, instead of a hash table."""
+    path = root / "fixtures" / "orders-sorted.parquet"
+    scan = Scan(path, ["customer_id", "amount"])
+    table = PerfectTable(*customer_id_range(path)) if perfect else HashTable()
+    return HashAggregate(scan, ["customer_id"], ORDERS_AND_SPEND, table)
+
+
+def customer_id_range(path: Path) -> tuple[int, int]:
+    """The smallest and largest customer id in the file, from its row groups' statistics: what a
+    planner knows before it reads a row."""
+    metadata = pq.ParquetFile(path).metadata
+    column = metadata.schema.names.index("customer_id")
+    stats = [metadata.row_group(i).column(column).statistics for i in range(metadata.num_row_groups)]
+    return min(s.min for s in stats), max(s.max for s in stats)
+
+
+def orders_per_status(root: Path) -> Operator:
+    """queries/orders_per_status.sql: the same aggregates, grouped by a string (ch07)."""
+    scan = Scan(root / "fixtures" / "orders-sorted.parquet", ["status", "amount"])
+    return HashAggregate(scan, ["status"], ORDERS_AND_SPEND)
+
+
 #: Each plan, by the query file it answers.
 PLANS: dict[str, Callable[[Path], Operator]] = {
     "returned_unit_price.sql": returned_unit_price,
@@ -183,6 +214,8 @@ PLANS: dict[str, Callable[[Path], Operator]] = {
     "early_march_table.sql": early_march_table,
     "largest_orders.sql": largest_orders,
     "with_tax.sql": with_tax,
+    "orders_per_customer.sql": orders_per_customer,
+    "orders_per_status.sql": orders_per_status,
 }
 
 #: For each plan, the DuckDB operator that does the same job as each of the plan's operators,
@@ -197,6 +230,8 @@ DUCKDB_PARTNERS: dict[str, list[str | None]] = {
     "early_march_table.sql": ["TABLE_SCAN"],
     "largest_orders.sql": ["TABLE_SCAN"],
     "with_tax.sql": ["PROJECTION", "FILTER", None],
+    "orders_per_customer.sql": ["PERFECT_HASH_GROUP_BY", "TABLE_SCAN"],
+    "orders_per_status.sql": ["HASH_GROUP_BY", "TABLE_SCAN"],
 }
 
 

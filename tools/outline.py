@@ -192,6 +192,16 @@ _CHAPTERS = (
         ("branches",),
         ("orders-sorted.parquet",),
     ),
+    (
+        "hash_aggregation",
+        "Hash aggregation",
+        "computing",
+        "How does an engine find a row's group, and what does the number of groups cost?",
+        "A hash aggregate over an open-addressing table, counting its probes and its cache misses, "
+        "and a perfect hash aggregate for keys from a small range, as DuckDB chooses.",
+        ("measure",),
+        ("orders-sorted.parquet",),
+    ),
 )
 
 CHAPTERS = tuple(
@@ -220,4 +230,4 @@ BY_ANCHOR = {x.anchor: x for x in (*CHAPTERS, *APPENDICES)}
 #: The experiments ``web/lab/lab.js`` knows how to mount, each drawn from the JSON of the
 #: function of the same name in ``query_lab.report``. A ``lab`` block naming anything else fails
 #: the build, rather than rendering an empty box.
-EXPERIMENTS: tuple[str, ...] = ("plan", "gather", "pruning", "branches")
+EXPERIMENTS: tuple[str, ...] = ("plan", "gather", "pruning", "branches", "measure")

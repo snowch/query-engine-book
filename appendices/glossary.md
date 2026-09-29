@@ -55,11 +55,17 @@ that pass. [ch03](#projection-and-filter-pushdown)
 output is row `positions[k]` of the input. A sort, a join and a lookup each end in one.
 [ch02](#batches-in-memory)
 
+**Hash table.** An array of slots in which a key's hash picks the slot to look in first: how an
+engine finds a row's group, or a row's match. [ch07](#hash-aggregation)
+
 **Hive partitioning.** Laying out a table's files in directories named for a column's value, such
 as `month=2024-03`, so a reader can rule out a file from its path. [ch05](#where-work-happens)
 
 **Lane.** One of the values a vector register holds side by side, each worked on by the same
 instruction. [ch06](#expressions-and-vectorised-kernels)
+
+**Linear probing.** Looking in the next slot, and the next, when a key's slot in a hash table
+holds another key. [ch07](#hash-aggregation)
 
 **Misprediction.** A branch that goes the other way from the branch predictor's guess, so the work
 started on the guessed path is thrown away. [ch06](#expressions-and-vectorised-kernels)
@@ -70,8 +76,19 @@ and the first row it holds. [ch04](#statistics-and-pruning)
 **Offsets.** The buffer of a string array that says where each row's bytes start and end in its
 data buffer. [ch02](#batches-in-memory)
 
+**Open addressing.** Keeping a hash table's entries in its array of slots, rather than in lists
+hanging off them. [ch07](#hash-aggregation)
+
 **Operator.** One step of a plan: a job with one input and one output, such as a scan, a filter
 or a projection. [ch01](#the-plan-is-the-map)
+
+**Partial aggregate.** A group's aggregates over part of its rows, such as a count and a sum,
+combined later with the other parts' into the group's aggregates over all of them.
+[ch07](#hash-aggregation)
+
+**Perfect hash aggregate.** An aggregate whose table has a slot for every possible key, found by
+subtracting the smallest key: possible when the keys are whole numbers from a small, known range.
+[ch07](#hash-aggregation)
 
 **Physical plan.** The operators an engine will run for a query, and how rows flow between them.
 DuckDB draws it for `EXPLAIN`. [ch01](#the-plan-is-the-map)
