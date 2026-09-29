@@ -1,0 +1,71 @@
+{
+ "experiment": "measure",
+ "of": "rules",
+ "engine": "the book's engine",
+ "title": "Two rules, one at a time",
+ "predict": {
+  "label": "Bytes read",
+  "ask": "the bytes each plan reads",
+  "placeholder": "bytes read"
+ },
+ "facts": "The query keeps enterprise customers, a quarter of them, and orders over a unit price, from two tables of seven and five columns. The customers are one row group.",
+ "cases": [
+  {
+   "label": "Push the filters down",
+   "detail": "push_filters",
+   "reference": {
+    "label": "The plain plan",
+    "value": 515966
+   },
+   "measured": 515966,
+   "counters": [
+    [
+     "rows from the scans",
+     20232
+    ],
+    [
+     "rows into the join",
+     12406
+    ]
+   ]
+  },
+  {
+   "label": "Prune the columns",
+   "detail": "prune_columns",
+   "reference": {
+    "label": "The plain plan",
+    "value": 515966
+   },
+   "measured": 301746,
+   "counters": [
+    [
+     "rows from the scans",
+     21000
+    ],
+    [
+     "rows into the join",
+     21000
+    ]
+   ]
+  },
+  {
+   "label": "Both rules",
+   "detail": "push_filters, then prune_columns",
+   "reference": {
+    "label": "The plain plan",
+    "value": 515966
+   },
+   "measured": 301746,
+   "counters": [
+    [
+     "rows from the scans",
+     20232
+    ],
+    [
+     "rows into the join",
+     12406
+    ]
+   ]
+  }
+ ]
+}
