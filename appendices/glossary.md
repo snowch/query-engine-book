@@ -18,6 +18,9 @@ one operator hands the next. [ch01](#the-plan-is-the-map)
 way it went before, so the processor can start on the guessed path at once.
 [ch06](#expressions-and-vectorised-kernels)
 
+**Build side.** The input a hash join reads first and holds, in a hash table on its key, until the
+join ends. [ch08](#joins)
+
 **Cache hit.** A read whose cache line is already in the cache. [ch02](#batches-in-memory)
 
 **Cache line.** The fixed-size block of memory a processor moves between memory and its caches.
@@ -55,6 +58,9 @@ that pass. [ch03](#projection-and-filter-pushdown)
 output is row `positions[k]` of the input. A sort, a join and a lookup each end in one.
 [ch02](#batches-in-memory)
 
+**Hash join.** A join that holds one input, the build side, in a hash table on the join key, and
+streams the other, the probe side, past it, looking each row's key up. [ch08](#joins)
+
 **Hash table.** An array of slots in which a key's hash picks the slot to look in first: how an
 engine finds a row's group, or a row's match. [ch07](#hash-aggregation)
 
@@ -66,6 +72,9 @@ instruction. [ch06](#expressions-and-vectorised-kernels)
 
 **Linear probing.** Looking in the next slot, and the next, when a key's slot in a hash table
 holds another key. [ch07](#hash-aggregation)
+
+**Merge join.** A join of two inputs sorted by the join key, which walks both from the front
+together and needs no table. [ch08](#joins)
 
 **Misprediction.** A branch that goes the other way from the branch predictor's guess, so the work
 started on the guessed path is thrown away. [ch06](#expressions-and-vectorised-kernels)
@@ -95,6 +104,9 @@ DuckDB draws it for `EXPLAIN`. [ch01](#the-plan-is-the-map)
 
 **Predicate.** A condition that each row either meets or does not, such as
 `status = 'returned'`. [ch01](#the-plan-is-the-map)
+
+**Probe side.** The input a hash join streams past its table, a batch at a time, looking each
+row's key up. [ch08](#joins)
 
 **Profile.** A plan's operators after a run, each with counters from that run.
 [ch01](#the-plan-is-the-map)

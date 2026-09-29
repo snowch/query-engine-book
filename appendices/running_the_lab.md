@@ -18,7 +18,8 @@ that shows a query lets you edit the query and run your own.
 ## Edit and run
 
 Every query the book quotes has an **Edit and run** button. Your version runs under DuckDB in the
-page and draws its plan and its first rows. Some listings of the engine have the button too: your
+page and draws its plan and its first rows, and the page's figures and panels computed for the
+book's query say so until you reset it. Some listings of the engine have the button too: your
 edit runs in place of the engine's own code, then the chapter's panel or the engine's tests run
 on it, so you can see what your change does to the counts, or which tests it breaks. The book's
 code is back as soon as the run ends, your edit stays in this browser, and **Reset to the book's

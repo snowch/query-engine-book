@@ -92,7 +92,117 @@ def aggregation(root: Path) -> dict:
     }
 
 
+#: The sizes of the build side the join panel's chart sweeps, in rows.
+BUILD_SWEEP = (256, 512, 1024, 2048, 4096, 8192, 16_384, 20_000)
+
+
+def joins(root: Path) -> dict:
+    """The orders joined with their customers three ways through the cache model: built on the
+    customers, built on the orders, and built on the customers a filter keeps. Then a build side
+    of more and more orders, probed by every order in random order."""
+    from .aggregate import HashTable
+    from .cache import LINE_BYTES, LINES, Cache
+    from .join import HashJoin
+    from .operators import Comparison, Scan
+
+    fixtures = root / "fixtures"
+    orders = lambda: Scan(fixtures / "orders-sorted.parquet", ["order_id", "customer_id"])  # noqa: E731
+
+    def customers(filters=()):
+        return Scan(fixtures / "customers.parquet", ["customer_id", "country"], filters=list(filters))
+
+    ways = [
+        (
+            "Build on the customers",
+            "customers: 1 row each",
+            lambda t: HashJoin(
+                orders(),
+                customers(),
+                "customer_id",
+                "customer_id",
+                [("probe", "order_id"), ("build", "country")],
+                t,
+            ),
+        ),
+        (
+            "Build on the orders",
+            "orders: many rows per customer",
+            lambda t: HashJoin(
+                customers(),
+                orders(),
+                "customer_id",
+                "customer_id",
+                [("build", "order_id"), ("probe", "country")],
+                t,
+            ),
+        ),
+        (
+            "Build on enterprise customers",
+            "segment = 'enterprise'",
+            lambda t: HashJoin(
+                orders(),
+                customers([Comparison("segment", "=", "enterprise")]),
+                "customer_id",
+                "customer_id",
+                [("probe", "order_id"), ("build", "country")],
+                t,
+            ),
+        ),
+    ]
+    cases = []
+    for label, detail, make in ways:
+        cache = Cache()
+        join = make(HashTable(cache=cache))
+        rows = join.run().num_rows
+        cases.append(
+            {
+                "label": label,
+                "detail": detail,
+                "reference": {"label": "Rows joined", "value": rows},
+                "measured": cache.misses,
+                "counters": [
+                    ["build rows", join.build_rows],
+                    ["held bytes", join.held_bytes],
+                    ["probes", join.table.probes],
+                ],
+            }
+        )
+    ids = Scan(fixtures / "orders-shuffled.parquet", ["order_id"]).run().column("order_id").to_pylist()
+    points = []
+    for n in BUILD_SWEEP:
+        cache = Cache()
+        table = HashTable(cache=cache)
+        for key in range(1, n + 1):
+            table.find(key)
+        before = cache.misses
+        for key in ids:
+            group = table.get(key)
+            if group is not None:
+                cache.read("build rows", group * 16, 16)
+        points.append([n, cache.misses - before])
+    return {
+        "title": "Joining the orders and their customers",
+        "predict": {
+            "label": "Cache misses",
+            "ask": "the cache misses of each",
+            "placeholder": "cache misses",
+        },
+        "facts": (
+            f"The join holds its build side: a table of 16-byte slots, and each row at 8 bytes a column "
+            f"plus 8. The cache holds {LINES:,} lines of {LINE_BYTES} bytes."
+        ),
+        "cases": cases,
+        "chart": {
+            "x_label": "build rows",
+            "y_label": "cache misses while probing",
+            "x_scale": "log",
+            "series": [{"label": "Every order probing a build side of that many orders", "points": points}],
+        },
+    }
+
+
 #: Every measure panel, by the name a lab block gives it as ``of``.
 MEASURES: dict[str, Callable[[Path], dict]] = {
     "aggregation": aggregation,
+    "joins": joins,
 }

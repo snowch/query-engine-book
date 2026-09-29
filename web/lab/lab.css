@@ -214,3 +214,9 @@ figure.quoted textarea.code-area:focus { outline: 2px solid var(--accent); outli
 .measure-key.s1 { color: var(--accent); }
 .measure-key.s2 { color: var(--go); }
 .measure-key.s3 { color: var(--stop); }
+
+/* A figure or panel computed for the book's query, while the reader's edit of it ran last. */
+.stale-note { margin: 0 0 .4rem; padding: .35rem .7rem; font: 12.5px/1.4 var(--chrome); color: var(--ink);
+              background: var(--wash); border-left: 3px solid var(--warn); border-radius: 0 4px 4px 0; }
+.lab > .stale-note { margin: 0; border-radius: 0; }
+[data-stale="true"] > :not(.stale-note) { opacity: .6; }
