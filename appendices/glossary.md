@@ -64,6 +64,10 @@ streams the other, the probe side, past it, looking each row's key up. [ch08](#j
 **Hash table.** An array of slots in which a key's hash picks the slot to look in first: how an
 engine finds a row's group, or a row's match. [ch07](#hash-aggregation)
 
+**Heap.** A tree kept in an array, in which each node sorts before its children, so the first
+element is always the best: the top-k keeps the worst of its rows there, to replace it cheaply.
+[ch09](#sorting-and-top-k)
+
 **Hive partitioning.** Laying out a table's files in directories named for a column's value, such
 as `month=2024-03`, so a reader can rule out a file from its path. [ch05](#where-work-happens)
 
@@ -137,9 +141,15 @@ with statistics for each column. [ch01](#the-plan-is-the-map)
 **SIMD.** Single instruction, multiple data: instructions that apply one operation to every lane of
 a wide register at once. [ch06](#expressions-and-vectorised-kernels)
 
+**Sorted run.** A sequence of rows already in order: part of the input a sort finds in order, or a
+piece of a large sort written to disk, to be merged with the others. [ch09](#sorting-and-top-k)
+
 **Table metadata.** A file kept beside a table's data files that lists each of them with the
 smallest and largest value of every column, so a reader can rule out a file without opening it.
 [ch05](#where-work-happens)
+
+**Top-k.** The first k rows in some order, found without sorting every row: an engine keeps the
+best k seen so far and compares each new row with the worst of them. [ch09](#sorting-and-top-k)
 
 **Validity bitmap.** One bit per value in an Arrow array, saying whether the value is present or
 null. [ch02](#batches-in-memory)

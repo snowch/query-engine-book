@@ -745,6 +745,31 @@ def self_join_table() -> str:
     return "\n".join(lines) + "\n" + duckdb_conditions("orders-sorted.parquet")
 
 
+def sort_or_top_table() -> str:
+    """ch09's problem 9.3: the ten largest orders, kept by the application after a full sort, or
+    by the engine with a LIMIT."""
+    lines = [
+        "| Query | DuckDB's operator | Your engine's operator | Rows held | Comparisons | Rows handed up |",
+        "|---|---|---|---:|---:|---:|",
+    ]
+    for query in ("orders_by_amount.sql", "top_orders.sql"):
+        seen = json.dumps(explain(read_query(ROOT / "queries" / query)))
+        duck = next(op for op in ("TOP_N", "ORDER_BY") if f'"{op}"' in seen)
+        plan = plans.plan_for(ROOT, query)
+        plan.run()
+        lines.append(
+            f"| `{query}` | `{duck}` | `{plan.metrics.operator}` | {plan.rows_held:,} | "
+            f"{plan.comparisons.count:,} | {plan.metrics.rows_out:,} |"
+        )
+    return (
+        "\n".join(lines)
+        + "\n"
+        + conditions(
+            f"the book's engine and DuckDB {duckdb.__version__} with one thread", "orders-shuffled.parquet"
+        )
+    )
+
+
 def orders_recipe() -> str:
     """How the orders were generated, from the generator's own constants and manifest."""
     sys.path.insert(0, str(ROOT / "fixtures"))
@@ -823,6 +848,10 @@ FIGURES = (
     Figure("orders-with-country-compare", compare_of("orders_with_country.sql", "orders-sorted.parquet")),
     Figure("build-sides", build_sides_table, query="customers_with_orders.sql"),
     Figure("self-join", self_join_table),
+    Figure("top-orders-plan", plan_of("top_orders.sql", "orders-shuffled.parquet")),
+    Figure("orders-by-amount-plan", plan_of("orders_by_amount.sql", "orders-shuffled.parquet")),
+    Figure("top-orders-compare", compare_of("top_orders.sql", "orders-shuffled.parquet")),
+    Figure("sort-or-top", sort_or_top_table, query="orders_by_amount.sql"),
 )
 
 
@@ -845,6 +874,7 @@ PANELS = (
     {"experiment": "branches", "column": "amount"},
     {"experiment": "measure", "of": "aggregation"},
     {"experiment": "measure", "of": "joins"},
+    {"experiment": "measure", "of": "sorting"},
 )
 
 
