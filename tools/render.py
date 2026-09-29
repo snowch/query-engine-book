@@ -195,6 +195,9 @@ def _problems(node: dict) -> str:
 
 def _code(node: dict) -> str:
     lang = node.get("lang") or ""
+    if lang == "diagram":
+        # A picture drawn in text, not code: no highlighting, and its own line height (book.css).
+        return f'<pre class="diagram"><code>{html.escape(str(node.get("value", "")))}</code></pre>'
     # One blank line at most: an excerpt that spans two definitions keeps the two blank lines the
     # formatter puts between them in the source, and on a phone every line counts.
     code = re.sub(r"\n(?:[ \t]*\n){2,}", "\n\n", str(node.get("value", "")))

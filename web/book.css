@@ -3,6 +3,13 @@
    that each mean one thing, shared with the lab so an experiment sits on the page rather than
    on top of it. */
 
+/* The book's monospace font travels with it (public/fonts, SIL Open Font License): a phone's own
+   monospace font may lack the box-drawing characters DuckDB draws its plans with, and borrowing
+   them from another font pulls the boxes apart. */
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap;
+             src: url("public/fonts/JetBrainsMono-Regular.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 700; font-display: swap;
+             src: url("public/fonts/JetBrainsMono-Bold.woff2") format("woff2"); }
 :root {
   color-scheme: light dark;
   --ink: #263238; --muted: #41555e; --faint: #5a707b;
@@ -15,7 +22,7 @@
   --tok-keyword: #35648f; --tok-type: #8a5a14; --tok-attr: #6b7d86;
   --chrome: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --text: Charter, "Bitstream Charter", "Sitka Text", Cambria, Georgia, serif;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, "DejaVu Sans Mono", monospace;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, "DejaVu Sans Mono", monospace;
   --top: 3.1rem;
   /* The unit the page's widths are laid out in: the reader's text size, but never less than
      16px. `rem` alone follows a browser's font setting down as well as up, while the prose is
@@ -199,6 +206,7 @@ h1 { font-size: clamp(1.6rem, 5.4vw, 2.1rem); font-weight: 700; line-height: 1.1
 h1 .label { color: var(--faint); font-weight: 500; margin-right: .4rem; }
 .builds { margin: 0 0 1.6rem; font: 14.5px/1.5 var(--chrome); color: var(--muted); }
 .builds strong { color: var(--ink); font-weight: 600; }
+.subtitle { margin: -.4rem 0 1.2rem; font: 500 1.05rem/1.4 var(--chrome); color: var(--muted); }
 h2 { font-size: 1.35rem; font-weight: 650; line-height: 1.25; margin: 2.5rem 0 .9rem;
      padding-top: 1.1rem; border-top: 1px solid var(--edge); }
 h3 { font-size: 1.15rem; font-weight: 700; line-height: 1.3; margin: 1.9rem 0 .6rem; }
@@ -221,6 +229,9 @@ pre { font-size: 13.5px; line-height: 1.55; background: var(--code); color: var(
       padding: .85rem 1rem; border-radius: 6px; border: 1px solid var(--edge); margin: 1.3rem 0;
       white-space: pre; overflow-x: auto; }
 pre code { background: none; padding: 0; font-size: inherit; }
+/* A diagram drawn in text: lines close enough that the box-drawing characters join up. */
+pre.diagram { line-height: 1.25; background: none; border: 0; padding: .25rem 0; }
+@media (max-width: 30rem) { pre.diagram { font-size: 12px; } }
 .tok-comment { color: var(--tok-comment); font-style: italic; }
 .tok-string { color: var(--tok-string); }
 .tok-number { color: var(--tok-number); }

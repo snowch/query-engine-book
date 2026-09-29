@@ -13,6 +13,18 @@ time, in Python on Apache Arrow. By the end you can look at a design choice (a s
 partitioning scheme, a join, a memory limit) and predict how it changes the bytes read, the
 rows moved, the memory used and the data shuffled, in any engine.
 
+**A query engine is a machine for moving and transforming data.** A plan says where the data will
+go; a profile says how much of it went. Every way an engine gets faster reads less, moves less,
+holds less, computes less or sends less between machines, and the book asks one question, five
+ways, one part each:
+
+- **[Part I, Seeing a query](#part-seeing-a-query):** what happened to the data?
+- **[Part II, Reading less](#part-reading-less):** could the engine have read less of it?
+- **[Part III, Computing](#part-computing):** once it is in memory, what does working on it cost?
+- **[Part IV, Planning](#part-planning):** how does an engine decide what to do, before it has read
+  a row?
+- **[Part V, Scaling out](#part-scaling-out):** what changes when one machine is not enough?
+
 You need a browser and nothing else: everything the book asks you to run, runs in the page. If
 you would rather run it on your own machine, [Running the lab](#running-the-lab) says how. You
 should be able to read Python. The book is self-contained: each idea about hardware or file

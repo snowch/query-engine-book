@@ -33,7 +33,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from tools import render as renderer  # noqa: E402
-from tools.outline import APPENDICES, CHAPTERS, PARTS, UNWRITTEN  # noqa: E402
+from tools.outline import APPENDICES, CHAPTERS, PARTS, SUBTITLES, UNWRITTEN  # noqa: E402
 
 CONTENT = ROOT / "_build" / "site" / "content"
 TITLE = "Queries, operator by operator"
@@ -590,6 +590,8 @@ def page_html(
         h1 = f'<h1><span class="label">{html.escape(p["label"])}</span>{html.escape(p["title"])}</h1>'
     else:
         h1 = f"<h1>{html.escape(p['title'])}</h1>"
+    if chapter is not None and chapter.slug in SUBTITLES:
+        h1 += f'<p class="subtitle">{html.escape(SUBTITLES[chapter.slug])}</p>'
     builds = ""
     if chapter is not None:
         # A chapter that explains and builds nothing says what it shows instead.
@@ -839,6 +841,8 @@ def build(out: Path) -> None:
         (out / p["href"]).write_text(text)
 
     shutil.copy(ROOT / "web" / "book.css", out / "book.css")
+    # The monospace font book.css asks for, with its licence.
+    shutil.copytree(ROOT / "public" / "fonts", out / "public" / "fonts", dirs_exist_ok=True)
     for image in sorted(renderer.IMAGES):
         (out / image).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / image, out / image)

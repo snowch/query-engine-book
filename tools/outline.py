@@ -39,6 +39,9 @@ CHAPTER_SHAPE = (
 #: Chapters that explain and build nothing. None yet: every pilot chapter builds something.
 EXPLAINERS: frozenset[str] = frozenset()
 
+#: A chapter's claim in a line, drawn under its title, where the chapter has one.
+SUBTITLES: dict[str, str] = {"the_plan_is_the_map": "Plans show intent; profiles show the work"}
+
 #: What a page carries until it is written. Everything that reports progress keys off it.
 UNWRITTEN = "[To write"
 
