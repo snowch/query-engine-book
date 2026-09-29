@@ -77,6 +77,11 @@ query ran, and running the query measures what each operator did. The panel sets
 side, operator by operator. The profile names the scan `TABLE_SCAN`, where the plan drew it as
 `PARQUET_SCAN`.
 
+Above the plan are two changes to try: a higher price threshold, and shipped orders in place of
+returned ones. Before you press either, look at the plan and decide which of its operators each
+change reaches, and whether it will move their estimates, their measurements, or both. Each
+change redraws the plan at once, from a run the book made when it was built.
+
 ```lab
 experiment: plan
 query: returned_unit_price.sql
@@ -87,10 +92,12 @@ The panel draws what DuckDB measured when the book was built. Its button runs th
 again in your browser, under Pyodide, and says whether your browser's DuckDB gave the same
 answer.
 
-Above the plan are changes to try: a higher price threshold, and shipped orders in place of
-returned ones. Each one redraws the plan at once, from a run the book made when it was built.
-Try them, and watch which numbers move.
+Now press them, and check your answers.
 
+- **A change reaches only the operator that runs the test it alters, and those above it.** The
+  price test runs in the `FILTER`, so a higher threshold leaves the scan's rows as they were and
+  changes the filter's and the projection's. The status test runs inside the scan, so asking for
+  shipped orders changes the rows of every operator.
 - **The measurements move, and the estimates do not.** Whichever orders you ask for, the planner
   expects the same rows from the scan and the same rows from the filter. It knows how many rows
   the file holds, and nothing about how `status` or the unit price are spread across them. So it
