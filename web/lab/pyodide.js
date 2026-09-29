@@ -29,7 +29,8 @@ function writeFile(pyodide, path, bytes) {
 
 /**
  * Lay out what the build listed in py/package.json (from `base`, a URL in web/lab): the Python
- * packages, the queries and the problems under py/, and the fixtures beside the lab.
+ * packages, the queries, the problems and the engine's tests under py/, and the fixtures beside
+ * the lab.
  */
 export async function writeBook(pyodide, base) {
   const list = await (await fetchOk(new URL("py/package.json", base))).json();
@@ -38,6 +39,7 @@ export async function writeBook(pyodide, base) {
       modules.map((m) => [`py/${pkg}/${m}`, `${ROOT}/python/${pkg}/${m}`])),
     ...list.queries.map((q) => [`py/queries/${q}`, `${ROOT}/queries/${q}`]),
     ...list.exercises.map((e) => [`py/exercises/${e}`, `${ROOT}/exercises/${e}`]),
+    ...list.tests.map((t) => [`py/tests/${t}`, `${ROOT}/python/tests/${t}`]),
     ...list.fixtures.map((f) => [`../fixtures/${f}`, `${ROOT}/fixtures/${f}`]),
   ];
   const bodies = await Promise.all(files.map(async ([from]) =>

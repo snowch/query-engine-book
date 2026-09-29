@@ -56,6 +56,8 @@ if node -e "require.resolve('playwright')" >/dev/null 2>&1 \
   ./scripts/browser-probe.sh
   node tests/browser/panels.mjs _build/html
   node tests/browser/workbench.mjs _build/html
+  # Every listing of the engine a chapter opens to editing, and a query on every page.
+  node tests/browser/edits.mjs _build/html
   # Served under /query-engine-book/ on an origin other books share, as GitHub Pages serves it.
   node tests/browser/site.mjs _build/html
 elif [ -n "${CI:-}" ]; then

@@ -112,6 +112,15 @@ share one store, so the table's counters are every request the scan made:
 :end-before: def count_requests(
 ```
 
+```run
+experiment: pruning
+query: early_march_table.sql
+scans: by its metadata, by its files
+```
+
+Make `ruled_out` rule out nothing, and run the panel's report: the scan by the metadata now opens
+every file, and pays for the metadata as well.
+
 ### The plan
 
 ```{literalinclude} ../python/query_lab/plans.py

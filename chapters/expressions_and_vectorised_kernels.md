@@ -163,6 +163,14 @@ The two ways to find the rows that pass, the second with no branch on the data:
 :start-at: def select_with_branch(
 ```
 
+```run
+experiment: branches
+column: amount
+```
+
+Give the kernel without a branch an `if` of its own, and run the panel's report on your edit: its
+mispredictions come back.
+
 ### The plan
 
 The plan is chapter 1's shape: a scan, a filter and a projection. The filter and the projection

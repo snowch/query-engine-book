@@ -1,6 +1,8 @@
 // The page's Python, under Pyodide: a panel's report, or a chapter's problems and their graders.
 //
-// A report is query_lab.report.run, the function the build ran to draw the panel. Problems are
+// A report is query_lab.report.run, the function the build ran to draw the panel. An edit is the
+// reader's change to a quoted listing, run in place of the engine's code (query_lab.edits) before
+// the report or the tests the chapter names, then undone. Problems are
 // the chapter's graders, run by pytest exactly as the repository runs them, on the reader's edit of
 // the chapter's stubs. Pyodide and each package are fetched on first use only: a plan's report
 // needs DuckDB alone; a gather's or a pruning's also needs pyarrow, for the engine; the graders
@@ -67,6 +69,46 @@ def run_problems(chapter, source):
             plugins=[collect],
         ))
     return json.dumps({"exit": code, "tests": collect.tests, "output": out.getvalue()})
+
+
+def _last_lines(error):
+    """What went wrong, for the page: the exception, and the line of the reader's edit it came
+    from when it came from there."""
+    import traceback
+
+    if isinstance(error, SyntaxError) and (error.filename or "").startswith("<your edit"):
+        return f"{type(error).__name__}: {error.msg} (line {error.lineno} of your edit)"
+    frames = [f for f in traceback.extract_tb(error.__traceback__) if f.filename.startswith("<your edit")]
+    where = f" (line {frames[-1].lineno} of your edit)" if frames else ""
+    return f"{type(error).__name__}: {error}{where}"
+
+
+def run_edit(file, listing, text, then_json):
+    """Run the reader's edit of a quoted listing in place of the engine's code, then what the
+    chapter's run block names: a panel's report, or some of the engine's tests."""
+    import pytest
+    from query_lab import report
+    from query_lab.edits import edited
+
+    then = json.loads(then_json)
+    try:
+        with edited(Path("${ROOT}"), file, listing, text):
+            if "report" in then:
+                result = report.run(Path("${ROOT}"), then["report"])
+                return json.dumps({"report": result}, separators=(",", ":"))
+            tests = then["tests"]
+            for name in [n for n in sys.modules if n.startswith("test_") or n.startswith("conftest")]:
+                del sys.modules[name]
+            collect = Collect()
+            out = io.StringIO()
+            args = [f"python/tests/{tests['tests']}", "-q", "--color=no", "-p", "no:cacheprovider"]
+            if tests.get("select"):
+                args += ["-k", tests["select"]]
+            with redirect_stdout(out), redirect_stderr(out):
+                code = int(pytest.main(args, plugins=[collect]))
+            return json.dumps({"tests": collect.tests, "exit": code, "output": out.getvalue()})
+    except Exception as error:
+        return json.dumps({"error": _last_lines(error)})
 `;
 
 let ready = null;
@@ -101,6 +143,10 @@ onmessage = async ({ data }) => {
       await need(pyodide, NEEDS[data.config.experiment] || ["duckdb", "pyarrow"]);
       postMessage({ type: "status", text: "Running…" });
       postMessage({ type: "result", json: pyodide.globals.get("run_report")(JSON.stringify(data.config)) });
+    } else if (data.kind === "edit") {
+      await need(pyodide, ["duckdb", "pyarrow", "pytest"]);
+      postMessage({ type: "status", text: "Running your edit…" });
+      postMessage({ type: "result", json: pyodide.globals.get("run_edit")(data.file, data.listing, data.text, JSON.stringify(data.then)) });
     } else if (data.kind === "problems") {
       await need(pyodide, ["duckdb", "pyarrow", "pytest"]);
       postMessage({ type: "status", text: "Running the graders…" });

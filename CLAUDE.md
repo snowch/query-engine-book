@@ -55,7 +55,7 @@ package once both books are stable; until then, a fix to shared tooling is worth
 | `spikes/` | Experiments that decided something. Each has a README with its findings; tests keep the ones that still matter true. |
 | `tools/` | The outline (`outline.py`), the renderer (`render.py`), the highlighter. |
 | `scripts/` | Build and check entry points. `ci-check.sh` is what CI runs. |
-| `web/` | The site stylesheet, and `web/lab/`: the panels and the problems workbench. A panel draws JSON from `query_lab.report` embedded at build time and can recompute it under Pyodide; the workbench runs a chapter's graders under Pyodide on the reader's answers. Both share one Python worker. |
+| `web/` | The site stylesheet, and `web/lab/`: the panels, the problems workbench and Edit and run. A panel draws JSON from `query_lab.report` embedded at build time and can recompute it under Pyodide; the workbench runs a chapter's graders under Pyodide on the reader's answers; Edit and run (`edit.js`) runs the reader's edit of a quoted query, or of a listing of the engine in place of its code (`query_lab.edits`), then a panel's report or the engine's tests. All share one Python worker. |
 | `tests/` | Tests of the book, the renderer, and desk-browser parity; `tests/browser/` drives Chromium. |
 
 ## Build, run, test
@@ -133,10 +133,15 @@ returns markdown ending with its conditions line, run `make figures`, and `{incl
 
 **A panel.** Only where a picture beats a table. Add a function to `python/query_lab/report.py`
 that returns the JSON to draw, and its name to `EXPERIMENTS` there and in `tools/outline.py`; a
-drawing module in `web/lab/` and its mount in `lab.js`; the block's settings to `PANELS` in
+drawing module in `web/lab/` and its mount in `panels.js`; the block's settings to `PANELS` in
 `figures.py`; then `make figures` and a ```` ```lab ```` block in the chapter. JavaScript draws;
 it never computes a count. `tests/browser/panels.mjs` checks each panel against its JSON and
 reruns it under Pyodide; add a reader for any new drawing to it.
+
+**An editable listing.** Follow the `{literalinclude}` of the engine with a ```` ```run ````
+block naming a panel's settings or `tests:` in `python/tests/`, and say in the prose one edit to
+try. `tests/browser/edits.mjs` runs each as quoted (the build's answer, or every test passing) and
+broken. Quoted queries are editable without one.
 
 **A counter.** Change COUNTERS.md first, then `metrics.py`, then every chapter that prints it.
 

@@ -849,8 +849,21 @@ def build(out: Path) -> None:
     for name in exercises:
         (out / "lab" / "py" / "exercises" / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(ROOT / "exercises" / name, out / "lab" / "py" / "exercises" / name)
+    # The engine's tests, which a chapter may run on the reader's edit of a listing.
+    tests = sorted(f.name for f in (ROOT / "python" / "tests").glob("*.py"))
+    (out / "lab" / "py" / "tests").mkdir()
+    for name in tests:
+        shutil.copy(ROOT / "python" / "tests" / name, out / "lab" / "py" / "tests" / name)
     (out / "lab" / "py" / "package.json").write_text(
-        json.dumps({"packages": listing, "queries": queries, "exercises": exercises, "fixtures": fixtures})
+        json.dumps(
+            {
+                "packages": listing,
+                "queries": queries,
+                "exercises": exercises,
+                "tests": tests,
+                "fixtures": fixtures,
+            }
+        )
     )
     (out / ".nojekyll").write_text("")
 

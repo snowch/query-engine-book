@@ -65,6 +65,14 @@ reader change the query, from variants the build computed, and watch which numbe
 gets a paragraph before it saying what to look for. Say what the book's tests check, without a
 command: the reader runs nothing but the page.
 
+Open the listing that decides the measurement to editing, so the reader can change it and watch
+the counts move: follow its `{literalinclude}` with a ```` ```run ```` block naming what to run on
+the edit, a panel's settings as in its ```` ```lab ```` block, or `tests:` a file in
+`python/tests/` with an optional `select:` (a pytest `-k` expression). Then say, in a sentence,
+one edit worth trying and what it does, and check that it does. Choose listings that are whole
+definitions (a function, a method, a class), since an edit runs in place of what the listing
+defines. Every quoted query is editable already.
+
 **Compare** puts the book's engine beside DuckDB: the same result, and the counters both report
 (COUNTERS.md says which ones can be compared). Where they differ, say why.
 

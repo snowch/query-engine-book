@@ -112,7 +112,7 @@ row with a kernel from `pyarrow.compute`:
 ```{literalinclude} ../python/query_lab/operators.py
 :language: python
 :start-at: class Comparison:
-:end-before: #: The kernel that tests each row
+:end-before: def against_page(
 ```
 
 ### The scan, pushed down
@@ -127,6 +127,14 @@ pass, in only the columns asked for:
 :start-at: # Row group by row group:
 :end-before: def count_requests(
 ```
+
+```run
+experiment: pruning
+query: early_march.sql
+```
+
+Make the scan read every row group, whatever its statistics say, and run the panel's report on
+your edit. The rows handed up do not change; the row groups read, the bytes and the requests do.
 
 One filter that rules a row group out is enough: the predicates are joined by `AND`, so a row
 must pass them all.

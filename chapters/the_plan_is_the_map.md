@@ -26,6 +26,9 @@ quotes it, so the SQL you read is the SQL every figure below ran.
 :language: sql
 ```
 
+Every query the book quotes can be changed and run in your browser: press **Edit and run** above
+it. Your version runs under DuckDB in the page, and draws its plan and its first rows.
+
 Ask DuckDB how it will run the query, without running it, by putting `EXPLAIN` in front. What
 comes back is the **physical plan**: the steps the engine will take, one to a row of the table
 below. Each step is an **operator**, one job with one input and one output. Rows flow from the
@@ -184,6 +187,16 @@ many rows.
 :start-at: class Filter(Operator):
 :end-before: def arrow_type(
 ```
+
+```run
+tests: test_operators.py
+select: returned_unit_price or projection or nothing_is_read
+```
+
+Press **Edit and run** on a listing like this one to change the engine and run it in your browser.
+Make the filter hand up every batch unfiltered, say, and run the engine's tests on your edit:
+the rows no longer match DuckDB's, and the tests say where. The book's own code comes back when
+you close the editor, and nothing you change moves a number the chapter prints.
 
 ### The plan
 
