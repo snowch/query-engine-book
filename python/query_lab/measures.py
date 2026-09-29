@@ -934,6 +934,65 @@ def pushing(root: Path) -> dict:
     }
 
 
+#: The operations the compiling panel's chart puts in the computed column.
+OPERATION_SWEEP = (0, 1, 2, 4, 8)
+
+
+def compiling(root: Path) -> dict:
+    """ch01's returned orders over a unit price, run three ways over the sorted orders: interpreted
+    a row at a time, interpreted a batch at a time, and compiled into one loop, counting the bytes
+    each writes; then the bytes as the computed column takes more operations."""
+    from .compile import Pipeline, compiled, interpreted, rows_at_a_time
+    from .operators import Scan
+    from .reference import read_query
+
+    def run(pipeline, way):
+        return way(
+            pipeline, list(Scan(root / "fixtures" / "orders-sorted.parquet", pipeline.columns()).batches())
+        )
+
+    pipeline = Pipeline.of(read_query(root / "queries" / "returned_unit_price.sql"))
+    cases = []
+    for label, detail, way in (
+        ("Interpreted, a row at a time", "ch06's evaluate_row", rows_at_a_time),
+        ("Interpreted, a batch at a time", "ch06's evaluate, a kernel a node", interpreted),
+        ("Compiled into one loop", "generate, then compile", compiled),
+    ):
+        r = run(pipeline, way)
+        cases.append(
+            {
+                "label": label,
+                "detail": detail,
+                "reference": {"label": "Bytes of the result", "value": r.result.get_total_buffer_size()},
+                "measured": r.written,
+                "counters": [["nodes visited while running", r.dispatches], ["instructions", r.instructions]],
+            }
+        )
+    series = []
+    for label, way in (("a batch at a time", interpreted), ("compiled", compiled)):
+        points = []
+        for k in OPERATION_SWEEP:
+            text = f"SELECT order_id, amount{' * 1.1' * k} AS price FROM 't' WHERE status = 'returned'"
+            points.append([k, run(Pipeline.of(text), way).written])
+        series.append({"label": label, "points": points})
+    return {
+        "title": "Three ways to run one pipeline",
+        "predict": {"label": "Bytes written", "ask": "the bytes each way writes", "placeholder": "bytes"},
+        "facts": (
+            "The pipeline tests the status, then the unit price, and returns three columns of the orders "
+            "that pass. A kernel writes an array for its result; a filter a batch of the rows it keeps. "
+            "A value held in a variable is written nowhere."
+        ),
+        "cases": cases,
+        "chart": {
+            "x_label": "operations in the computed column",
+            "y_label": "bytes written",
+            "x_scale": "linear",
+            "series": series,
+        },
+    }
+
+
 MEASURES: dict[str, Callable[[Path], dict]] = {
     "aggregation": aggregation,
     "joins": joins,
@@ -947,4 +1006,5 @@ MEASURES: dict[str, Callable[[Path], dict]] = {
     "skew": skew,
     "stages": stages,
     "pushing": pushing,
+    "compiling": compiling,
 }

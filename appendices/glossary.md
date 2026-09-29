@@ -184,6 +184,9 @@ operator above it, and so on up to a sink. [ch18](#pushing-instead-of-pulling)
 **Pushdown.** Handing work to the operator that reads the data, so that data never has to leave
 it. [ch03](#projection-and-filter-pushdown)
 
+**Query compilation.** Writing code for a query from its plan, then compiling and running that code in
+place of interpreting the plan. [ch19](#compiling-a-query)
+
 **Recursive descent.** Parsing with one function for each kind of phrase in a grammar, each calling
 the functions for the phrases inside it; precedence is one function per level.
 [ch11](#from-sql-to-a-logical-plan)

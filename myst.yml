@@ -68,10 +68,12 @@ project:
     - file: parts/other_ways_to_run_a_plan.md
       children:
         - file: chapters/pushing_instead_of_pulling.md
+        - file: chapters/compiling_a_query.md
     - title: Appendices
       children:
         - file: appendices/running_the_lab.md
         - file: appendices/the_fixtures.md
+        - file: appendices/the_machine_in_one_page.md
         - file: appendices/glossary.md
 
 # MyST needs a site block to write its parse (_build/site/content). It never renders with this
