@@ -117,7 +117,7 @@ A scan, and a top-k or a sort:
 ```{literalinclude} ../python/query_lab/plans.py
 :language: python
 :start-at: def top_orders(
-:end-before: def duckdb_partner(
+:end-before: def orders_by_amount_within(
 ```
 
 The book's tests sort by several keys, in both directions, and ask for the top k for k from one

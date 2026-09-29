@@ -180,7 +180,7 @@ fold them or move them into the scan:
 ```{literalinclude} ../python/query_lab/plans.py
 :language: python
 :start-at: WITH_TAX_WHERE = Call(
-:end-before: #: Each plan, by the query file it answers.
+:end-before: #: The aggregates of queries/orders_per_customer.sql
 ```
 
 The book's tests evaluate many random trees both ways and require the same values, and hold the

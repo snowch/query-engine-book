@@ -112,7 +112,7 @@ the customers in the chapter's query, and the orders in the same query written t
 ```{literalinclude} ../python/query_lab/plans.py
 :language: python
 :start-at: def orders_with_country(
-:end-before: def duckdb_partner(
+:end-before: #: queries/top_orders.sql's and orders_by_amount.sql's order
 ```
 
 The book's tests join from either side, with a filter on the build side, and with the orders

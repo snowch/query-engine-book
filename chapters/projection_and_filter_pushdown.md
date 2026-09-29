@@ -117,14 +117,15 @@ row with a kernel from `pyarrow.compute`:
 
 ### The scan, pushed down
 
-The scan reads the columns it was asked for, and any column a filter tests. For each row group,
-it first asks whether the statistics rule it out, and skips it if they do: no request is made
-for its columns. Otherwise it reads the chunks, tests the rows, and hands up only the rows that
-pass, in only the columns asked for:
+The scan reads the columns it was asked for, and any column a filter tests. Its loop is
+[ch01](#the-plan-is-the-map)'s; what changes is how it decides, row group by row group, which rows
+to read. If the statistics rule the row group out, none, and no request is made for its columns.
+Otherwise all of them; the loop then tests every row against the filters and hands up only the
+rows that pass, in only the columns asked for:
 
 ```{literalinclude} ../python/query_lab/operators.py
 :language: python
-:start-at: # Row group by row group:
+:start-at: def rows_to_read(
 :end-before: def count_requests(
 ```
 
@@ -146,7 +147,7 @@ The plan is the scan, as DuckDB's is:
 ```{literalinclude} ../python/query_lab/plans.py
 :language: python
 :start-at: #: queries/early_march.sql's predicates
-:end-before: def early_march_above(
+:end-before: def early_march_by_page(
 ```
 
 The book's tests run each pushed comparison against both files and compare the rows with

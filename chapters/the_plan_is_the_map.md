@@ -67,6 +67,7 @@ query once with a JSON profile and reads it back:
 ```{literalinclude} ../python/query_lab/reference.py
 :language: python
 :start-at: def observe(
+:end-before: def bytes_read(
 ```
 
 The profile's counters are the measurement in the next section. Before you look at them, you
@@ -145,7 +146,7 @@ row at a time. Every operator in the book shares one shape:
 ```{literalinclude} ../python/query_lab/operators.py
 :language: python
 :start-at: class Operator:
-:end-before: class Scan(Operator):
+:end-before: # A predicate the scan tests itself (ch03).
 ```
 
 `batches` is a generator. An operator produces a batch only when the operator above it asks
@@ -161,12 +162,14 @@ slices of the table, each holding every column's values for a run of rows, one c
 another. The scan opens the file with the Parquet reader from *Parquet, byte by byte*, through
 that book's simulated object store, so every byte it reads is a request the store logged. It
 reads the footer, which says where everything is, then, for each row group, the chunks of the
-columns it was asked for. It decodes them and hands up one batch per row group.
+columns it was asked for. It decodes them and hands up one batch per row group. Opening the file
+through the store, and deciding which rows of a row group to read, are methods of their own, since
+later chapters grow them; the loop is the scan:
 
 ```{literalinclude} ../python/query_lab/operators.py
 :language: python
-:start-at: class Scan(Operator):
-:end-before: class Filter(Operator):
+:start-at: # Row group by row group:
+:end-before: def open(self)
 ```
 
 Called with no `filters`, as this chapter calls it, the scan reads every row group and hands up
@@ -207,7 +210,7 @@ turn, and a projection computes the unit price:
 ```{literalinclude} ../python/query_lab/plans.py
 :language: python
 :start-at: def returned_unit_price(
-:end-before: #: Each plan, by the query file it answers.
+:end-before: def in_date_order(
 ```
 
 The book's tests run this plan every time the book is built. They check that its counters obey

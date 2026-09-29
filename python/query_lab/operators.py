@@ -70,6 +70,9 @@ class Operator:
         return batch
 
 
+# A predicate the scan tests itself (ch03).
+
+
 @dataclass(frozen=True)
 class Comparison:
     """A predicate a scan can test by itself: one column compared with a constant (ch03).
@@ -200,6 +203,32 @@ class Scan(Operator):
 
     # Row group by row group: one the statistics rule out is never requested at all.
     def batches(self) -> Iterator[pa.RecordBatch]:
+        footer, reader = self.open()
+        by_name = {leaf.dotted_path(): leaf for leaf in leaves(build(footer.metadata.schema))}
+        # The columns asked for, then any column a filter tests that was not asked for.
+        reading = list(dict.fromkeys([*self.columns, *(f.column for f in self.filters)]))
+        wanted = [by_name[name] for name in reading]
+        schema = pa.schema([arrow_field(leaf) for leaf in wanted])
+        self.skipped, self.kept = {}, {}
+        for index, row_group in enumerate(footer.metadata.row_groups):
+            rows = self.rows_to_read(index, row_group, footer.metadata, by_name, reader)
+            if not rows:
+                continue
+            arrays = [self.read(leaf, row_group, rows, reader) for leaf in wanted]
+            batch = self.take(pa.RecordBatch.from_arrays(arrays, schema=schema))
+            # Until it has tested the rows, the scan holds every column it read, the filters' too.
+            self.metrics.peak_memory_bytes = max(
+                self.metrics.peak_memory_bytes, batch.get_total_buffer_size()
+            )
+            for f in self.filters:
+                batch = batch.filter(f.mask(batch))
+            self.count_requests(reader[0])
+            yield self.emit(batch.select(self.columns))
+        self.count_requests(reader[0])
+
+    def open(self) -> tuple:
+        """The file's footer, read through the store, and the reader's hold on the file: the store,
+        the file's key in it, and the bytes the store has returned so far."""
         data = self.path.read_bytes()
         if self.store is None:
             key = self.path.name
@@ -215,39 +244,26 @@ class Scan(Operator):
         for request in store.requests[before:]:
             if request.returned is not None:
                 have.add(request.returned, data[request.returned.start : request.returned.end])
-        by_name = {leaf.dotted_path(): leaf for leaf in leaves(build(footer.metadata.schema))}
-        # The columns asked for, then any column a filter tests that was not asked for.
-        reading = list(dict.fromkeys([*self.columns, *(f.column for f in self.filters)]))
-        wanted = [by_name[name] for name in reading]
-        schema = pa.schema([arrow_field(leaf) for leaf in wanted])
-        self.skipped, self.kept = {}, {}
         self.count_requests(store)
-        reader = (store, key, have)
+        return footer, (store, key, have)
 
-        for index, row_group in enumerate(footer.metadata.row_groups):
-            why = self.ruled_out(row_group, footer.metadata, by_name)
-            if why is not None:
-                self.skipped[index] = why
-                continue
-            rows = [(0, row_group.num_rows)]
-            if self.page_index:
-                rows = self.pages_kept(row_group, footer.metadata, by_name, reader)
-                if not rows:
-                    self.skipped[index] = "the page index rules out every page"
-                    continue
-            self.kept[index] = rows
-            arrays = [self.read(leaf, row_group, rows, reader) for leaf in wanted]
-            batch = pa.RecordBatch.from_arrays(arrays, schema=schema)
-            self.take(batch)
-            # Until it has tested the rows, the scan holds every column it read, the filters' too.
-            self.metrics.peak_memory_bytes = max(
-                self.metrics.peak_memory_bytes, batch.get_total_buffer_size()
-            )
-            for f in self.filters:
-                batch = batch.filter(f.mask(batch))
-            self.count_requests(store)
-            yield self.emit(batch.select(self.columns))
-        self.count_requests(store)
+    def rows_to_read(
+        self, index: int, row_group: RowGroup, metadata: FileMetaData, by_name: dict[str, Leaf], reader: tuple
+    ) -> list[tuple[int, int]]:
+        """The rows of a row group worth reading, as ``[start, end)`` ranges: none if its statistics
+        rule it out (ch03), and with the page index, only the rows of the pages it keeps (ch04)."""
+        why = self.ruled_out(row_group, metadata, by_name)
+        if why is not None:
+            self.skipped[index] = why
+            return []
+        rows = [(0, row_group.num_rows)]
+        if self.page_index:
+            rows = self.pages_kept(row_group, metadata, by_name, reader)
+            if not rows:
+                self.skipped[index] = "the page index rules out every page"
+                return []
+        self.kept[index] = rows
+        return rows
 
     def ruled_out(self, row_group: RowGroup, metadata: FileMetaData, by_name: dict[str, Leaf]) -> str | None:
         """Why no row of ``row_group`` can pass the filters, from its statistics, or None if
