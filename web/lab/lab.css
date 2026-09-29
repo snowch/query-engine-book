@@ -146,3 +146,22 @@
 .pruning-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint);
                 font-variant-numeric: tabular-nums; margin: 0 0 .3rem; }
 .pruning-groups + .pruning-axis { margin-right: 4.7rem; }
+
+/* The branches panel (ch06): cases as the gather panel's, then the sweep. */
+.branch-facts { margin: 0; padding: .7rem 1rem 0; font-size: 13px; color: var(--muted); }
+.branch-facts b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.branch-case { width: 22rem; }
+.branch-figure { margin: 0 1rem 1rem; }
+.branch-sweep { display: block; width: 100%; max-width: 36rem; height: auto; margin: 0 auto; background: var(--panel); border-radius: 4px; }
+.branch-axis { stroke: var(--rule); stroke-width: 1; }
+.branch-line { fill: none; stroke-width: 1.6; }
+.branch-line.with, .branch-dot.with { stroke: var(--warn); fill: var(--warn); }
+.branch-line.without, .branch-dot.without { stroke: var(--accent); fill: var(--accent); }
+.branch-line.with, .branch-line.without { fill: none; }
+.branch-label { font: 10px var(--chrome); fill: var(--faint); }
+.branch-label.end { text-anchor: end; }
+.branch-figure figcaption { font-size: 11.5px; color: var(--faint); margin-top: .35rem; text-align: center; }
+.branch-figure figcaption b { color: var(--ink); font-weight: 600; }
+.branch-key { font-weight: 600; }
+.branch-key.with { color: var(--warn); }
+.branch-key.without { color: var(--accent); }

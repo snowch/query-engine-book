@@ -73,7 +73,7 @@ let ready = null;
 const loaded = new Set();
 
 /** The packages each experiment's report needs, beyond Pyodide itself. */
-const NEEDS = { plan: ["duckdb"], gather: ["duckdb", "pyarrow"], pruning: ["duckdb", "pyarrow"] };
+const NEEDS = { plan: ["duckdb"], gather: ["duckdb", "pyarrow"], pruning: ["duckdb", "pyarrow"], branches: ["duckdb", "pyarrow"] };
 
 async function setup() {
   postMessage({ type: "status", text: "Loading Python into your browser (a large download, the first time only)…" });

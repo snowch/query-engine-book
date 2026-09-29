@@ -109,6 +109,35 @@ Invariants: a read touches at least one line, so `hits + misses >= reads`; and r
 once, in order, from an empty cache fetches each of its lines exactly once, so its `misses` is
 its size in lines. `python/tests/test_memory.py` holds the model to both.
 
+**The expression evaluator** (`python/query_lab/expressions.py`, ch06) counts its own work as it
+walks an expression tree, a row or a batch at a time.
+
+| Field | Meaning |
+|---|---|
+| `dispatches` | Nodes visited: at each, the evaluator decides what to run. A row at a time, every node once per row; a batch at a time, once per batch. |
+
+**The branch predictor** (`python/query_lab/cpu.py`, ch06): a two-bit saturating counter for
+each branch in the code, named by the caller, starting at 1 (weakly not taken), predicting taken
+at 2 and 3. No history of other branches, no shared table, nothing else a real predictor keeps.
+
+| Field | Meaning |
+|---|---|
+| `branches` | Branches run: a kernel with an `if` runs two per value (the test's and the loop's), one without runs one (the loop's). |
+| `mispredictions` | Branches that went the other way from the counter's guess. |
+
+**The vector unit** (`python/query_lab/cpu.py`, ch06): instructions of `lanes` lanes, every
+value eight bytes. The book's setting is four lanes, a 32-byte register of doubles.
+
+| Field | Meaning |
+|---|---|
+| `instructions` | Instructions run: an operation over `n` values takes `ceil(n / lanes)`; a value at a time takes one each. |
+| `lanes_used` | Values computed, one lane each. Divided by `instructions × lanes`, the share of the lanes that did work. |
+
+Invariants: the same values, found with a branch and without one, are the same positions, and
+the kernel without one mispredicts at most twice (its loop's first and last); a tree of `k` nodes
+over `r` rows makes `k × r` dispatches a row at a time and `k` per batch a batch at a time.
+`python/tests/test_expressions.py` holds the models to them.
+
 ## What the counters leave out
 
 Counters say how much work was done, not how long it took. Two plans with the same counters can

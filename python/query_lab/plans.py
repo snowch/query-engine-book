@@ -1,4 +1,4 @@
-"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch03).
+"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch06).
 
 The engine has no planner yet: that is Part IV. Until then, each query the book runs through
 the engine has a plan here, built from operators the way DuckDB's ``EXPLAIN`` drew its own,
@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import datetime as dt
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.compute as pc
 
 from .cache import Cache
+from .expressions import Call, Column, Literal, evaluate
 from .memory import fixed_width_array, gather
 from .operators import Comparison, Filter, Operator, Project, Scan, TableScan
 from .storage import ComputingStore, StorageScan
@@ -151,6 +153,28 @@ def largest_orders(root: Path, fixture: str = "orders-sorted.parquet") -> Operat
     )
 
 
+#: The expressions of queries/with_tax.sql, as trees (ch06). The engine has no parser yet, so
+#: they are written out here, exactly as the query writes them.
+WITH_TAX_WHERE = Call(
+    "and",
+    (
+        Call(">", (Call("/", (Column("amount"), Column("quantity"))), Call("*", (Literal(50), Literal(2))))),
+        Call(">", (Call("+", (Column("quantity"), Literal(1))), Literal(3))),
+    ),
+)
+WITH_TAX = Call("*", (Column("amount"), Call("+", (Literal(1), Call("/", (Literal(20), Literal(100)))))))
+
+
+def with_tax(root: Path) -> Operator:
+    """queries/with_tax.sql, operator by operator, each expression evaluated as a tree a batch at
+    a time, as the query writes it: there is no planner yet to rewrite it (ch06)."""
+    scan = Scan(root / "fixtures" / "orders-sorted.parquet", ["order_id", "amount", "quantity"])
+    kept = Filter(scan, str(WITH_TAX_WHERE), partial(evaluate, WITH_TAX_WHERE))
+    return Project(
+        kept, {"order_id": partial(evaluate, Column("order_id")), "with_tax": partial(evaluate, WITH_TAX)}
+    )
+
+
 #: Each plan, by the query file it answers.
 PLANS: dict[str, Callable[[Path], Operator]] = {
     "returned_unit_price.sql": returned_unit_price,
@@ -158,6 +182,7 @@ PLANS: dict[str, Callable[[Path], Operator]] = {
     "early_march_paged.sql": early_march_by_page,
     "early_march_table.sql": early_march_table,
     "largest_orders.sql": largest_orders,
+    "with_tax.sql": with_tax,
 }
 
 #: For each plan, the DuckDB operator that does the same job as each of the plan's operators,
@@ -171,6 +196,7 @@ DUCKDB_PARTNERS: dict[str, list[str | None]] = {
     "early_march_paged.sql": ["TABLE_SCAN"],
     "early_march_table.sql": ["TABLE_SCAN"],
     "largest_orders.sql": ["TABLE_SCAN"],
+    "with_tax.sql": ["PROJECTION", "FILTER", None],
 }
 
 

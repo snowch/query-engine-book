@@ -24,6 +24,8 @@ import pyarrow.parquet as pq
 
 from . import plans, report
 from .cache import LINE_BYTES, LINES
+from .cpu import LANES, Predictor, VectorUnit, select_with_branch, select_without_branch
+from .expressions import Counts, batches_of, evaluate, evaluate_row
 from .memory import buffer_names, buffer_sizes
 from .metrics import Metrics
 from .operators import Comparison, Scan, TableScan
@@ -535,6 +537,74 @@ def one_customer_table() -> str:
     return "\n".join(lines) + "\n" + conditions("the book's engine", "orders-by-month/")
 
 
+#: The batch sizes the evaluation table tries: one row, then batches up to DuckDB's vector size
+#: and beyond it.
+BATCH_SIZES = (16, 256, 2048, 20_000)
+
+
+def batch_sizes_table() -> str:
+    """queries/with_tax.sql's two expressions evaluated a row at a time and in batches of several
+    sizes: the nodes the evaluator visited and the instructions its operators would run."""
+    table = Scan(ROOT / "fixtures" / "orders-sorted.parquet", ["order_id", "amount", "quantity"]).run()
+    lines = [
+        "| How it evaluates | Batches | Nodes visited | Instructions | Lanes used | Rows kept |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+
+    def row(label: str, batches: int, counts: Counts, unit: VectorUnit, kept: int) -> None:
+        used = 100 * unit.values / (unit.instructions * unit.lanes)
+        lines.append(
+            f"| {label} | {batches:,} | {counts.dispatches:,} | {unit.instructions:,} | {used:.0f}% | {kept:,} |"
+        )
+
+    counts, unit, kept = Counts(), VectorUnit(), 0
+    for r in table.to_pylist():
+        if evaluate_row(plans.WITH_TAX_WHERE, r, counts, unit):
+            evaluate_row(plans.WITH_TAX, r, counts, unit)
+            kept += 1
+    row("A row at a time", table.num_rows, counts, unit, kept)
+    for size in BATCH_SIZES:
+        counts, unit, kept, batches = Counts(), VectorUnit(), 0, 0
+        for batch in batches_of(table, size):
+            passing = batch.filter(evaluate(plans.WITH_TAX_WHERE, batch, counts, unit))
+            evaluate(plans.WITH_TAX, passing, counts, unit)
+            kept += passing.num_rows
+            batches += 1
+        row(f"In batches of {size:,} rows", batches, counts, unit, kept)
+    return (
+        "\n".join(lines)
+        + "\n"
+        + conditions(f"the book's engine and a vector unit of {LANES} lanes", "orders-sorted.parquet")
+    )
+
+
+def sorted_branches_table() -> str:
+    """The random test of the branch panel, run on the amounts in the order the file stores them
+    and in the order of the amounts themselves."""
+    amounts = Scan(ROOT / "fixtures" / "orders-sorted.parquet", ["amount"]).run().column("amount").to_pylist()
+    median = sorted(amounts)[len(amounts) // 2]
+    lines = [
+        "| The amounts in the order of | Kernel | Rows kept | Branches | Mispredictions |",
+        "|---|---|---:|---:|---:|",
+    ]
+    for order, values in (("the file: by date", amounts), ("the amounts", sorted(amounts))):
+        for kernel, select in (
+            ("with a branch", select_with_branch),
+            ("without a branch", select_without_branch),
+        ):
+            predictor = Predictor()
+            kept = select(values, lambda v: v > median, predictor)
+            lines.append(
+                f"| {order} | {kernel} | {len(kept):,} | {predictor.branches:,} | {predictor.mispredictions:,} |"
+            )
+    return (
+        "\n".join(lines)
+        + "\n"
+        + f"\nThe test is `amount > {median:g}`.\n"
+        + conditions("the book's engine and branch model", "orders-sorted.parquet")
+    )
+
+
 def orders_recipe() -> str:
     """How the orders were generated, from the generator's own constants and manifest."""
     sys.path.insert(0, str(ROOT / "fixtures"))
@@ -600,6 +670,10 @@ FIGURES = (
     Figure("early-march-table-compare", table_compare),
     Figure("storage", storage_table),
     Figure("one-customer-table", one_customer_table),
+    Figure("with-tax-plan", plan_of("with_tax.sql", "orders-sorted.parquet")),
+    Figure("with-tax-compare", compare_of("with_tax.sql", "orders-sorted.parquet")),
+    Figure("batch-sizes", batch_sizes_table),
+    Figure("sorted-branches", sorted_branches_table),
 )
 
 
@@ -619,6 +693,7 @@ PANELS = (
         "fixtures": "orders-sorted.parquet, orders-paged.parquet",
     },
     {"experiment": "pruning", "query": "early_march_table.sql", "scans": "by its metadata, by its files"},
+    {"experiment": "branches", "column": "amount"},
 )
 
 
