@@ -11,14 +11,10 @@
 // browser's storage, and is never compared with the build, because the build never ran it.
 // JavaScript here draws JSON and compares it; it never computes a count of its own.
 
-import { mountBranches } from "./branches.js";
-import { mountGather } from "./gather.js";
-import { mountPlan } from "./plan.js";
-import { mountPruning } from "./pruning.js";
+import { mountEdits } from "./edit.js";
+import { EXPERIMENTS } from "./panels.js";
 import { runReport } from "./runner.js";
 import { mountWorkbench } from "./workbench.js";
-
-const EXPERIMENTS = { plan: mountPlan, gather: mountGather, pruning: mountPruning, branches: mountBranches };
 
 const store = {
   get(key) { try { return localStorage.getItem(key); } catch { return null; } },
@@ -137,6 +133,12 @@ function mount(el) {
       run.disabled = false;
     }
   });
+}
+
+try {
+  mountEdits();
+} catch (error) {
+  console.error("the listings could not be made editable", error);
 }
 
 for (const el of document.querySelectorAll(".workbench[data-chapter]")) {

@@ -102,6 +102,15 @@ filter kept its page:
 :end-before: def read(self, leaf
 ```
 
+```run
+experiment: pruning
+query: early_march_paged.sql
+fixtures: orders-sorted.parquet, orders-paged.parquet
+```
+
+Keep every page, and run the panel's report on your edit: the paged file now costs a little more
+than DuckDB paid, because the scan still reads the page index, and uses none of it.
+
 ### Only those pages
 
 Each column's pages end at different rows: a page holds a number of bytes, not rows, and columns

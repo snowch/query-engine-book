@@ -94,6 +94,22 @@ def test_no_code_is_pasted_into_a_page(page):
         )
 
 
+@pytest.mark.parametrize("page", BOOK_PAGES, ids=lambda p: str(p.relative_to(ROOT)))
+def test_a_run_block_follows_a_listing_of_the_engine(page):
+    """A ``run`` block makes the listing above it editable, so it must come straight after a
+    ``{literalinclude}`` of the engine: an edit runs in place of the engine's code."""
+    text = page.read_text()
+    for m in re.finditer(r"```run\n", text):
+        before = text[: m.start()].rstrip()
+        include = before[before.rfind("```{literalinclude}") :]
+        assert before.endswith("```") and include.count("```") == 2, (
+            "a run block must follow a literalinclude"
+        )
+        assert include.startswith("```{literalinclude} ../python/query_lab/"), (
+            f"a run block follows {include.splitlines()[0]}, which is not the engine"
+        )
+
+
 #: The longest line of a query that still fits the prose's measure in the code's font, with room
 #: to spare for a reader's fonts. A longer line pushes its listing into the wide column, where a
 #: short query leaves most of the width empty beside the prose's narrower listings.
@@ -223,9 +239,9 @@ def test_every_experiment_has_a_mount_and_a_report():
     """A lab block's experiment is drawn by web/lab and computed by query_lab.report."""
     from query_lab.report import EXPERIMENTS as REPORTS
 
-    js = (ROOT / "web" / "lab" / "lab.js").read_text()
+    js = (ROOT / "web" / "lab" / "panels.js").read_text()
     for e in EXPERIMENTS:
-        assert re.search(rf"\b{e}: mount", js), f"web/lab/lab.js does not mount {e}"
+        assert re.search(rf"\b{e}: mount", js), f"web/lab/panels.js does not mount {e}"
         assert e in REPORTS, f"query_lab.report has no {e}"
 
 

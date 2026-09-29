@@ -140,6 +140,14 @@ engine does:
 :end-before: def is_valid(
 ```
 
+```run
+tests: test_memory.py
+select: bitmap or built_by_hand or no_nulls or offset
+```
+
+Try counting from the other end of each byte, `1 << (7 - i % 8)`, and run the tests on your edit:
+the array still builds, and pyarrow reads the wrong rows as null.
+
 A fixed-width array packs each value at its row's place in one buffer, and a string array writes
 the offsets as it appends each string's bytes. `pa.Array.from_buffers` wraps the buffers as an
 array without copying them:
@@ -171,6 +179,14 @@ The model's read touches every line its bytes fall in, and counts each as a hit 
 :start-at: def read(self, buffer
 :end-before: @property
 ```
+
+```run
+experiment: gather
+column: amount
+```
+
+Edit the cache so it never pushes a line out, and run the gather again: the shuffled gather's
+misses fall to the column's size in lines, because the cache has become the whole of memory.
 
 The gather reads each row the positions ask for, through the cache, in the order they ask for
 them: the bit, then the value; for a string, its two offsets, then its bytes. It builds the

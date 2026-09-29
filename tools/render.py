@@ -21,7 +21,11 @@ Three node shapes are this book's own:
   names has problems.
 - A ``{literalinclude}`` of a file in this repository gets a bar naming the file, because the
   book's code and queries are quoted from the working tree, and the reader should always be able
-  to see which file a block came from.
+  to see which file a block came from. A quoted query can be edited and run in the page.
+- A fenced block in the language ``run``, right after a ``{literalinclude}`` of the engine, makes
+  that listing editable in the page: the reader changes the code, and the page runs it in place
+  of the engine's own, then runs what the block names, a panel's report or some of the engine's
+  tests. It becomes an empty marker the page finds; the renderer checks what it names exists.
 
 This file started as a copy of the Parquet book's renderer (``snowch/parquet-book``). That book
 shows its reader in Python and Rust side by side in tab sets; this one is Python only, so a tab
@@ -139,6 +143,35 @@ def _lab(node: dict) -> str:
         f'<script type="application/json" class="lab-data">{_script_json(panel_data(config))}</script>'
         '<p class="lab-fallback">This panel needs JavaScript.</p></div>'
     )
+
+
+class RunBlockError(LabBlockError):
+    """A ``run`` block that names something to run that does not exist."""
+
+
+def parse_run_block(value: str) -> dict:
+    """A ``run`` block says what to run on the reader's edit of the listing above it: a panel's
+    report, as a ``lab`` block names one (and the build must have its JSON, which the page
+    compares the edit's answer with), or ``tests``, a file in ``python/tests/``, with an optional
+    ``select``, a pytest ``-k`` expression."""
+    config = parse_key_values(value, "run")
+    if "tests" in config:
+        if set(config) - {"tests", "select"}:
+            raise RunBlockError(f"a run block with tests takes only tests and select; got {config}")
+        if not (ROOT / "python" / "tests" / config["tests"]).is_file():
+            raise RunBlockError(f"run block names python/tests/{config['tests']}, which does not exist")
+        return config
+    if "experiment" in config:
+        parse_lab_block(value)
+        panel_data(config)
+        return config
+    raise RunBlockError(f"a run block names an experiment or tests; got {config}")
+
+
+def _run(node: dict) -> str:
+    config = parse_run_block(str(node.get("value", "")))
+    then = {"tests": config} if "tests" in config else {"report": config, "build": panel_data(config)}
+    return f'<script type="application/json" class="run-then">{_script_json(then)}</script>'
 
 
 def parse_problems_block(value: str) -> str:
@@ -270,6 +303,8 @@ def render(node: dict, footnotes: list | None = None, label: str = "") -> str:
             return _lab(node)
         if node.get("lang") == "problems":
             return _problems(node)
+        if node.get("lang") == "run":
+            return _run(node)
         return _code(node)
     if kind == "include":
         if node.get("literal"):
@@ -278,7 +313,7 @@ def render(node: dict, footnotes: list | None = None, label: str = "") -> str:
                 (
                     f'<figure class="quoted walkthrough" data-file="{html.escape(_repo_path(node))}">'
                     if walkthrough
-                    else '<figure class="quoted">'
+                    else f'<figure class="quoted" data-file="{html.escape(_repo_path(node))}">'
                 )
                 + _source_bar(node)
                 + "".join(render(c, footnotes) for c in node.get("children", []))

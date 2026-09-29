@@ -15,6 +15,15 @@ nothing to download. Its **Run it in your browser** button runs the same code ag
 browser, under Pyodide, and says whether your browser got the same answer as the build. A panel
 that shows a query lets you edit the query and run your own.
 
+## Edit and run
+
+Every query the book quotes has an **Edit and run** button. Your version runs under DuckDB in the
+page and draws its plan and its first rows. Some listings of the engine have the button too: your
+edit runs in place of the engine's own code, then the chapter's panel or the engine's tests run
+on it, so you can see what your change does to the counts, or which tests it breaks. The book's
+code is back as soon as the run ends, your edit stays in this browser, and **Reset to the book's
+code** starts again.
+
 ## Problems
 
 Each chapter's problems open with a workbench. Write your answers in it and press **Run the

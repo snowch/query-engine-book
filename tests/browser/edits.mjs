@@ -1,0 +1,124 @@
+// Every editable listing in the built site, driven in headless Chromium.
+//
+//   node tests/browser/edits.mjs _build/html
+//
+// A listing of the engine that a `run` block follows: run as the book quotes it, under Pyodide,
+// it must give the build's answer (a panel's report, compared with the build's JSON) or pass the
+// engine's tests the block names. An edit that does not parse must say so, with the line of the
+// edit it failed on, and a run after it must give the build's answer again: the edit was undone.
+// The edit is kept in the browser's storage, and reopens its editor on a reload.
+//
+// A quoted query, the first on each page: an edited query must draw what a desk's report prints
+// for the same text, and a broken one must report DuckDB's error.
+
+import { execFileSync } from "node:child_process";
+import { readFileSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { ORIGIN, directory, launch, openPage } from "./chromium.mjs";
+
+const site = resolve(process.argv[2] || "_build/html");
+const pages = readdirSync(site).filter((f) => f.endsWith(".html") && readFileSync(join(site, f), "utf8").includes('class="quoted"'));
+
+function check(ok, message) {
+  if (!ok) throw new Error(message);
+}
+
+async function run(page, figure) {
+  const result = await figure.evaluateHandle((f) => f.nextElementSibling);
+  await (await figure.$(".edit-bar .lab-run")).click();
+  await page.waitForFunction((r) => r.dataset.ready === "true" || r.dataset.ready === "error", result,
+    { timeout: 600_000, polling: 250 });
+  return result.evaluate((r) => ({
+    ready: r.dataset.ready, agrees: r.dataset.agrees, passed: r.dataset.passed, total: r.dataset.total,
+    status: r.querySelector(".lab-status").textContent,
+    operators: [...r.querySelectorAll(".plan-op")].map((op) => op.dataset.operator),
+  }));
+}
+
+function desk(query, sql) {
+  const out = execFileSync("python3", ["-m", "query_lab", "report", "plan", query, "--sql", sql], {
+    env: { ...process.env, PYTHONPATH: "python:external/parquet-book/python" },
+  });
+  return JSON.parse(out);
+}
+
+function operators(node, out = []) {
+  out.push(node.operator);
+  for (const c of node.children) operators(c, out);
+  return out;
+}
+
+const EDITED = "SELECT status, count(*) AS orders\nFROM 'fixtures/orders-sorted.parquet'\nGROUP BY status\nORDER BY status;";
+
+/** Open `file` afresh, and the `index`th editable listing on it once the page has mounted them. */
+async function open(page, file, index) {
+  await page.goto(`${ORIGIN}/${file}`);
+  await page.waitForFunction((i) => document.querySelectorAll("figure.quoted[data-editable]").length > i, index, { timeout: 10_000 });
+  return (await page.$$("figure.quoted[data-editable]"))[index];
+}
+
+const browser = await launch();
+let failures = 0;
+let checked = 0;
+try {
+  for (const file of pages) {
+    const page = await openPage(browser, directory(site));
+    await page.goto(`${ORIGIN}/${file}`);
+    await page.waitForLoadState("load");
+    const kinds = await page.$$eval("figure.quoted[data-editable]", (fs) => fs.map((f) => [f.dataset.editable, f.dataset.file]));
+    // Every listing of the engine, and the first query on the page.
+    const firstQuery = kinds.findIndex(([kind]) => kind === "query");
+    for (const [index, [kind, name]] of kinds.entries()) {
+      if (kind === "query" && index !== firstQuery) continue;
+      const label = `${file} ${name}`;
+      try {
+        let figure = await open(page, file, index);
+        await (await figure.$(".edit-open")).click();
+        const editor = await figure.$("textarea.code-area");
+        const listing = await editor.inputValue();
+        if (kind === "query") {
+          await editor.fill(EDITED);
+          const got = await run(page, figure);
+          check(got.ready === "true" && got.status.startsWith("Your query"), `${label}, edited: ${got.status}`);
+          const want = operators(desk(name.slice("queries/".length), EDITED).root);
+          check(JSON.stringify(got.operators) === JSON.stringify(want), `${label}: drew ${got.operators}, the desk ${want}`);
+          await editor.fill("SELECT nothing FROM nowhere");
+          const broken = await run(page, figure);
+          check(broken.ready === "error" && broken.status.startsWith("DuckDB could not run your query"), `${label}, broken: ${broken.status}`);
+          await (await figure.$(".edit-reset")).click();
+          console.log(`  ${label}: an edited query draws the desk's plan, and a broken one DuckDB's error`);
+        } else {
+          const shipped = await run(page, figure);
+          check(shipped.ready === "true", `${label}, as the book quotes it: ${shipped.status}`);
+          const right = (r) => (r.total !== undefined ? r.passed === r.total && Number(r.total) > 0 : r.agrees === "true");
+          check(right(shipped), `${label}: ${shipped.status}`);
+          await editor.fill(`${listing}\n(`);
+          const broken = await run(page, figure);
+          check(broken.ready === "error" && /(Syntax|Indentation)Error: .*\(line \d+ of your edit\)$/.test(broken.status), `${label}, broken: ${broken.status}`);
+          // Kept, and reopened on a reload.
+          figure = await open(page, file, index);
+          check(await figure.getAttribute("data-editing") === "true", `${label}: a kept edit did not reopen its editor`);
+          check(await figure.$eval("textarea.code-area", (t) => t.value) === `${listing}\n(`, `${label}: the edit was not kept`);
+          await (await figure.$(".edit-reset")).click();
+          const restored = await run(page, figure);
+          check(restored.ready === "true" && right(restored), `${label}, after a broken edit and a reset: ${restored.status}`);
+          await (await figure.$(".edit-open")).click();
+          check(!(await figure.$("textarea.code-area")), `${label}: closing the editor left it open`);
+          console.log(`  ${label}: as quoted it gives the build's answer; a broken edit says where, and is undone`);
+        }
+        checked += 1;
+      } catch (error) {
+        failures += 1;
+        console.error(`FAILED ${label}: ${error.message}`);
+      }
+    }
+    await page.context().close();
+  }
+} finally {
+  await browser.close();
+}
+if (!checked) {
+  console.error("FAILED: no editable listing was checked");
+  process.exit(1);
+}
+if (failures) process.exit(1);

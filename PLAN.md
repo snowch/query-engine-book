@@ -146,6 +146,7 @@ What the first week produced, and the decisions it forced. Each links to where t
 | Chapter 4 | Written: a new fixture, `orders-paged` (the sorted orders in one row group, with a page index and dictionaries only for low-cardinality columns); DuckDB 1.1.2 reads the whole row group for a fortnight, ignoring the page index; the engine's scan reads the page index and fetches only the pages it keeps. Two graded problems and one to diagnose (dictionary pages). | `chapters/statistics_and_pruning.md`, `python/query_lab/operators.py` |
 | Chapter 5 | Written: a new fixture, `orders-by-month` (the sorted orders as twelve monthly files in Hive's layout, with a table metadata file listing each file's column bounds); DuckDB's glob opens every file, and Hive partitioning scans one, when the query names the month; the engine's `TableScan` rules files out from the metadata before opening them, and matches DuckDB's bytes when it opens them all; `StorageScan` hands the scan to simulated storage that returns Arrow IPC, with Vast DataBase as the worked example. Two graded problems and one to diagnose (a query by customer). | `chapters/where_work_happens.md`, `python/query_lab/operators.py`, `python/query_lab/storage.py` |
 | Chapter 6 | Written, opening Part III: DuckDB folds constants and rewrites `quantity + 1 > 3` into a pushed-down `quantity > 2`; the engine's expression trees evaluated a row and a batch at a time, counting dispatches; a vector unit model (four lanes) and a two-bit branch predictor model, specified in COUNTERS.md; a panel predicting mispredictions for a run, a random test with a branch and one without, then a sweep across selectivity. Two graded problems (constant folding, a pattern the predictor always gets wrong) and one to diagnose (sorted data and branches). | `chapters/expressions_and_vectorised_kernels.md`, `python/query_lab/expressions.py`, `python/query_lab/cpu.py` |
+| Edit and run | Every quoted query, and seven listings of the engine in ch01 to ch06, edited and run in the page; the edit runs in place of the engine's code, then the chapter's panel or tests, and is undone. | `web/lab/edit.js`, `python/query_lab/edits.py`, `tests/browser/edits.mjs` |
 | Cover page | As in sizing-and-tco: the site's front page, before the preface. | `cover.md` |
 | Panels spike | Passed: `query_lab.report` computes each panel's JSON, the build embeds it, JavaScript draws it, and the page can recompute it under Pyodide. The first panel, the plan, is in ch01. | `spikes/panels/`, `web/lab/` |
 
@@ -176,6 +177,11 @@ Decisions taken this week:
   prediction, hides the measurement until they reveal it, then draws prediction, estimate and
   measurement together. Without JavaScript a panel says it needs JavaScript; there is no static
   copy. Queries in a panel can be edited and rerun.
+- **Readers edit the code.** Every quoted query has Edit and run, under DuckDB in the page. A
+  chapter opens the listings of the engine that decide its measurement to editing with a `run`
+  block: the reader's edit runs in place of the engine's code (`query_lab.edits`), then the
+  chapter's panel or the engine's tests run on it, and the edit is undone. Tweaking and breaking
+  the engine is how the reader tests their understanding; the printed numbers stay the build's.
 - **Ch01 does not ask.** Its reader has not yet met a file's layout or a planner, so a number
   they typed would be a guess. Its plan panel draws the planner's estimate beside the
   measurement at once, and offers changes to the query, computed at build time, that move the

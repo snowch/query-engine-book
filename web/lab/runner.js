@@ -35,3 +35,12 @@ export function runReport(config, onStatus = () => {}) {
 export function runProblems(chapter, source, onStatus = () => {}) {
   return run({ kind: "problems", chapter, source }, onStatus);
 }
+
+/**
+ * Run the reader's `text`, their edit of `listing` from `file`, in place of the engine's code,
+ * then `then`: {report: config} or {tests: {tests, select}}. Resolves with JSON text:
+ * {report}, {tests, exit, output}, or {error}.
+ */
+export function runEdit(file, listing, text, then, onStatus = () => {}) {
+  return run({ kind: "edit", file, listing, text, then }, onStatus);
+}

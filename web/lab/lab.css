@@ -165,3 +165,26 @@
 .branch-key { font-weight: 600; }
 .branch-key.with { color: var(--warn); }
 .branch-key.without { color: var(--accent); }
+
+/* Edit and run: a quoted listing turned into an editor, with the result of running it below. */
+.edit-open { flex: none; align-self: center; margin: -.15rem 0; font: 12px/1 var(--chrome); color: var(--accent);
+             background: var(--bg); border: 1px solid var(--accent); border-radius: 5px; padding: .3rem .5rem;
+             cursor: pointer; }
+.edit-open:hover { background: var(--wash); }
+figure.quoted textarea.code-area { display: block; box-sizing: border-box; width: 100%; margin: 0; resize: vertical;
+                                   padding: .8rem 1rem; font: 13px/1.5 var(--mono); color: var(--ink);
+                                   background: var(--code); border: 1px solid var(--edge); border-top: 0;
+                                   tab-size: 4; white-space: pre; overflow-x: auto; }
+figure.quoted textarea.code-area:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+.edit-bar { display: flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: center; padding: .5rem 0 0; font: 13px var(--chrome); }
+.edit-bar button { font: 13px var(--chrome); color: var(--ink); background: var(--bg); border: 1px solid var(--rule);
+                   border-radius: 4px; padding: .25rem .6rem; cursor: pointer; }
+.edit-bar button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.edit-bar .lab-run { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.run-result { margin: .8rem 0 1.6rem; }
+.run-result > .lab-status { padding: .6rem 1rem; margin: 0; border-bottom: 1px solid var(--edge); }
+.run-result > .lab-body:empty { display: none; }
+.edit-tests { margin: .6rem 0; padding: 0 1rem 0 2.2rem; font-size: 13px; }
+.edit-tests li { margin: .15rem 0; }
+.edit-tests li.passed code { color: var(--go); }
+.edit-tests li.failed code { color: var(--stop); }
