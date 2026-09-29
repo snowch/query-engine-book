@@ -22,7 +22,18 @@ from dataclasses import dataclass
 import pyarrow as pa
 
 from .cpu import VectorUnit
-from .expressions import KERNELS, Call, Column, Counts, Expression, Literal, _divide, evaluate_row, nodes
+from .expressions import (
+    KERNELS,
+    Call,
+    Column,
+    Counts,
+    Expression,
+    Literal,
+    _divide,
+    evaluate,
+    evaluate_row,
+    nodes,
+)
 from .planner import name_of
 from .rules import conjuncts
 from .sql import parse
@@ -145,6 +156,15 @@ def _operations(expr: Expression, shared: dict[Expression, str]) -> int:
     return 1 + sum(_operations(a, shared) for a in expr.args)
 
 
+def _table(out: dict[str, list], pipeline: Pipeline, batches: list[pa.RecordBatch]) -> pa.Table:
+    """The values a loop appended, as a table of the types the kernels would have given them."""
+    empty = batches[0].slice(0, 0)
+    types = [evaluate(e, empty).type for _, e in pipeline.outputs]
+    return pa.table(
+        [pa.array(out[n], t) for (n, _), t in zip(pipeline.outputs, types, strict=True)], names=list(out)
+    )
+
+
 @dataclass
 class Run:
     """What running a pipeline over some batches counted, one way."""
@@ -167,7 +187,7 @@ def compiled(pipeline: Pipeline, batches: list[pa.RecordBatch]) -> Run:
     out = {name: [] for name, _ in pipeline.outputs}
     for batch in batches:
         scope["pipeline"](batch, out)
-    result = pa.table(out)
+    result = _table(out, pipeline, batches)
     return Run(result, 0, result.get_total_buffer_size(), unit.instructions)
 
 
@@ -218,5 +238,5 @@ def rows_at_a_time(pipeline: Pipeline, batches: list[pa.RecordBatch]) -> Run:
             if all(evaluate_row(f, row, counts, unit) for f in pipeline.filters):
                 for name, expr in pipeline.outputs:
                     out[name].append(evaluate_row(expr, row, counts, unit))
-    result = pa.table(out)
+    result = _table(out, pipeline, batches)
     return Run(result, counts.dispatches, result.get_total_buffer_size(), unit.instructions)

@@ -15,9 +15,9 @@
    "detail": "ch06's evaluate_row",
    "reference": {
     "label": "Bytes of the result",
-    "value": 17496
+    "value": 14580
    },
-   "measured": 17496,
+   "measured": 14580,
    "counters": [
     [
      "nodes visited while running",
@@ -53,9 +53,9 @@
    "detail": "generate, then compile",
    "reference": {
     "label": "Bytes of the result",
-    "value": 17496
+    "value": 14580
    },
-   "measured": 17496,
+   "measured": 14580,
    "counters": [
     [
      "nodes visited while running",
