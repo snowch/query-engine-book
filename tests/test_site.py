@@ -63,3 +63,25 @@ def test_the_svg_and_the_pngs_draw_the_same_bars():
     assert svg.count("<rect") == 1 + len(site.ICON_BARS)
     for *_, colour in site.ICON_BARS:
         assert colour in svg
+
+
+def test_the_site_builds_with_no_pythonpath(tmp_path):
+    """The deploy workflow sets no PYTHONPATH, so the builder must find the engine and its scan
+    layer itself. CI's own checks export one, which once hid this."""
+    import os
+    import subprocess
+    import sys
+
+    env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import runpy, sys; sys.argv = ['build-site.py', '--help']; "
+            "runpy.run_path('scripts/build-site.py', run_name='not_main')",
+        ],
+        cwd=ROOT,
+        env=env,
+        check=True,
+        capture_output=True,
+    )
