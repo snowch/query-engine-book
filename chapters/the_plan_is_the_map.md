@@ -138,68 +138,25 @@ operators report the same counters, and they must agree with these.
 
 ## Building it
 
-Your engine runs the same plan, operator by operator. Each operator does one job and produces
-one output: a stream of **batches**. A batch is a slice of a table, a few thousand rows held
-column by column as Apache Arrow arrays, so an operator works on a column at a time instead of a
-row at a time. Every operator in the book shares one shape:
+Your engine runs the same plan, from the same kinds of operator. They are ready-made parts: you
+put them together here, and each one's own code is the subject of the chapter that measures it,
+starting with [ch03](#projection-and-filter-pushdown). What you need to know about them is how
+they hand rows to each other.
 
-```{literalinclude} ../python/query_lab/operators.py
-:language: python
-:start-at: class Operator:
-:end-before: # A predicate the scan tests itself (ch03).
-```
-
-`batches` is a generator. An operator produces a batch only when the operator above it asks
-for one, and it asks the operator below it, its child, for input only then. So the operator at the top drives the
-run, and nothing is read until something above asks. This is the **pull model**: rows are pulled
-up the plan, not pushed. `take` and `emit` count every batch on its way in and out, so every
-operator reports the counters in COUNTERS.md without any code of its own for counting.
-
-### The scan
+Each operator produces a stream of **batches**. A batch is a slice of a table, a few thousand rows
+held column by column as Apache Arrow arrays, so an operator works on a column at a time instead
+of a row at a time. An operator produces a batch only when the operator above it asks for one,
+and asks the operator below it, its child, for input only then. So the operator at the top drives
+the run, and nothing is read until something above asks. This is the **pull model**: rows are
+pulled up the plan, not pushed. Every operator counts the batches and rows it takes in and hands
+out, the counters in COUNTERS.md.
 
 The scan is the only operator that reads. A Parquet file is cut into **row groups**: horizontal
-slices of the table, each holding every column's values for a run of rows, one column after
-another. The scan opens the file with the Parquet reader from *Parquet, byte by byte*, through
-that book's simulated object store, so every byte it reads is a request the store logged. It
-reads the footer, which says where everything is, then, for each row group, the chunks of the
-columns it was asked for. It decodes them and hands up one batch per row group. Opening the file
-through the store, and deciding which rows of a row group to read, are methods of their own, since
-later chapters grow them; the loop is the scan:
-
-```{literalinclude} ../python/query_lab/operators.py
-:language: python
-:start-at: # Row group by row group:
-:end-before: def open(self)
-```
-
-Called with no `filters`, as this chapter calls it, the scan reads every row group and hands up
-every row. It tests no predicate, where DuckDB's did. That difference is the first thing the
-comparison below shows, and the `filters` are how [ch03](#projection-and-filter-pushdown) closes
-it.
-
-### Filter and project
-
-A filter asks its child for a batch. It evaluates its predicate for
-every row with a kernel from `pyarrow.compute`, a function that works on a whole column at once,
-and hands up the rows that are true. A projection computes each output column
-from the batch it receives. Neither changes how many batches flow; only the filter changes how
-many rows.
-
-```{literalinclude} ../python/query_lab/operators.py
-:language: python
-:start-at: class Filter(Operator):
-:end-before: def arrow_type(
-```
-
-```run
-tests: test_operators.py
-select: returned_unit_price or projection or nothing_is_read
-```
-
-Press **Edit and run** on a listing like this one to change the engine and run it in your browser.
-Make the filter hand up every batch unfiltered, say, and run the engine's tests on your edit:
-the rows no longer match DuckDB's, and the tests say where. The book's own code comes back when
-you close the editor, and nothing you change moves a number the chapter prints.
+slices of the table, each holding every column's values for a run of rows. The scan reads the
+columns it is asked for, a row group at a time, through the Parquet reader from *Parquet, byte by
+byte*, and hands up one batch per row group. A filter evaluates its predicate on each batch and
+hands up the rows that are true; a projection computes each output column from the batch it
+receives.
 
 ### The plan
 
@@ -213,9 +170,22 @@ turn, and a projection computes the unit price:
 :end-before: def in_date_order(
 ```
 
-The book's tests run this plan every time the book is built. They check that its counters obey
-COUNTERS.md's rules, and compare its result with DuckDB's, row for row. The comparison below is
-what they found.
+```run
+tests: test_operators.py
+select: returned_unit_price or projection or nothing_is_read
+```
+
+Press **Edit and run** on a listing like this one to change it and run it in your browser. Skip
+the filter on the status, say, by handing the price filter `scan` in place of `returned`, and run
+the engine's tests on your edit: the rows no longer match DuckDB's, and the tests say so. The
+book's own code comes back when you close the editor, and nothing you change moves a number the
+chapter prints.
+
+Called with no `filters`, as this plan calls it, the scan reads every row group and hands up
+every row. It tests no predicate, where DuckDB's did. That difference is the first thing the
+comparison below shows, and [ch03](#projection-and-filter-pushdown) closes it. The book's tests run
+this plan every time the book is built. They check that its counters obey COUNTERS.md's rules,
+and compare its result with DuckDB's, row for row.
 
 ## Compare
 
@@ -306,17 +276,16 @@ browser, and **Reset to the stubs** starts again.
 chapter: the_plan_is_the_map
 ```
 
-**1.1 A limit.** Write `Limit`: an operator that hands up
-the first `n` rows its child produces, and no more. It must stop asking its child for batches as
-soon as it has `n` rows. The graders compare its rows with DuckDB's `LIMIT`, and count the
-batches its child produced, with and without a filter between them. A limit that drains its
-child fails even when its rows are right. This is where the pull model pays: a limit at the top
-of a plan stops the scan at the bottom.
-
-**1.2 A plan of your own.** Write `customer_orders`, the plan for every order of one customer:
+**1.1 A plan of your own.** Write `customer_orders`, the plan for every order of one customer:
 `order_id`, `order_date` and `amount`, where `customer_id` equals the customer given. Build it
-from the book's operators. The graders compare its result with DuckDB's for several customers,
-check its counters obey the rules, and check the scan reads no column the query does not use.
+from the book's operators, as the chapter built its plan. The graders compare its result with
+DuckDB's for several customers, check its counters obey the rules, and check the scan reads no
+column the query does not use.
+
+**1.2 Work it out from the recipe.** Write `expected_rows`: from the orders' recipe above, the
+rows the chapter's query keeps, for any status and any price threshold. The graders compare your
+answer with DuckDB's count for several of each. It is the estimate the planner could not make,
+because nobody gave it the recipe.
 
 **1.3 Diagnose the slow query.** No test. A colleague finds the same returned orders with this
 query:

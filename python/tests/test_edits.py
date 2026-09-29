@@ -90,3 +90,14 @@ def test_an_error_names_the_line_of_the_edit_it_is_on():
         with edited(ROOT, "python/query_lab/cpu.py", source, failing):
             cpu.VectorUnit().run(1)
     assert caught.traceback[-1].lineno + 1 == line
+
+
+def test_an_edited_plan_is_the_one_its_registry_runs_until_the_edit_ends():
+    book = listing(plans.returned_unit_price)
+    edit = book.replace("pricey = Filter(returned,", "pricey = Filter(scan,")
+    assert edit != book
+    with edited(ROOT, "python/query_lab/plans.py", book, edit):
+        assert plans.PLANS["returned_unit_price.sql"] is plans.returned_unit_price
+        skipped = plans.plan_for(ROOT, "returned_unit_price.sql").run().num_rows
+    assert plans.PLANS["returned_unit_price.sql"].__code__.co_filename.endswith("plans.py")
+    assert plans.plan_for(ROOT, "returned_unit_price.sql").run().num_rows < skipped

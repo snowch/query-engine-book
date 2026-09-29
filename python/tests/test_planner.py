@@ -134,7 +134,7 @@ def test_binding_names_the_name_it_cannot_bind(text, message):
 
 
 def test_a_limit_keeps_the_first_rows_as_they_come():
-    # The engine has no limit of its own, which is problem 1.1's: the planner runs a top-k with
+    # The engine has no limit of its own, which is problem 3.3's: the planner runs a top-k with
     # no keys, which keeps the first rows it is given.
     text = f"SELECT order_id FROM {ORDERS} LIMIT 7"
     first = pq.read_table(ROOT / "fixtures" / "orders-sorted.parquet", columns=["order_id"])

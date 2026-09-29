@@ -177,9 +177,9 @@ table the text names second:
 :end-before: def plan(
 ```
 
-A `LIMIT` has no operator of its own: that is problem 1.1's, which you may have written. The
+A `LIMIT` has no operator of its own: that is problem 3.3's, which you may have written. The
 planner runs it as ch09's top-k with nothing to order by, which keeps the first rows it is given.
-It reads every row its child hands up to do so, where problem 1.1's limit stops asking.
+It reads every row its child hands up to do so, where problem 3.3's limit stops asking.
 
 The book's tests plan every query in `queries/` that reads one plain file, and require DuckDB's
 rows for each. The three that read many files, or pass `read_parquet` options, are refused with a

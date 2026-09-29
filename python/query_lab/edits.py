@@ -111,6 +111,7 @@ def edited(root: Path, file: str, listing: str, text: str) -> Iterator[list[str]
     owner_name = enclosing_class((root / file).read_text(), first)
     code = textwrap.dedent(text)
     undo: list[tuple[object, str, object]] = []
+    swapped: list[tuple[dict, object, object]] = []
 
     def put(owner, name: str, value) -> None:
         undo.append((owner, name, owner.__dict__.get(name, MISSING)))
@@ -138,14 +139,23 @@ def edited(root: Path, file: str, listing: str, text: str) -> Iterator[list[str]
                     continue
                 put(module, name, value)
                 if inspect.isfunction(old) or inspect.isclass(old):
-                    # Modules that imported the old one by name get the new one too.
                     for other in list(sys.modules.values()):
-                        if other is module or not getattr(other, "__name__", "").startswith("query_lab"):
+                        if not getattr(other, "__name__", "").startswith("query_lab"):
                             continue
-                        if other.__dict__.get(name) is old:
+                        # Modules that imported the old one by name get the new one too.
+                        if other is not module and other.__dict__.get(name) is old:
                             put(other, name, value)
+                        # So does a registry that holds it, as plans.PLANS holds each plan.
+                        for held in list(other.__dict__.values()):
+                            if isinstance(held, dict):
+                                for key, v in list(held.items()):
+                                    if v is old:
+                                        swapped.append((held, key, v))
+                                        held[key] = value
         yield sorted({name for _, name, _ in undo})
     finally:
+        for held, key, old in reversed(swapped):
+            held[key] = old
         for owner, name, old in reversed(undo):
             if old is MISSING:
                 delattr(owner, name)
