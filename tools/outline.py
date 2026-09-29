@@ -167,6 +167,16 @@ _CHAPTERS = (
         ("pruning",),
         ("orders-sorted.parquet", "orders-paged.parquet"),
     ),
+    (
+        "where_work_happens",
+        "Where work happens",
+        "reading_less",
+        "When a table is many files, what decides which of them are opened, and where are the rows tested?",
+        "A table scan that reads a table's metadata and opens only the files that might match, and "
+        "a scan handed to storage that tests the rows itself.",
+        ("pruning",),
+        ("orders-by-month", "orders-sorted.parquet", "orders-shuffled.parquet"),
+    ),
 )
 
 CHAPTERS = tuple(

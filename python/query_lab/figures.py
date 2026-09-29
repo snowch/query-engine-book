@@ -26,8 +26,8 @@ from . import plans, report
 from .cache import LINE_BYTES, LINES
 from .memory import buffer_names, buffer_sizes
 from .metrics import Metrics
-from .operators import Scan
-from .reference import Observation, bytes_read, connect, explain, observe, read_query
+from .operators import Comparison, Scan, TableScan
+from .reference import Observation, bytes_read, connect, explain, files_opened, observe, read_query
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "chapters" / "_generated"
@@ -454,6 +454,87 @@ def dictionary_table() -> str:
     )
 
 
+def table_compare() -> str:
+    """The fortnight from the table of monthly files: your table scan by its metadata and by its
+    files, and DuckDB by a glob of the files and by the month in their directories' names."""
+    lines = [
+        "| Scan | Files opened | Requests | Bytes read | Rows decoded | Rows handed up |",
+        "|---|---:|---:|---:|---:|---:|",
+    ]
+    for label, metadata in (("Yours, by the table's metadata", True), ("Yours, by the table's files", False)):
+        scan = plans.early_march_table(ROOT, metadata=metadata)
+        scan.run()
+        m = scan.metrics
+        lines.append(
+            f"| {label} | {len(scan.opened):,} | {m.requests:,} | {m.bytes_read:,} | {m.rows_in:,} | {m.rows_out:,} |"
+        )
+    for label, query in (
+        ("DuckDB's, by a glob of the files", "early_march_table.sql"),
+        ("DuckDB's, by the month in the directory's name", "early_march_partition.sql"),
+    ):
+        sql = read_query(ROOT / "queries" / query)
+        scan = list(observe(sql).metrics.walk())[-1]
+        lines.append(
+            f"| {label} | {files_opened(sql):,} | not reported | {bytes_read(sql):,} | not reported | "
+            f"{scan.rows_out:,} |"
+        )
+    what = f"the book's engine and DuckDB {duckdb.__version__} with one thread, its reads counted at the file system"
+    return "\n".join(lines) + "\n" + conditions(what, "orders-by-month/")
+
+
+def storage_table() -> str:
+    """The fortnight from each orders file, its rows tested by your engine and by the storage."""
+    lines = [
+        "| File | Where the rows are tested | Bytes over the network | Requests | Bytes the storage read |",
+        "|---|---|---:|---:|---:|",
+    ]
+    for fixture in report.GATHER_FIXTURES:
+        ours = plans.early_march(ROOT, fixture)
+        ours.run()
+        lines.append(
+            f"| `{fixture}` | In your engine | {ours.metrics.bytes_read:,} | {ours.metrics.requests:,} | "
+            f"{ours.metrics.bytes_read:,} |"
+        )
+        theirs = plans.early_march_in_storage(ROOT, fixture)
+        theirs.run()
+        lines.append(
+            f"| `{fixture}` | In the storage | {theirs.metrics.bytes_read:,} | {theirs.metrics.requests:,} | "
+            f"{theirs.storage.bytes_read:,} |"
+        )
+    return (
+        "\n".join(lines) + "\n" + "\n*Computed by the book's engine and its storage that tests rows, on "
+        "`fixtures/orders-sorted.parquet` and `fixtures/orders-shuffled.parquet`, at build time.*\n"
+    )
+
+
+def one_customer_table() -> str:
+    """One customer's orders from the table of monthly files, by the table's metadata."""
+    scan = TableScan(
+        ROOT / "fixtures" / "orders-by-month",
+        ["order_id", "order_date", "amount"],
+        [Comparison("customer_id", "=", 17)],
+    )
+    rows = scan.run().num_rows
+    m = scan.metrics
+    metadata = json.loads((ROOT / "fixtures" / "orders-by-month" / "metadata.json").read_text())
+    lines = [
+        "| File | Rows | Smallest `customer_id` | Largest `customer_id` | Opened |",
+        "|---|---:|---:|---:|---|",
+    ]
+    for entry in metadata["files"]:
+        b = entry["bounds"]["customer_id"]
+        low = int.from_bytes(bytes.fromhex(b["lower"]), "little", signed=True)
+        high = int.from_bytes(bytes.fromhex(b["upper"]), "little", signed=True)
+        opened = "yes" if entry["path"] in scan.opened else "no"
+        lines.append(f"| `{entry['path']}` | {entry['rows']:,} | {low:,} | {high:,} | {opened} |")
+    lines += [
+        "",
+        f"The scan opened {len(scan.opened):,} of {len(metadata['files']):,} files in {m.requests:,} requests, "
+        f"read {m.bytes_read:,} bytes, decoded {m.rows_in:,} rows and handed up {rows:,}.",
+    ]
+    return "\n".join(lines) + "\n" + conditions("the book's engine", "orders-by-month/")
+
+
 def orders_recipe() -> str:
     """How the orders were generated, from the generator's own constants and manifest."""
     sys.path.insert(0, str(ROOT / "fixtures"))
@@ -514,6 +595,11 @@ FIGURES = (
     Figure("grain", grain_table),
     Figure("early-march-paged-compare", paged_compare),
     Figure("dictionary-pages", dictionary_table),
+    Figure("early-march-table-plan", plan_of("early_march_table.sql", "orders-by-month/")),
+    Figure("early-march-partition-plan", plan_of("early_march_partition.sql", "orders-by-month/")),
+    Figure("early-march-table-compare", table_compare),
+    Figure("storage", storage_table),
+    Figure("one-customer-table", one_customer_table),
 )
 
 
@@ -532,6 +618,7 @@ PANELS = (
         "query": "early_march_paged.sql",
         "fixtures": "orders-sorted.parquet, orders-paged.parquet",
     },
+    {"experiment": "pruning", "query": "early_march_table.sql", "scans": "by its metadata, by its files"},
 )
 
 

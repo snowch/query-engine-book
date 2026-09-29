@@ -8,6 +8,9 @@ title: Glossary
 Terms the book uses, each with the chapter that introduces it. No chapter uses a term before the
 chapter that introduces it: `tests/test_book.py` checks every entry.
 
+**Arrow IPC.** The stream format Arrow uses to move batches between processes: a schema, then
+batches laid out as they are in memory. [ch05](#where-work-happens)
+
 **Batch.** A slice of a table, a few thousand rows held column by column as Arrow arrays: what
 one operator hands the next. [ch01](#the-plan-is-the-map)
 
@@ -40,6 +43,9 @@ that pass. [ch03](#projection-and-filter-pushdown)
 **Gather.** Reading rows by position, in an order given by a list of positions: row `k` of the
 output is row `positions[k]` of the input. A sort, a join and a lookup each end in one.
 [ch02](#batches-in-memory)
+
+**Hive partitioning.** Laying out a table's files in directories named for a column's value, such
+as `month=2024-03`, so a reader can rule out a file from its path. [ch05](#where-work-happens)
 
 **Offset index.** Part of a Parquet file's page index: where each page of a column chunk starts,
 and the first row it holds. [ch04](#statistics-and-pruning)
@@ -81,6 +87,10 @@ with statistics for each column. [ch01](#the-plan-is-the-map)
 [ch01](#the-plan-is-the-map)
 
 **Selectivity.** The fraction of its input rows a predicate keeps. [ch01](#the-plan-is-the-map)
+
+**Table metadata.** A file kept beside a table's data files that lists each of them with the
+smallest and largest value of every column, so a reader can rule out a file without opening it.
+[ch05](#where-work-happens)
 
 **Validity bitmap.** One bit per value in an Arrow array, saying whether the value is present or
 null. [ch02](#batches-in-memory)

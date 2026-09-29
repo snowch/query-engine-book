@@ -52,7 +52,12 @@ Invariant 2 makes the tree read like a ledger. Each operator's reduction is `row
   estimated.
 - **Bytes read and requests** come from the scan layer's object-store trace: the bytes each
   response returned, including any gap coalescing read. They are never the file's size or a
-  column chunk's recorded size.
+  column chunk's recorded size. A table scan (ch05) shares one store across the files it opens,
+  so its bytes and requests are the table's: the metadata or the listing, then every file.
+- **Bytes read by storage that tests rows** (ch05) are what crossed the network: the size of the
+  Arrow IPC response, in one request. What the storage read of its own disks is its own scan's
+  counters, kept on the operator as `storage` and reported beside it, never added to it, so
+  bytes read still means bytes that reached the engine.
 - **Peak memory** is the sum of `get_total_buffer_size()` over the Arrow arrays the operator
   retains, at its largest. It counts buffers, not Python objects, so it is the same under
   CPython and Pyodide. It excludes the batches an operator has passed on, which belong to its

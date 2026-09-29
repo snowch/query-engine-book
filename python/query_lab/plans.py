@@ -17,7 +17,8 @@ import pyarrow.compute as pc
 
 from .cache import Cache
 from .memory import fixed_width_array, gather
-from .operators import Comparison, Filter, Operator, Project, Scan
+from .operators import Comparison, Filter, Operator, Project, Scan, TableScan
+from .storage import ComputingStore, StorageScan
 
 
 def returned_unit_price(root: Path) -> Operator:
@@ -97,6 +98,27 @@ def early_march_by_page(root: Path, fixture: str = "orders-paged.parquet") -> Op
     return Scan(root / "fixtures" / fixture, columns, filters=EARLY_MARCH, page_index=True)
 
 
+def early_march_table(root: Path, metadata: bool = True) -> Operator:
+    """queries/early_march_table.sql: the fortnight from the table of monthly files (ch05). With
+    ``metadata``, the scan reads the table's metadata first; without it, it opens every file."""
+    columns = ["order_id", "customer_id", "amount"]
+    return TableScan(root / "fixtures" / "orders-by-month", columns, filters=EARLY_MARCH, metadata=metadata)
+
+
+def early_march_in_storage(root: Path, fixture: str = "orders-sorted.parquet") -> Operator:
+    """chapter 3's scan handed to the storage (ch05): the storage tests the dates and sends back
+    only the rows that pass."""
+    columns = ["order_id", "customer_id", "amount"]
+    return StorageScan(ComputingStore(root / "fixtures"), fixture, columns, filters=EARLY_MARCH)
+
+
+#: Scans a panel can set side by side under a name, where one query file cannot say which (ch05).
+SCANS: dict[str, Callable[[Path], Operator]] = {
+    "by its metadata": lambda root: early_march_table(root, metadata=True),
+    "by its files": lambda root: early_march_table(root, metadata=False),
+}
+
+
 def early_march_above(root: Path, fixture: str, columns: list[str]) -> Operator:
     """queries/early_march.sql with nothing pushed into the scan but ``columns``: the scan hands
     up every row of every row group, and a filter above it tests the dates, as ch01's plan did."""
@@ -134,6 +156,7 @@ PLANS: dict[str, Callable[[Path], Operator]] = {
     "returned_unit_price.sql": returned_unit_price,
     "early_march.sql": early_march,
     "early_march_paged.sql": early_march_by_page,
+    "early_march_table.sql": early_march_table,
     "largest_orders.sql": largest_orders,
 }
 
@@ -146,6 +169,7 @@ DUCKDB_PARTNERS: dict[str, list[str | None]] = {
     "returned_unit_price.sql": ["PROJECTION", "FILTER", "TABLE_SCAN", None],
     "early_march.sql": ["TABLE_SCAN"],
     "early_march_paged.sql": ["TABLE_SCAN"],
+    "early_march_table.sql": ["TABLE_SCAN"],
     "largest_orders.sql": ["TABLE_SCAN"],
 }
 

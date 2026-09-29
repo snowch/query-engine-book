@@ -104,7 +104,7 @@ function fileCard(file, data, view, index) {
   const card = el("div", "plan-op pruning-file");
   card.dataset.fixture = file.fixture;
   const name = el("div", "plan-op-name");
-  name.append("From ", el("code", "", file.fixture));
+  name.append("From ", el("code", "", file.fixture), file.label ? `, ${file.label}` : "");
   card.append(name);
   const at = scale(file, data.window);
   if (view.asking) {

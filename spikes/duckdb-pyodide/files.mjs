@@ -10,11 +10,19 @@ export const ROOT = new URL("../../", import.meta.url).pathname;
 const list = (dir, suffix) =>
   readdirSync(join(ROOT, dir)).filter((f) => f.endsWith(suffix)).map((f) => `${dir}/${f}`);
 
+/** Every file of every table of many files among the fixtures: a directory with its metadata. */
+const tables = () => readdirSync(join(ROOT, "fixtures"), { withFileTypes: true })
+  .filter((d) => d.isDirectory() && readdirSync(join(ROOT, "fixtures", d.name)).includes("metadata.json"))
+  .flatMap((d) => readdirSync(join(ROOT, "fixtures", d.name), { recursive: true })
+    .filter((f) => f.endsWith(".parquet") || f === "metadata.json")
+    .map((f) => `fixtures/${d.name}/${f}`));
+
 export function probeFiles() {
   return [
     ...list("python/query_lab", ".py"),
     ...list("external/parquet-book/python/parquet_lab", ".py"),
     ...list("fixtures", ".parquet"),
+    ...tables(),
     ...list("queries", ".sql"),
     "spikes/duckdb-pyodide/probe.py",
   ];
