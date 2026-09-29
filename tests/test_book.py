@@ -94,6 +94,18 @@ def test_no_code_is_pasted_into_a_page(page):
         )
 
 
+#: The longest line of a query that still fits the prose's measure in the code's font, with room
+#: to spare for a reader's fonts. A longer line pushes its listing into the wide column, where a
+#: short query leaves most of the width empty beside the prose's narrower listings.
+QUERY_COLUMNS = 78
+
+
+@pytest.mark.parametrize("query", sorted((ROOT / "queries").glob("*.sql")), ids=lambda p: p.name)
+def test_a_query_fits_the_prose_measure(query):
+    long = [n for n, line in enumerate(query.read_text().splitlines(), 1) if len(line) > QUERY_COLUMNS]
+    assert not long, f"lines {long} are longer than {QUERY_COLUMNS} characters: wrap them"
+
+
 #: The one page that says how to run the book on your own machine. Only it gives shell commands.
 OWN_MACHINE = ROOT / "appendices" / "running_the_lab.md"
 
