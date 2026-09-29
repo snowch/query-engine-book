@@ -1,0 +1,137 @@
+{
+  "name": "orders-paged",
+  "why": "The sorted orders in one row group, with a page index and small pages, and a dictionary only for the columns with few distinct values. Its one row group spans the year, so row group statistics can skip nothing; its pages each hold a few weeks, so a reader that uses the page index can skip most of them.",
+  "writer": "parquet-cpp-arrow version 18.1.0",
+  "file_bytes": 415368,
+  "rows": 20000,
+  "row_groups": [
+    {
+      "rows": 20000,
+      "columns": {
+        "order_id": {
+          "compressed_bytes": 80724,
+          "uncompressed_bytes": 160419,
+          "min": 1,
+          "max": 20000,
+          "null_count": 0
+        },
+        "order_date": {
+          "compressed_bytes": 2827,
+          "uncompressed_bytes": 2778,
+          "min": "2024-01-01",
+          "max": "2024-12-31",
+          "null_count": 0
+        },
+        "customer_id": {
+          "compressed_bytes": 29136,
+          "uncompressed_bytes": 29032,
+          "min": 1,
+          "max": 1000,
+          "null_count": 0
+        },
+        "status": {
+          "compressed_bytes": 7734,
+          "uncompressed_bytes": 7706,
+          "min": "cancelled",
+          "max": "shipped",
+          "null_count": 0
+        },
+        "quantity": {
+          "compressed_bytes": 10365,
+          "uncompressed_bytes": 10313,
+          "min": 1,
+          "max": 10,
+          "null_count": 0
+        },
+        "amount": {
+          "compressed_bytes": 100537,
+          "uncompressed_bytes": 160419,
+          "min": 2.04,
+          "max": 2496.85,
+          "null_count": 0
+        },
+        "note": {
+          "compressed_bytes": 178560,
+          "uncompressed_bytes": 465753,
+          "min": "as as",
+          "max": "wrap wrap wrap",
+          "null_count": 2981
+        }
+      }
+    }
+  ],
+  "schema": [
+    {
+      "name": "order_id",
+      "type": "int64",
+      "nullable": false
+    },
+    {
+      "name": "order_date",
+      "type": "date32[day]",
+      "nullable": false
+    },
+    {
+      "name": "customer_id",
+      "type": "int32",
+      "nullable": false
+    },
+    {
+      "name": "status",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "quantity",
+      "type": "int32",
+      "nullable": false
+    },
+    {
+      "name": "amount",
+      "type": "double",
+      "nullable": false
+    },
+    {
+      "name": "note",
+      "type": "string",
+      "nullable": true
+    }
+  ],
+  "distinct": {
+    "order_id": 20000,
+    "order_date": 366,
+    "customer_id": 948,
+    "status": 5,
+    "quantity": 10,
+    "amount": 18712,
+    "note": 13305
+  },
+  "nulls": {
+    "order_id": 0,
+    "order_date": 0,
+    "customer_id": 0,
+    "status": 0,
+    "quantity": 0,
+    "amount": 0,
+    "note": 2981
+  },
+  "properties": {
+    "rows": 20000,
+    "row_group_size": 20000,
+    "customers": 1000,
+    "customer_skew": 1.1,
+    "sorted_by": [
+      "order_date",
+      "order_id"
+    ],
+    "page_index": true,
+    "dictionary": [
+      "order_date",
+      "customer_id",
+      "status",
+      "quantity"
+    ],
+    "top_customer_orders": 3583,
+    "customers_with_orders": 948
+  }
+}

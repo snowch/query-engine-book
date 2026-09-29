@@ -16,7 +16,8 @@
  "files": [
   {
    "fixture": "orders-sorted.parquet",
-   "row_groups": [
+   "unit": "row group",
+   "units": [
     {
      "rows": 2000,
      "min": 19723,
@@ -33,7 +34,7 @@
      "min_label": "2024-02-06",
      "max_label": "2024-03-14",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     },
     {
      "rows": 2000,
@@ -42,7 +43,7 @@
      "min_label": "2024-03-14",
      "max_label": "2024-04-19",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     },
     {
      "rows": 2000,
@@ -108,7 +109,7 @@
      "why": "order_date < 2024-03-15: the minimum is too large"
     }
    ],
-   "row_groups_read": 2,
+   "units_read": 2,
    "rows_decoded": 4000,
    "rows_out": 765,
    "bytes_read": 63218,
@@ -117,7 +118,8 @@
   },
   {
    "fixture": "orders-shuffled.parquet",
-   "row_groups": [
+   "unit": "row group",
+   "units": [
     {
      "rows": 2000,
      "min": 19723,
@@ -125,7 +127,7 @@
      "min_label": "2024-01-01",
      "max_label": "2024-12-31",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     },
     {
      "rows": 2000,
@@ -134,7 +136,7 @@
      "min_label": "2024-01-01",
      "max_label": "2024-12-31",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     },
     {
      "rows": 2000,
@@ -143,7 +145,7 @@
      "min_label": "2024-01-01",
      "max_label": "2024-12-31",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     },
     {
      "rows": 2000,
@@ -152,7 +154,7 @@
      "min_label": "2024-01-01",
      "max_label": "2024-12-31",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     },
     {
      "rows": 2000,
@@ -161,7 +163,7 @@
      "min_label": "2024-01-01",
      "max_label": "2024-12-31",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     },
     {
      "rows": 2000,
@@ -170,7 +172,7 @@
      "min_label": "2024-01-01",
      "max_label": "2024-12-31",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     },
     {
      "rows": 2000,
@@ -179,7 +181,7 @@
      "min_label": "2024-01-01",
      "max_label": "2024-12-31",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     },
     {
      "rows": 2000,
@@ -188,7 +190,7 @@
      "min_label": "2024-01-01",
      "max_label": "2024-12-31",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     },
     {
      "rows": 2000,
@@ -197,7 +199,7 @@
      "min_label": "2024-01-01",
      "max_label": "2024-12-31",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     },
     {
      "rows": 2000,
@@ -206,10 +208,10 @@
      "min_label": "2024-01-01",
      "max_label": "2024-12-31",
      "read": true,
-     "why": "the statistics cannot rule it out"
+     "why": "nothing rules it out"
     }
    ],
-   "row_groups_read": 10,
+   "units_read": 10,
    "rows_decoded": 20000,
    "rows_out": 765,
    "bytes_read": 322476,

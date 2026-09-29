@@ -45,6 +45,7 @@ project:
     - file: parts/reading_less.md
       children:
         - file: chapters/projection_and_filter_pushdown.md
+        - file: chapters/statistics_and_pruning.md
     - title: Appendices
       children:
         - file: appendices/running_the_lab.md

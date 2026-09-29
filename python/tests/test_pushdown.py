@@ -111,12 +111,11 @@ def test_the_pruning_report_is_the_scans():
     for f in data["files"]:
         scan = plans.early_march(ROOT, f["fixture"])
         scan.run()
-        assert [not g["read"] for g in f["row_groups"]] == [
-            i in scan.skipped for i in range(len(f["row_groups"]))
-        ]
-        assert f["row_groups_read"] == scan.metrics.batches_in
+        assert f["unit"] == "row group"
+        assert [not g["read"] for g in f["units"]] == [i in scan.skipped for i in range(len(f["units"]))]
+        assert f["units_read"] == scan.metrics.batches_in
         assert f["bytes_read"] == scan.metrics.bytes_read
-        for g in f["row_groups"]:
+        for g in f["units"]:
             assert g["min"] <= g["max"]
     assert data["window"]["min_label"] == "2024-03-01" and data["window"]["max_label"] == "2024-03-15"
 

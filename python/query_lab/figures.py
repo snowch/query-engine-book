@@ -20,11 +20,13 @@ from pathlib import Path
 
 import duckdb
 import pyarrow as pa
+import pyarrow.parquet as pq
 
 from . import plans, report
 from .cache import LINE_BYTES, LINES
 from .memory import buffer_names, buffer_sizes
 from .metrics import Metrics
+from .operators import Scan
 from .reference import Observation, bytes_read, connect, explain, observe, read_query
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -321,19 +323,135 @@ def row_groups_of(query: str, fixture: str) -> Callable[[], str]:
             f"| Row group | Rows | Smallest `{column}` | Largest `{column}` | Read by the scan |",
             "|---:|---:|---:|---:|---|",
         ]
-        for i, g in enumerate(found["row_groups"]):
+        for i, g in enumerate(found["units"]):
             lines.append(
                 f"| {i} | {g['rows']:,} | {g['min_label']} | {g['max_label']} | {'yes' if g['read'] else 'no'} |"
             )
         lines.append("")
         lines.append(
-            f"The scan read {found['row_groups_read']:,} of {len(found['row_groups']):,} row groups: "
+            f"The scan read {found['units_read']:,} of {len(found['units']):,} {found['unit']}s: "
             f"it decoded {found['rows_decoded']:,} rows, handed up {found['rows_out']:,}, and read "
             f"{found['bytes_read']:,} of the file's {found['file_bytes']:,} bytes."
         )
         return "\n".join(lines) + "\n" + conditions("the book's engine", fixture)
 
     return make
+
+
+def _pages_of(path: Path, column: str) -> int | None:
+    """How many pages the page index lists for ``column`` across the file, or None without one."""
+    from parquet_lab import page_index
+    from parquet_lab.reader import FooterOptions, read_footer
+    from parquet_lab.schema import build, leaves
+
+    data = path.read_bytes()
+    md = read_footer(report._store(path), path.name, FooterOptions()).metadata
+    leaf = next(x for x in leaves(build(md.schema)) if x.dotted_path() == column)
+    counts = [page_index.offset_index(data, g.columns[leaf.column]) for g in md.row_groups]
+    return None if any(c is None for c in counts) else sum(len(c.pages) for c in counts)
+
+
+#: The two files ch04 reads: the same sorted orders, cut into row groups, and into pages.
+GRAIN_FIXTURES = ("orders-sorted.parquet", "orders-paged.parquet")
+
+
+def grain_table() -> str:
+    """What DuckDB reads of each file for queries/early_march_paged.sql, and for all its rows."""
+    query = read_query(ROOT / "queries" / "early_march_paged.sql")
+    lines = [
+        "| File | Row groups | Pages of `order_date` | DuckDB's bytes read, the fortnight | "
+        "DuckDB's bytes read, every row |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    for fixture in GRAIN_FIXTURES:
+        sql = query.replace("orders-paged.parquet", fixture)
+        every = sql.split("WHERE")[0]
+        path = ROOT / "fixtures" / fixture
+        pages = _pages_of(path, "order_date")
+        groups = pq.ParquetFile(path).metadata.num_row_groups
+        lines.append(
+            f"| `{fixture}` | {groups:,} | {'no page index' if pages is None else f'{pages:,}'} | "
+            f"{bytes_read(sql):,} | {bytes_read(every):,} |"
+        )
+    what = f"DuckDB {duckdb.__version__} with one thread, its reads counted at the file system"
+    return (
+        "\n".join(lines) + "\n" + f"\n*Computed by {what}, on `fixtures/orders-sorted.parquet` and "
+        "`fixtures/orders-paged.parquet`, at build time.*\n"
+    )
+
+
+def paged_compare() -> str:
+    """queries/early_march_paged.sql: your scan by row group, your scan by page, and DuckDB's."""
+    sql = read_query(ROOT / "queries" / "early_march_paged.sql")
+    lines = [
+        "| Scan | Rows decoded | Rows handed up | Bytes read | Requests |",
+        "|---|---:|---:|---:|---:|",
+    ]
+    by_group = plans.early_march(ROOT, "orders-paged.parquet")
+    by_page = plans.early_march_by_page(ROOT)
+    for label, scan in (("Yours, by row group", by_group), ("Yours, by page", by_page)):
+        scan.run()
+        m = scan.metrics
+        lines.append(f"| {label} | {m.rows_in:,} | {m.rows_out:,} | {m.bytes_read:,} | {m.requests:,} |")
+    duck = list(observe(sql).metrics.walk())[-1]
+    lines.append(f"| DuckDB's | not reported | {duck.rows_out:,} | {bytes_read(sql):,} | not reported |")
+    what = f"the book's engine and DuckDB {duckdb.__version__} with one thread, its reads counted at the file system"
+    return "\n".join(lines) + "\n" + conditions(what, "orders-paged.parquet")
+
+
+def dictionary_table() -> str:
+    """orders-paged beside a copy the writer encodes as it does by default, with a dictionary for
+    every column: each column's dictionary page, and what the page-by-page scan read of each."""
+    import tempfile
+
+    path = ROOT / "fixtures" / "orders-paged.parquet"
+    columns = ["order_id", "order_date", "customer_id", "amount"]
+    with tempfile.TemporaryDirectory() as tmp:
+        # The fixture's own settings, but the writer's default dictionaries.
+        copy = Path(tmp) / "orders-paged.parquet"
+        pq.write_table(
+            pq.read_table(path),
+            copy,
+            row_group_size=pq.ParquetFile(path).metadata.num_rows,
+            compression="snappy",
+            write_statistics=True,
+            data_page_version="1.0",
+            write_page_index=True,
+            data_page_size=1024,
+        )
+        sizes, read = {}, {}
+        for label, file in (("orders-paged", path), ("the default copy", copy)):
+            md = pq.ParquetFile(file).metadata.row_group(0)
+            chunks = {md.column(c).path_in_schema: md.column(c) for c in range(md.num_columns)}
+            sizes[label] = {
+                name: chunks[name].data_page_offset - chunks[name].dictionary_page_offset
+                if chunks[name].dictionary_page_offset is not None
+                else None
+                for name in columns
+            }
+            scan = Scan(file, ["order_id", "customer_id", "amount"], plans.EARLY_MARCH, page_index=True)
+            scan.run()
+            read[label] = scan.metrics
+    lines = [
+        "| Column | Dictionary page, `orders-paged` | Dictionary page, the default copy |",
+        "|---|---:|---:|",
+    ]
+    for name in columns:
+        a, b = sizes["orders-paged"][name], sizes["the default copy"][name]
+        lines.append(f"| `{name}` | {_bytes(a)} | {_bytes(b)} |")
+    lines += [
+        "",
+        "| Scan by page | Rows decoded | Bytes read | Requests |",
+        "|---|---:|---:|---:|",
+    ]
+    for label, m in read.items():
+        lines.append(f"| {label} | {m.rows_in:,} | {m.bytes_read:,} | {m.requests:,} |")
+    return (
+        "\n".join(lines)
+        + "\n"
+        + "\n*Computed by the book's engine on `fixtures/orders-paged.parquet` and on a copy of it "
+        f"that pyarrow {pa.__version__} writes, at build time, with its default dictionaries.*\n"
+    )
 
 
 def orders_recipe() -> str:
@@ -392,6 +510,10 @@ FIGURES = (
     Figure("early-march-compare", compare_of("early_march.sql", "orders-sorted.parquet")),
     Figure("early-march-pushdown", pushdown_table),
     Figure("largest-orders-row-groups", row_groups_of("largest_orders.sql", "orders-sorted.parquet")),
+    Figure("early-march-paged-plan", plan_of("early_march_paged.sql", "orders-paged.parquet")),
+    Figure("grain", grain_table),
+    Figure("early-march-paged-compare", paged_compare),
+    Figure("dictionary-pages", dictionary_table),
 )
 
 
@@ -405,6 +527,11 @@ PANELS = (
     },
     {"experiment": "gather", "column": "amount"},
     {"experiment": "pruning", "query": "early_march.sql"},
+    {
+        "experiment": "pruning",
+        "query": "early_march_paged.sql",
+        "fixtures": "orders-sorted.parquet, orders-paged.parquet",
+    },
 )
 
 

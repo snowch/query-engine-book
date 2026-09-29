@@ -5,9 +5,8 @@ module holds only what a script or a test needs: the order, the titles, the ques
 chapter answers, what each chapter adds to the engine, and which fixtures and experiments it
 uses.
 
-Only the pilot slice is listed (PLAN.md, Phase 1). The draft table of contents for the rest of
-the book lives in PLAN.md until the pilot passes its go/no-go review; a chapter enters this list
-when it is about to be written, not before.
+The draft table of contents lives in PLAN.md; a chapter enters this list when it is about to be
+written, not before.
 
 A chapter's number is derived from its position here and never typed anywhere else. Its identity
 is its slug: the file name, the anchor a cross-reference uses, and the name of its problems.
@@ -157,6 +156,16 @@ _CHAPTERS = (
         "the row groups skipped.",
         ("pruning",),
         ("orders-sorted.parquet", "orders-shuffled.parquet"),
+    ),
+    (
+        "statistics_and_pruning",
+        "Statistics and pruning",
+        "reading_less",
+        "How finely can a scan skip, and what does skipping finely cost?",
+        "A scan that reads a file's page index and fetches and decodes only the pages that might "
+        "hold a match, checked against DuckDB byte for byte.",
+        ("pruning",),
+        ("orders-sorted.parquet", "orders-paged.parquet"),
     ),
 )
 

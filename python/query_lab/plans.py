@@ -90,6 +90,13 @@ def early_march(root: Path, fixture: str = "orders-sorted.parquet") -> Operator:
     return Scan(root / "fixtures" / fixture, ["order_id", "customer_id", "amount"], filters=EARLY_MARCH)
 
 
+def early_march_by_page(root: Path, fixture: str = "orders-paged.parquet") -> Operator:
+    """queries/early_march_paged.sql: chapter 3's scan, told to use the page index (ch04). On a
+    file without one, it reads by row group, as chapter 3's did."""
+    columns = ["order_id", "customer_id", "amount"]
+    return Scan(root / "fixtures" / fixture, columns, filters=EARLY_MARCH, page_index=True)
+
+
 def early_march_above(root: Path, fixture: str, columns: list[str]) -> Operator:
     """queries/early_march.sql with nothing pushed into the scan but ``columns``: the scan hands
     up every row of every row group, and a filter above it tests the dates, as ch01's plan did."""
@@ -126,6 +133,7 @@ def largest_orders(root: Path, fixture: str = "orders-sorted.parquet") -> Operat
 PLANS: dict[str, Callable[[Path], Operator]] = {
     "returned_unit_price.sql": returned_unit_price,
     "early_march.sql": early_march,
+    "early_march_paged.sql": early_march_by_page,
     "largest_orders.sql": largest_orders,
 }
 
@@ -137,6 +145,7 @@ PLANS: dict[str, Callable[[Path], Operator]] = {
 DUCKDB_PARTNERS: dict[str, list[str | None]] = {
     "returned_unit_price.sql": ["PROJECTION", "FILTER", "TABLE_SCAN", None],
     "early_march.sql": ["TABLE_SCAN"],
+    "early_march_paged.sql": ["TABLE_SCAN"],
     "largest_orders.sql": ["TABLE_SCAN"],
 }
 

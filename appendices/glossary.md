@@ -22,6 +22,15 @@ memory first. [ch02](#batches-in-memory)
 **Cardinality estimate.** The number of rows a planner expects an operator to produce, made
 before the query runs. [ch01](#the-plan-is-the-map)
 
+**Column index.** Part of a Parquet file's page index: the smallest and largest value of each
+page of a column chunk. [ch04](#statistics-and-pruning)
+
+**Data page.** The unit a Parquet column chunk is stored in: a run of a column's values, encoded
+and compressed together. [ch04](#statistics-and-pruning)
+
+**Dictionary page.** The page of a dictionary-encoded column chunk that holds its distinct
+values, which every data page of the chunk refers to by number. [ch04](#statistics-and-pruning)
+
 **Filter.** The operator that keeps the rows for which a predicate is true.
 [ch01](#the-plan-is-the-map)
 
@@ -31,6 +40,9 @@ that pass. [ch03](#projection-and-filter-pushdown)
 **Gather.** Reading rows by position, in an order given by a list of positions: row `k` of the
 output is row `positions[k]` of the input. A sort, a join and a lookup each end in one.
 [ch02](#batches-in-memory)
+
+**Offset index.** Part of a Parquet file's page index: where each page of a column chunk starts,
+and the first row it holds. [ch04](#statistics-and-pruning)
 
 **Offsets.** The buffer of a string array that says where each row's bytes start and end in its
 data buffer. [ch02](#batches-in-memory)

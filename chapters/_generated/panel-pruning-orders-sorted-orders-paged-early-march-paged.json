@@ -1,0 +1,312 @@
+{
+ "experiment": "pruning",
+ "query": "early_march_paged.sql",
+ "engine": "the book's engine",
+ "column": "order_date",
+ "filters": [
+  "order_date >= 2024-03-01",
+  "order_date < 2024-03-15"
+ ],
+ "window": {
+  "min": 19783,
+  "max": 19797,
+  "min_label": "2024-03-01",
+  "max_label": "2024-03-15"
+ },
+ "files": [
+  {
+   "fixture": "orders-sorted.parquet",
+   "unit": "row group",
+   "units": [
+    {
+     "rows": 2000,
+     "min": 19723,
+     "max": 19759,
+     "min_label": "2024-01-01",
+     "max_label": "2024-02-06",
+     "read": false,
+     "why": "order_date >= 2024-03-01: the maximum is too small"
+    },
+    {
+     "rows": 2000,
+     "min": 19759,
+     "max": 19796,
+     "min_label": "2024-02-06",
+     "max_label": "2024-03-14",
+     "read": true,
+     "why": "nothing rules it out"
+    },
+    {
+     "rows": 2000,
+     "min": 19796,
+     "max": 19832,
+     "min_label": "2024-03-14",
+     "max_label": "2024-04-19",
+     "read": true,
+     "why": "nothing rules it out"
+    },
+    {
+     "rows": 2000,
+     "min": 19832,
+     "max": 19869,
+     "min_label": "2024-04-19",
+     "max_label": "2024-05-26",
+     "read": false,
+     "why": "order_date < 2024-03-15: the minimum is too large"
+    },
+    {
+     "rows": 2000,
+     "min": 19869,
+     "max": 19905,
+     "min_label": "2024-05-26",
+     "max_label": "2024-07-01",
+     "read": false,
+     "why": "order_date < 2024-03-15: the minimum is too large"
+    },
+    {
+     "rows": 2000,
+     "min": 19906,
+     "max": 19942,
+     "min_label": "2024-07-02",
+     "max_label": "2024-08-07",
+     "read": false,
+     "why": "order_date < 2024-03-15: the minimum is too large"
+    },
+    {
+     "rows": 2000,
+     "min": 19942,
+     "max": 19979,
+     "min_label": "2024-08-07",
+     "max_label": "2024-09-13",
+     "read": false,
+     "why": "order_date < 2024-03-15: the minimum is too large"
+    },
+    {
+     "rows": 2000,
+     "min": 19979,
+     "max": 20015,
+     "min_label": "2024-09-13",
+     "max_label": "2024-10-19",
+     "read": false,
+     "why": "order_date < 2024-03-15: the minimum is too large"
+    },
+    {
+     "rows": 2000,
+     "min": 20015,
+     "max": 20052,
+     "min_label": "2024-10-19",
+     "max_label": "2024-11-25",
+     "read": false,
+     "why": "order_date < 2024-03-15: the minimum is too large"
+    },
+    {
+     "rows": 2000,
+     "min": 20052,
+     "max": 20088,
+     "min_label": "2024-11-25",
+     "max_label": "2024-12-31",
+     "read": false,
+     "why": "order_date < 2024-03-15: the minimum is too large"
+    }
+   ],
+   "units_read": 2,
+   "rows_decoded": 4000,
+   "rows_out": 765,
+   "bytes_read": 63218,
+   "requests": 11,
+   "file_bytes": 497857
+  },
+  {
+   "fixture": "orders-paged.parquet",
+   "unit": "page",
+   "units": [
+    {
+     "rows": 1024,
+     "min": 19723,
+     "max": 19741,
+     "min_label": "2024-01-01",
+     "max_label": "2024-01-19",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19741,
+     "max": 19760,
+     "min_label": "2024-01-19",
+     "max_label": "2024-02-07",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19760,
+     "max": 19779,
+     "min_label": "2024-02-07",
+     "max_label": "2024-02-26",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19779,
+     "max": 19797,
+     "min_label": "2024-02-26",
+     "max_label": "2024-03-15",
+     "read": true,
+     "why": "nothing rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19797,
+     "max": 19816,
+     "min_label": "2024-03-15",
+     "max_label": "2024-04-03",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19816,
+     "max": 19835,
+     "min_label": "2024-04-03",
+     "max_label": "2024-04-22",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19835,
+     "max": 19854,
+     "min_label": "2024-04-22",
+     "max_label": "2024-05-11",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19854,
+     "max": 19872,
+     "min_label": "2024-05-11",
+     "max_label": "2024-05-29",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19872,
+     "max": 19891,
+     "min_label": "2024-05-29",
+     "max_label": "2024-06-17",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19891,
+     "max": 19910,
+     "min_label": "2024-06-17",
+     "max_label": "2024-07-06",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19910,
+     "max": 19929,
+     "min_label": "2024-07-06",
+     "max_label": "2024-07-25",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19929,
+     "max": 19947,
+     "min_label": "2024-07-25",
+     "max_label": "2024-08-12",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19947,
+     "max": 19966,
+     "min_label": "2024-08-12",
+     "max_label": "2024-08-31",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19966,
+     "max": 19985,
+     "min_label": "2024-08-31",
+     "max_label": "2024-09-19",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 19985,
+     "max": 20004,
+     "min_label": "2024-09-19",
+     "max_label": "2024-10-08",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 20004,
+     "max": 20022,
+     "min_label": "2024-10-08",
+     "max_label": "2024-10-26",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 20022,
+     "max": 20041,
+     "min_label": "2024-10-26",
+     "max_label": "2024-11-14",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 20041,
+     "max": 20060,
+     "min_label": "2024-11-14",
+     "max_label": "2024-12-03",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 1024,
+     "min": 20060,
+     "max": 20079,
+     "min_label": "2024-12-03",
+     "max_label": "2024-12-22",
+     "read": false,
+     "why": "the page index rules it out"
+    },
+    {
+     "rows": 544,
+     "min": 20079,
+     "max": 20088,
+     "min_label": "2024-12-22",
+     "max_label": "2024-12-31",
+     "read": false,
+     "why": "the page index rules it out"
+    }
+   ],
+   "units_read": 1,
+   "rows_decoded": 1024,
+   "rows_out": 765,
+   "bytes_read": 18683,
+   "requests": 14,
+   "file_bytes": 415368
+  }
+ ]
+}
