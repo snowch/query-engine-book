@@ -1,0 +1,143 @@
+{
+ "experiment": "measure",
+ "of": "pushing",
+ "engine": "the book's engine",
+ "title": "Pushing the orders",
+ "predict": {
+  "label": "Bytes read",
+  "ask": "the bytes each way reads",
+  "placeholder": "bytes"
+ },
+ "facts": "The sorted orders are ten row groups, and returned orders are spread through all of them. Each scan tests the status itself, reads the footer once, and then a row group at a time.",
+ "cases": [
+  {
+   "label": "Is there a returned order? The source listens",
+   "detail": "scan \u2192 Exists",
+   "reference": {
+    "label": "Bytes read to the end",
+    "value": 16134
+   },
+   "measured": 8344,
+   "counters": [
+    [
+     "row groups read",
+     1
+    ],
+    [
+     "rows handed up",
+     114
+    ]
+   ]
+  },
+  {
+   "label": "Is there a returned order? The source never listens",
+   "detail": "scan \u2192 Exists",
+   "reference": {
+    "label": "Bytes read to the end",
+    "value": 16134
+   },
+   "measured": 16134,
+   "counters": [
+    [
+     "row groups read",
+     10
+    ],
+    [
+     "rows handed up",
+     1183
+    ]
+   ]
+  },
+  {
+   "label": "Big returners, pulled: a scan for each consumer",
+   "detail": "scan \u2192 totals; scan \u2192 average",
+   "reference": {
+    "label": "Bytes of one scan",
+    "value": 183266
+   },
+   "measured": 366532,
+   "counters": [
+    [
+     "scans",
+     2
+    ],
+    [
+     "rows handed up",
+     2366
+    ]
+   ]
+  },
+  {
+   "label": "Big returners, pushed: one scan through a tee",
+   "detail": "scan \u2192 tee \u2192 totals, average",
+   "reference": {
+    "label": "Bytes of one scan",
+    "value": 183266
+   },
+   "measured": 183266,
+   "counters": [
+    [
+     "scans",
+     1
+    ],
+    [
+     "rows handed up",
+     1183
+    ],
+    [
+     "rows each consumer took in",
+     1183
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "consumers of the returned orders",
+  "y_label": "bytes read",
+  "x_scale": "linear",
+  "series": [
+   {
+    "label": "pulled, a scan each",
+    "points": [
+     [
+      1,
+      183266
+     ],
+     [
+      2,
+      366532
+     ],
+     [
+      3,
+      549798
+     ],
+     [
+      4,
+      733064
+     ]
+    ]
+   },
+   {
+    "label": "pushed, one scan",
+    "points": [
+     [
+      1,
+      183266
+     ],
+     [
+      2,
+      183266
+     ],
+     [
+      3,
+      183266
+     ],
+     [
+      4,
+      183266
+     ]
+    ]
+   }
+  ]
+ }
+}

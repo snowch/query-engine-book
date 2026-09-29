@@ -19,7 +19,7 @@ NOT_A_REWRITE = {"early_march_paged.sql"}
 def plannable(query: str) -> bool:
     try:
         planner.logical_plan(ROOT, sql.parse(read_query(ROOT / "queries" / query)))
-    except planner.PlanError:
+    except (planner.PlanError, sql.SQLError):
         return False
     return True
 

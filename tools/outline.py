@@ -140,6 +140,11 @@ PARTS = (
         "Part V: Scaling out",
         "What changes when a query's work is shared among many workers, on one machine or many?",
     ),
+    Part(
+        "other_ways_to_run_a_plan",
+        "Part VI: Other ways to run a plan",
+        "The plan is chosen: what changes when an engine runs it another way?",
+    ),
 )
 
 _P = {p.slug: p.title for p in PARTS}
@@ -314,6 +319,16 @@ _CHAPTERS = (
         "the tasks a failed node costs for each place the rows between stages can be kept.",
         ("measure",),
         ("orders-sorted.parquet", "customers.parquet"),
+    ),
+    (
+        "pushing_instead_of_pulling",
+        "Pushing instead of pulling",
+        "other_ways_to_run_a_plan",
+        "What changes when the scan drives the query, pushing rows up the plan, instead of the top asking for them?",
+        "Pipelines that push batches from a scan into sinks, a sink that says when it has enough, and "
+        "a tee that feeds one scan to two consumers, counting the bytes each way reads.",
+        ("measure",),
+        ("orders-sorted.parquet",),
     ),
 )
 

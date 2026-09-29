@@ -1268,6 +1268,100 @@ def busy_month_table() -> str:
     return head + "\n".join(lines) + "\n" + duckdb_conditions("orders-sorted.parquet")
 
 
+def _operators_named(node: dict, names: set[str]) -> int:
+    """How many operators in a plan of DuckDB's JSON have one of ``names``."""
+    here = 1 if node["name"].strip() in names else 0
+    return here + sum(_operators_named(c, names) for c in node.get("children", []))
+
+
+#: ch18's queries: what each asks, and its file.
+PUSHING_QUERIES = (
+    ("How many returned orders?", "returned_count.sql"),
+    ("Is there a returned order?", "any_returned.sql"),
+    ("Big returners, the returned orders read by each consumer", "big_returners.sql"),
+    ("Big returners, the returned orders read once and kept", "big_returners_materialized.sql"),
+)
+
+
+def pushing_table() -> str:
+    """DuckDB's bytes read for ch18's queries, and the scans in each plan: of the file, and of a
+    result kept for reading again (ch18)."""
+    rows = []
+    for asks, query in PUSHING_QUERIES:
+        sql = read_query(ROOT / "queries" / query)
+        plan = explain(sql)
+        files = _operators_named(plan, {"PARQUET_SCAN", "TABLE_SCAN"})
+        kept = _operators_named(plan, {"CTE_SCAN"})
+        rows.append(f"| {asks} | `{query}` | {bytes_read(sql):,} | {files} | {kept} |")
+    head = (
+        "| The query asks | File | Bytes read | Scans of the file | Scans of a kept result |\n"
+        "|---|---|---:|---:|---:|\n"
+    )
+    return head + "\n".join(rows) + "\n" + duckdb_conditions("orders-sorted.parquet")
+
+
+def pushing_compare_table() -> str:
+    """ch18's two queries, pushed by the engine and run by DuckDB: the bytes each read (ch18)."""
+    from .push import any_returned, big_returners, big_returners_pulled
+
+    scan, _ = any_returned(ROOT)
+    pushed, _ = big_returners(ROOT)
+    pulled, _ = big_returners_pulled(ROOT)
+    duck = {q: bytes_read(read_query(ROOT / "queries" / q)) for _, q in PUSHING_QUERIES}
+    rows = [
+        (
+            "Is there a returned order?",
+            "a sink that wants one row",
+            scan.metrics.bytes_read,
+            duck["any_returned.sql"],
+        ),
+        (
+            "Big returners, one scan",
+            "a tee to both aggregates",
+            sum(s.metrics.bytes_read for s in pushed),
+            duck["big_returners_materialized.sql"],
+        ),
+        (
+            "Big returners, a scan each",
+            "each aggregate pulls its own scan",
+            sum(s.metrics.bytes_read for s in pulled),
+            duck["big_returners.sql"],
+        ),
+    ]
+    head = "| Query | Your engine | Your bytes read | DuckDB's bytes read |\n|---|---|---:|---:|\n"
+    lines = [f"| {q} | {how} | {mine:,} | {theirs:,} |" for q, how, mine, theirs in rows]
+    return (
+        head
+        + "\n".join(lines)
+        + "\n"
+        + conditions(
+            f"the book's engine and DuckDB {duckdb.__version__} with one thread", "orders-sorted.parquet"
+        )
+    )
+
+
+def earliest_orders_table() -> str:
+    """The bytes DuckDB reads for any ten orders and for the ten earliest, and each row group's
+    range of dates, as its statistics record them (ch18, problem 18.3)."""
+    path = ROOT / "fixtures" / "orders-sorted.parquet"
+    meta = pq.ParquetFile(path).metadata
+    date = meta.schema.to_arrow_schema().get_field_index("order_date")
+    ranges = [meta.row_group(i).column(date).statistics for i in range(meta.num_row_groups)]
+    rows = [
+        f"| `{q}` | {bytes_read(read_query(ROOT / 'queries' / q)):,} |"
+        for q in ("first_orders.sql", "earliest_orders.sql")
+    ]
+    groups = [f"| {i} | {r.min} | {r.max} |" for i, r in enumerate(ranges)]
+    return (
+        "| Query | Bytes read |\n|---|---:|\n"
+        + "\n".join(rows)
+        + "\n\n| Row group | Earliest `order_date` | Latest `order_date` |\n|---:|---|---|\n"
+        + "\n".join(groups)
+        + "\n"
+        + duckdb_conditions("orders-sorted.parquet")
+    )
+
+
 def stages_table() -> str:
     """ch17's query run in stages on sixteen simulated nodes: each stage's tasks, rows and bytes."""
     from .stages import spend_by_country
@@ -1401,6 +1495,10 @@ FIGURES = (
     Figure("unique-keys", unique_keys_table),
     Figure("heavy-customers", heavy_customers_table),
     Figure("busy-month", busy_month_table),
+    Figure("any-returned-explain", explain_of("any_returned.sql", "orders-sorted.parquet")),
+    Figure("pushing-bytes", pushing_table),
+    Figure("pushing-compare", pushing_compare_table),
+    Figure("earliest-orders", earliest_orders_table, query="earliest_orders.sql"),
     Figure("spend-by-country-plan", plan_of("spend_by_country.sql", ORDERS_AND_CUSTOMERS)),
     Figure("spend-by-country-stages", stages_table, query="spend_by_country.sql"),
     Figure(
@@ -1438,6 +1536,7 @@ PANELS = (
     {"experiment": "measure", "of": "shuffle"},
     {"experiment": "measure", "of": "skew"},
     {"experiment": "measure", "of": "stages"},
+    {"experiment": "measure", "of": "pushing"},
 )
 
 

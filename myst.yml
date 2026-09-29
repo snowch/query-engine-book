@@ -65,6 +65,9 @@ project:
         - file: chapters/partitioning_and_shuffle.md
         - file: chapters/skew.md
         - file: chapters/stages_and_distributed_execution.md
+    - file: parts/other_ways_to_run_a_plan.md
+      children:
+        - file: chapters/pushing_instead_of_pulling.md
     - title: Appendices
       children:
         - file: appendices/running_the_lab.md

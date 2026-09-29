@@ -183,7 +183,8 @@ It reads every row its child hands up to do so, where problem 3.3's limit stops 
 
 The book's tests plan every query in `queries/` that reads one plain file, and require DuckDB's
 rows for each. The three that read many files, or pass `read_parquet` options, are refused with a
-message that says why.
+message that says why, and so are the few in later chapters that ask one question inside another,
+which this parser does not read.
 
 ## Compare
 
