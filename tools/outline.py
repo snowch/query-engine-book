@@ -257,6 +257,16 @@ _CHAPTERS = (
         ("measure",),
         ("orders-sorted.parquet", "customers.parquet"),
     ),
+    (
+        "statistics_cost_and_join_order",
+        "Statistics, cost and join order",
+        "planning",
+        "How does a planner choose between plans that give the same rows, when it cannot run them to find out which is cheaper?",
+        "Estimates from each file's footer, carried up the plan, and a rule that chooses the order of "
+        "joins and each join's build side by dynamic programming over those estimates.",
+        ("measure",),
+        ("orders-sorted.parquet", "customers.parquet", "countries.parquet"),
+    ),
 )
 
 CHAPTERS = tuple(

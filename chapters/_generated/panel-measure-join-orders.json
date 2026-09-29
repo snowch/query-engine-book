@@ -1,0 +1,144 @@
+{
+ "experiment": "measure",
+ "of": "join_orders",
+ "engine": "the book's engine",
+ "title": "Three ways to join three tables",
+ "predict": {
+  "label": "Rows the joins hand up",
+  "ask": "the rows each order's joins hand up, added together",
+  "placeholder": "rows"
+ },
+ "facts": "There are twenty thousand orders, a thousand customers and twelve countries, two of them in Asia. Every order has a customer and every customer a country.",
+ "cases": [
+  {
+   "label": "Orders with customers, then countries",
+   "detail": "as the query is written",
+   "reference": {
+    "label": "The planner's estimate",
+    "value": 24000
+   },
+   "measured": 24124,
+   "counters": [
+    [
+     "rows into the joins",
+     41002
+    ],
+    [
+     "build rows held",
+     1002
+    ]
+   ]
+  },
+  {
+   "label": "Customers with countries, then orders",
+   "detail": "the smaller join first",
+   "reference": {
+    "label": "The planner's estimate",
+    "value": 4200
+   },
+   "measured": 4313,
+   "counters": [
+    [
+     "rows into the joins",
+     21191
+    ],
+    [
+     "build rows held",
+     191
+    ]
+   ]
+  },
+  {
+   "label": "The same, built on the orders",
+   "detail": "the larger side held",
+   "reference": {
+    "label": "The planner's estimate",
+    "value": 4200
+   },
+   "measured": 4313,
+   "counters": [
+    [
+     "rows into the joins",
+     21191
+    ],
+    [
+     "build rows held",
+     20002
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "x, in amount > x",
+  "y_label": "rows",
+  "x_scale": "linear",
+  "series": [
+   {
+    "label": "Estimated from the footer",
+    "points": [
+     [
+      100,
+      19215
+     ],
+     [
+      250,
+      18012
+     ],
+     [
+      500,
+      16008
+     ],
+     [
+      1000,
+      12000
+     ],
+     [
+      1500,
+      7991
+     ],
+     [
+      2000,
+      3983
+     ],
+     [
+      2400,
+      776
+     ]
+    ]
+   },
+   {
+    "label": "Counted",
+    "points": [
+     [
+      100,
+      17792
+     ],
+     [
+      250,
+      14215
+     ],
+     [
+      500,
+      10360
+     ],
+     [
+      1000,
+      5316
+     ],
+     [
+      1500,
+      2287
+     ],
+     [
+      2000,
+      640
+     ],
+     [
+      2400,
+      93
+     ]
+    ]
+   }
+  ]
+ }
+}

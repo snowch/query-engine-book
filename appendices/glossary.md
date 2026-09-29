@@ -44,11 +44,20 @@ on its own, wherever its columns are. [ch12](#optimiser-rules)
 **Constant folding.** Computing every part of an expression that depends on no column once, when the
 query is planned, instead of for every row. [ch06](#expressions-and-vectorised-kernels)
 
+**Cost model.** The rule a planner uses to turn its estimates into one number for a whole plan, so
+that it can choose the plan whose number is least. [ch13](#statistics-cost-and-join-order)
+
 **Data page.** The unit a Parquet column chunk is stored in: a run of a column's values, encoded
 and compressed together. [ch04](#statistics-and-pruning)
 
 **Dictionary page.** The page of a dictionary-encoded column chunk that holds its distinct
 values, which every data page of the chunk refers to by number. [ch04](#statistics-and-pruning)
+
+**Dynamic programming.** Finding the best plan for every set of a query's tables from the best plans
+for its parts, smallest sets first, so each is found once. [ch13](#statistics-cost-and-join-order)
+
+**Equal-depth histogram.** Bounds that split a column's values into buckets holding the same number
+of values each, however the values are spread. [ch13](#statistics-cost-and-join-order)
 
 **Expression tree.** An expression as a planner holds it: columns and constants at the leaves, and
 an operator at each inner node, applied to the values of the nodes below it.
@@ -83,6 +92,9 @@ element is always the best: the top-k keeps the worst of its rows there, to repl
 
 **Hive partitioning.** Laying out a table's files in directories named for a column's value, such
 as `month=2024-03`, so a reader can rule out a file from its path. [ch05](#where-work-happens)
+
+**Independence assumption.** Guessing that knowing one condition holds tells you nothing about
+another, so their selectivities multiply. [ch13](#statistics-cost-and-join-order)
 
 **Lane.** One of the values a vector register holds side by side, each worked on by the same
 instruction. [ch06](#expressions-and-vectorised-kernels)

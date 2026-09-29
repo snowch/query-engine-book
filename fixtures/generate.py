@@ -25,6 +25,8 @@ The first datasets are the ones the pilot chapters need:
   (ch05).
 - ``customers``, the small dimension table ``orders.customer_id`` points into, with a skewed
   distribution of orders per customer ready for the join and skew chapters.
+- ``countries``, the twelve countries ``customers.country`` names, each with its region: the third
+  table of ch13's join order.
 """
 
 from __future__ import annotations
@@ -61,6 +63,13 @@ QUANTITY = (1, 10)
 UNIT_PRICE = (2.0, 250.0)
 STATUSES = (("shipped", 70), ("delivered", 20), ("returned", 6), ("cancelled", 3), ("pending", 1))
 COUNTRIES = ("DE", "FR", "UK", "US", "PL", "SE", "ES", "IT", "NL", "JP", "BR", "IN")
+#: Each country's name, and its region: the third table of ch13's joins.
+COUNTRY_NAMES = {
+    "DE": "Germany", "FR": "France", "UK": "United Kingdom", "US": "United States", "PL": "Poland",
+    "SE": "Sweden", "ES": "Spain", "IT": "Italy", "NL": "Netherlands", "JP": "Japan", "BR": "Brazil",
+    "IN": "India",
+}  # fmt: skip
+REGIONS = {"US": "Americas", "BR": "Americas", "JP": "Asia", "IN": "Asia"}
 SEGMENTS = ("consumer", "small business", "enterprise", "public sector")
 WORDS = (
     "fragile", "gift", "leave", "with", "neighbour", "call", "before", "delivery", "rear", "door",
@@ -165,6 +174,24 @@ def customers(seed: int = 20240102) -> pa.Table:
     )
 
 
+def countries() -> pa.Table:
+    """One row per country a customer can be in, with its region: Europe unless listed."""
+    return pa.table(
+        {
+            "country": list(COUNTRIES),
+            "name": [COUNTRY_NAMES[c] for c in COUNTRIES],
+            "region": [REGIONS.get(c, "Europe") for c in COUNTRIES],
+        },
+        schema=pa.schema(
+            [
+                pa.field("country", pa.string(), nullable=False),
+                pa.field("name", pa.string(), nullable=False),
+                pa.field("region", pa.string(), nullable=False),
+            ]
+        ),
+    )
+
+
 def fixtures(n: int = ORDERS, row_group: int = ROW_GROUP) -> list[Fixture]:
     sorted_orders, shuffled_orders = orders(n)
     common = {"rows": n, "row_group_size": row_group, "customers": CUSTOMERS, "customer_skew": SKEW}
@@ -211,6 +238,14 @@ def fixtures(n: int = ORDERS, row_group: int = ROW_GROUP) -> list[Fixture]:
             customers(),
             CUSTOMERS,
             {"rows": CUSTOMERS, "sorted_by": ["customer_id"]},
+        ),
+        Fixture(
+            "countries",
+            "The countries customers.country names, each with its region: the smallest table of "
+            "ch13's three-way join, whose region a query filters on.",
+            countries(),
+            len(COUNTRIES),
+            {"rows": len(COUNTRIES), "sorted_by": []},
         ),
     ]
 

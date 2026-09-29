@@ -1019,6 +1019,96 @@ def either_side_table() -> str:
     )
 
 
+#: The conditions problem 13.3 asks the planner and DuckDB to estimate, of the sorted orders.
+MISESTIMATES = (
+    "order_date < DATE '2024-04-01'",
+    "status = 'returned'",
+    "amount > 2000",
+    "quantity = 1 AND amount > 300",
+    "customer_id = 1",
+)
+
+
+def misestimates_table() -> str:
+    """Conditions on the orders, the rows your planner and DuckDB estimate each keeps, and the rows
+    it keeps (ch13, problem 13.3)."""
+    from .cost import estimate
+    from .planner import logical_plan
+    from .rules import push_filters
+    from .sql import parse
+
+    con = connect()
+    rows = []
+    for condition in MISESTIMATES:
+        text = f"SELECT order_id FROM 'fixtures/orders-sorted.parquet' WHERE {condition}"
+        ours = estimate(ROOT, push_filters(logical_plan(ROOT, parse(text))))
+        theirs = int(explain(text, con)["extra_info"]["Estimated Cardinality"])
+        counted = con.execute(f"SELECT count(*) FROM ({text})").fetchone()[0]
+        rows.append(f"| `{condition}` | {round(ours):,} | {theirs:,} | {counted:,} |")
+    head = (
+        "| Condition | Your planner's estimate | DuckDB's estimate | Rows it keeps |\n|---|---:|---:|---:|\n"
+    )
+    return (
+        head
+        + "\n".join(rows)
+        + "\n"
+        + conditions(
+            f"the book's planner and DuckDB {duckdb.__version__} with one thread", "orders-sorted.parquet"
+        )
+    )
+
+
+def join_estimates_table() -> str:
+    """ch13's query planned by cost: each join's estimate and count, your planner's and DuckDB's."""
+    from functools import partial
+
+    from .cost import estimate, join_order
+    from .planner import Join, logical_plan, physical_plan
+    from .rules import prune_columns, push_filters
+    from .sql import parse
+
+    text = read_query(ROOT / "queries" / "asian_orders.sql")
+    logical = logical_plan(ROOT, parse(text))
+    for rule in (push_filters, partial(join_order, ROOT), prune_columns):
+        logical = rule(logical)
+    joins = [n for n in logical.walk() if isinstance(n, Join)]
+    operator = physical_plan(ROOT, logical)
+    operator.run()
+    counted = [m for m in operator.metrics.walk() if m.operator == "HashJoin"]
+    seen = observe(text)
+    theirs = [m for m in seen.metrics.walk() if m.operator == "HASH_JOIN"]
+    planned = _estimates(explain(text), "HASH_JOIN")
+    rows = []
+    for join, ours, duck, guess in zip(joins, counted, theirs, planned, strict=True):
+        rows.append(
+            f"| `{join.left_key} = {join.right_key}` | {round(estimate(ROOT, join)):,} | {ours.rows_out:,} | "
+            f"{guess:,} | {duck.rows_out:,} |"
+        )
+    head = (
+        "| Join, top down | Your estimate | Your rows | DuckDB's estimate | DuckDB's rows |\n"
+        "|---|---:|---:|---:|---:|\n"
+    )
+    return (
+        head
+        + "\n".join(rows)
+        + "\n"
+        + conditions(
+            f"the book's planner and DuckDB {duckdb.__version__} with one thread",
+            "orders-sorted.parquet`, `fixtures/customers.parquet` and `fixtures/countries.parquet",
+        )
+    )
+
+
+def _estimates(node: dict, name: str) -> list[int]:
+    """The estimates DuckDB's plan gives the operators called ``name``, top down."""
+    found = []
+    if node["name"].strip() == name:
+        found.append(int(node["extra_info"]["Estimated Cardinality"]))
+    for child in node.get("children", []):
+        found += _estimates(child, name)
+    return found
+
+
 def orders_recipe() -> str:
     """How the orders were generated, from the generator's own constants and manifest."""
     sys.path.insert(0, str(ROOT / "fixtures"))
@@ -1118,6 +1208,15 @@ FIGURES = (
     Figure("rules-rebuild", rules_rebuild_table),
     Figure("either-side", either_side_table, query="enterprise_or_large.sql"),
     Figure(
+        "asian-orders-plan",
+        plan_of(
+            "asian_orders.sql",
+            "orders-sorted.parquet`, `fixtures/customers.parquet` and `fixtures/countries.parquet",
+        ),
+    ),
+    Figure("asian-orders-estimates", join_estimates_table, query="asian_orders.sql"),
+    Figure("misestimates", misestimates_table),
+    Figure(
         "enterprise-orders-rewritten",
         logical_of("enterprise_orders.sql", ORDERS_AND_CUSTOMERS, rewritten=True),
     ),
@@ -1147,6 +1246,7 @@ PANELS = (
     {"experiment": "measure", "of": "spilling"},
     {"experiment": "measure", "of": "planning"},
     {"experiment": "measure", "of": "rules"},
+    {"experiment": "measure", "of": "join_orders"},
 )
 
 

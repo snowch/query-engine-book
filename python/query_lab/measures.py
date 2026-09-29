@@ -487,6 +487,100 @@ def rules(root: Path) -> dict:
     }
 
 
+def _operators(root, name: str) -> list:
+    """Every operator in a plan called ``name``, top down."""
+    found = [root] if root.metrics.operator == name else []
+    for child in root.children:
+        found += _operators(child, name)
+    return found
+
+
+#: The amounts the cost panel's chart asks ``amount > x`` of, to set the estimate beside the count.
+AMOUNT_SWEEP = (100, 250, 500, 1000, 1500, 2000, 2400)
+
+
+def join_orders(root: Path) -> dict:
+    """ch13's three-table query joined in three orders, counting the rows the joins hand up, beside
+    the planner's estimate of each; then ``amount > x`` estimated from the footer and counted."""
+    from .cost import joined_rows, selectivity, table_stats
+    from .operators import Comparison, Scan
+    from .planner import Join, logical_plan, physical_plan
+    from .reference import read_query
+    from .rules import prune_columns, push_filters
+    from .sql import parse
+
+    text = read_query(root / "queries" / "asian_orders.sql")
+    written = push_filters(logical_plan(root, parse(text)))
+    compute = written
+    joins = compute.children[0]
+    (inner, n), (o, c) = joins.children, joins.children[0].children
+    orders_first = Join(children=[inner, n], left_key="c.country", right_key="n.country")
+    customers_first = Join(
+        children=[o, Join(children=[c, n], left_key="c.country", right_key="n.country")],
+        left_key="o.customer_id",
+        right_key="c.customer_id",
+    )
+    built_on_orders = Join(
+        children=[Join(children=[c, n], left_key="c.country", right_key="n.country"), o],
+        left_key="c.customer_id",
+        right_key="o.customer_id",
+    )
+    cases = []
+    for label, detail, joined in (
+        ("Orders with customers, then countries", "as the query is written", orders_first),
+        ("Customers with countries, then orders", "the smaller join first", customers_first),
+        ("The same, built on the orders", "the larger side held", built_on_orders),
+    ):
+        plan = prune_columns(type(compute)(children=[joined], items=compute.items))
+        operator = physical_plan(root, plan)
+        operator.run()
+        hash_joins = [m for m in operator.metrics.walk() if m.operator == "HashJoin"]
+        held = _operators(operator, "HashJoin")
+        cases.append(
+            {
+                "label": label,
+                "detail": detail,
+                "reference": {"label": "The planner's estimate", "value": round(joined_rows(root, plan))},
+                "measured": sum(m.rows_out for m in hash_joins),
+                "counters": [
+                    ["rows into the joins", sum(m.rows_in for m in hash_joins)],
+                    ["build rows held", sum(j.build_rows for j in held)],
+                ],
+            }
+        )
+    orders = root / "fixtures" / "orders-sorted.parquet"
+    stats = table_stats(orders)
+    amounts = Scan(orders, ["amount"]).run().column("amount").to_pylist()
+    estimated, counted = [], []
+    for x in AMOUNT_SWEEP:
+        estimated.append(
+            [x, round(stats.rows * selectivity(Comparison("amount", ">", float(x)), stats.columns))]
+        )
+        counted.append([x, sum(1 for a in amounts if a > x)])
+    return {
+        "title": "Three ways to join three tables",
+        "predict": {
+            "label": "Rows the joins hand up",
+            "ask": "the rows each order's joins hand up, added together",
+            "placeholder": "rows",
+        },
+        "facts": (
+            "There are twenty thousand orders, a thousand customers and twelve countries, two of them "
+            "in Asia. Every order has a customer and every customer a country."
+        ),
+        "cases": cases,
+        "chart": {
+            "x_label": "x, in amount > x",
+            "y_label": "rows",
+            "x_scale": "linear",
+            "series": [
+                {"label": "Estimated from the footer", "points": estimated},
+                {"label": "Counted", "points": counted},
+            ],
+        },
+    }
+
+
 #: Every measure panel, by the name a lab block gives it as ``of``.
 MEASURES: dict[str, Callable[[Path], dict]] = {
     "aggregation": aggregation,
@@ -495,4 +589,5 @@ MEASURES: dict[str, Callable[[Path], dict]] = {
     "spilling": spilling,
     "planning": planning,
     "rules": rules,
+    "join_orders": join_orders,
 }

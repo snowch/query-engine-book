@@ -1,0 +1,66 @@
+{
+  "name": "countries",
+  "why": "The countries customers.country names, each with its region: the smallest table of ch13's three-way join, whose region a query filters on.",
+  "writer": "parquet-cpp-arrow version 18.1.0",
+  "file_bytes": 1077,
+  "rows": 12,
+  "row_groups": [
+    {
+      "rows": 12,
+      "columns": {
+        "country": {
+          "compressed_bytes": 117,
+          "uncompressed_bytes": 126,
+          "min": "BR",
+          "max": "US",
+          "null_count": 0
+        },
+        "name": {
+          "compressed_bytes": 199,
+          "uncompressed_bytes": 207,
+          "min": "Brazil",
+          "max": "United States",
+          "null_count": 0
+        },
+        "region": {
+          "compressed_bytes": 93,
+          "uncompressed_bytes": 89,
+          "min": "Americas",
+          "max": "Europe",
+          "null_count": 0
+        }
+      }
+    }
+  ],
+  "schema": [
+    {
+      "name": "country",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "name",
+      "type": "string",
+      "nullable": false
+    },
+    {
+      "name": "region",
+      "type": "string",
+      "nullable": false
+    }
+  ],
+  "distinct": {
+    "country": 12,
+    "name": 12,
+    "region": 3
+  },
+  "nulls": {
+    "country": 0,
+    "name": 0,
+    "region": 0
+  },
+  "properties": {
+    "rows": 12,
+    "sorted_by": []
+  }
+}
