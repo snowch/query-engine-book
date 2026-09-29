@@ -79,3 +79,18 @@ def test_the_plan_report_needs_no_pyarrow():
         "report.run(Path('.'), {'experiment': 'plan', 'query': 'returned_unit_price.sql'})\n"
     )
     subprocess.run([sys.executable, "-c", code], cwd=ROOT, check=True)
+
+
+def test_a_plans_variants_are_reported_as_the_query_itself_is():
+    data = report.run(ROOT, {**CONFIG, "variants": "pricier_returns.sql, shipped_unit_price.sql"})
+    assert [v["query"] for v in data["variants"]] == ["pricier_returns.sql", "shipped_unit_price.sql"]
+    for v in data["variants"]:
+        assert v == report.run(ROOT, {"experiment": "plan", "query": v["query"]})
+        assert v["label"], "a variant says what it changes, in its first comment"
+    # The point of the variants: the planner's estimates stay where they were, and the rows move.
+    estimates = {tuple(o["estimated_rows_out"] for o in walk(d["root"])) for d in [data, *data["variants"]]}
+    measured = {tuple(o["rows_out"] for o in walk(d["root"])) for d in [data, *data["variants"]]}
+    assert len(estimates) == 1 and len(measured) == 1 + len(data["variants"])
+    assert (
+        report.run(ROOT, {**CONFIG, "sql": "SELECT 1", "variants": "pricier_returns.sql"})["variants"] == []
+    )

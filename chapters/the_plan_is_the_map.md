@@ -71,53 +71,59 @@ make a prediction.
 
 ## Predict, then measure
 
-Before you see what DuckDB measured, predict it: the rows that come out of the scan, out of the
-filter, and out of the projection. You have what you need. The generator wrote the orders from
-this recipe:
-
-```{include} _generated/orders-recipe.md
-```
-
-The scan keeps the returned orders, so its output is the returned share of all the orders. The
-filter keeps the returned orders whose unit price, `amount / quantity`, is over the query's
-threshold. The unit price was drawn evenly across its range, so the share that passes is the
-share of that range above the threshold. The projection computes a column and drops two; it
-does not change the number of rows.
-
-The panel holds the run. Each operator shows the planner's estimate, which `EXPLAIN` printed
-before the query ran, and a box for your prediction. The measurement stays hidden until you
-reveal it. Then each operator has three bars on one scale: your prediction, the planner's
-estimate and the measurement. The profile names the scan `TABLE_SCAN`, where the plan drew it as
+In the chapters that follow, you predict what an operator will do before you measure it. Here
+the prediction is the planner's: `EXPLAIN` printed an estimate for each operator before the
+query ran, and running the query measures what each operator did. The panel sets the two side by
+side, operator by operator. The profile names the scan `TABLE_SCAN`, where the plan drew it as
 `PARQUET_SCAN`.
 
 ```lab
 experiment: plan
 query: returned_unit_price.sql
+variants: pricier_returns.sql, shipped_unit_price.sql
 ```
 
 The panel draws what DuckDB measured when the book was built. Its button runs the same report
 again in your browser, under Pyodide, and says whether your browser's DuckDB gave the same
-answer. You can also edit the query and run your own.
+answer.
 
-Compare the three bars on each operator.
+Above the plan are changes to try: a higher price threshold, and shipped orders in place of
+returned ones. Each one redraws the plan at once, from a run the book made when it was built.
+Try them, and watch which numbers move.
 
-- **A prediction from the recipe is close to the measurement, and the plan's estimate is
-  not.** You knew how the data was generated. DuckDB did not know how `status` and the unit price are distributed,
-  so it guessed.
-- **Each estimate is the same share of the estimate below it.** With nothing better to go on,
-  the planner gave both predicates one default **selectivity**, the fraction of rows a predicate
-  keeps. The chapters on planning are about where better estimates come from, and what a bad one
-  costs when it chooses between plans.
+- **The measurements move, and the estimates do not.** Whichever orders you ask for, the planner
+  expects the same rows from the scan and the same rows from the filter. It knows how many rows
+  the file holds, and nothing about how `status` or the unit price are spread across them. So it
+  gives every predicate the same default **selectivity**, the fraction of rows a predicate keeps.
+- **An estimate can be wrong in either direction.** For the returned orders it is too high; for
+  the shipped ones it is far too low. A planner that chooses between plans with guesses like
+  these can choose the wrong one. The chapters on planning are about where better estimates come
+  from.
 - **Rows in, for each operator above the scan, is the output of the operator below.** Nothing is
-  lost between operators. That makes the profile a ledger: each operator's reduction is its rows out
-  against its rows in.
+  lost between operators. That makes the profile a ledger: each operator's reduction is its rows
+  out against its rows in.
 - **Rows in, for the scan, is every row in the file.** That is DuckDB's report of the rows in the
   files it opened. [ch03](#projection-and-filter-pushdown) shows that it stays the same when the
   scan skips most of the file, so it tells you what the scan was responsible for, not what it
   decoded.
 
-Keep your three numbers. When you build the same plan in the next section, your operators report
-the same counters, and they must agree with these.
+The measurements are no mystery. They follow from how the generator wrote the orders:
+
+```{include} _generated/orders-recipe.md
+```
+
+The scan keeps the returned orders, which are the returned share of all the orders. The filter
+keeps those whose unit price, `amount / quantity`, is over the query's threshold, which is the
+share of the price range above it, since prices were drawn evenly across the range. The
+projection changes no row count. You could have worked the measurements out from this recipe.
+The planner could not, because nobody gave it the recipe. Later chapters give you what a
+prediction needs before they ask you for one.
+
+To go further, open the editor under the plan and run a query of your own. It runs in your
+browser.
+
+Keep the book's three measurements. When you build the same plan in the next section, your
+operators report the same counters, and they must agree with these.
 
 ## Building it
 

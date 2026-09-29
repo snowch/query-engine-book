@@ -169,10 +169,15 @@ Decisions taken this week:
 - **Panels draw from the build first.** Each panel's JSON is computed at build time and embedded,
   so it draws with nothing downloaded; *Run it in your browser* recomputes it under Pyodide, with
   DuckDB alone, and the page says whether the answers agree (`spikes/panels/README.md`).
-- **A run has one exhibit, and it asks before it answers.** The plan panel replaces the profile
-  table: it takes the reader's prediction per operator, hides the measurement until they reveal
-  it, then draws prediction, estimate and measurement together. Without JavaScript a panel says
-  it needs JavaScript; there is no static copy. Queries in a panel can be edited and rerun.
+- **A run has one exhibit, and it asks before it answers.** A panel takes the reader's
+  prediction, hides the measurement until they reveal it, then draws prediction, estimate and
+  measurement together. Without JavaScript a panel says it needs JavaScript; there is no static
+  copy. Queries in a panel can be edited and rerun.
+- **Ch01 does not ask.** Its reader has not yet met a file's layout or a planner, so a number
+  they typed would be a guess. Its plan panel draws the planner's estimate beside the
+  measurement at once, and offers changes to the query, computed at build time, that move the
+  measurements and leave the estimates where they were. The asking starts in ch02, once a chapter
+  has taught what the prediction needs.
 - **No desk.** The reader needs only a browser. Chapters give no shell commands; each chapter's
   problems run in a workbench in the page, by pytest under Pyodide, on the reader's answers.
 - **Cache counts join the counters.** The cache model's reads, hits, misses and bytes fetched

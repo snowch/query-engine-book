@@ -36,12 +36,16 @@ class ReportError(ValueError):
 PREVIEW_ROWS = 5
 
 
-def plan(root: Path, query: str, sql: str | None = None) -> dict:
+def plan(root: Path, query: str, sql: str | None = None, variants: str = "") -> dict:
     """DuckDB's plan for a query in ``queries/``, as a tree: each operator with the planner's
     estimate of its output and the profile's measured rows in and out.
 
     ``sql`` replaces the file's text: a query the reader edited in the page. The report then says
     so, and carries the reader's text as its source, so the panel can show what ran.
+
+    ``variants`` names other query files, separated by commas: changes to the query a reader can
+    try with one press, each reported the same way, so the page draws them with nothing to run.
+    An edited query carries none.
     """
     path = root / "queries" / query
     if not path.is_file():
@@ -63,7 +67,21 @@ def plan(root: Path, query: str, sql: str | None = None) -> dict:
             "rows": [[_json_value(v) for v in row] for row in seen.rows[:PREVIEW_ROWS]],
         },
         "root": _operator(seen.metrics, seen.profile["children"][0]),
+        "label": _label(source),
+        "variants": [] if sql is not None else [plan(root, v) for v in _names(variants)],
     }
+
+
+def _names(setting: str) -> list[str]:
+    """A setting that lists files, separated by commas, as a list of names."""
+    return [name.strip() for name in setting.split(",") if name.strip()]
+
+
+def _label(source: str) -> str:
+    """What a query file says it is: its first comment, after the chapter's label."""
+    first = next((line for line in source.splitlines() if line.startswith("--")), "")
+    text = first.removeprefix("--").split(":", 1)[-1].strip()
+    return text[:1].upper() + text[1:]
 
 
 def _json_value(v: object) -> object:
@@ -254,7 +272,7 @@ EXPERIMENTS = {"plan": plan, "gather": gather, "pruning": pruning}
 def panel_name(config: dict[str, str]) -> str:
     """The file a lab block's build-time JSON lives in, under ``chapters/_generated/``: named
     for the experiment and its settings, so the renderer finds it from the block alone."""
-    settings = [Path(v).stem for k, v in sorted(config.items()) if k != "experiment"]
+    settings = [Path(name).stem for k, v in sorted(config.items()) if k != "experiment" for name in _names(v)]
     return "-".join(["panel", config["experiment"], *settings]).replace("_", "-") + ".json"
 
 
