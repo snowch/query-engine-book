@@ -21,6 +21,9 @@
 
 /* The plan: operators top down, as DuckDB draws them, rows flowing up the links between them. */
 .plan-tree { padding: 1rem; overflow-x: auto; }
+/* The tree is as wide as its widest row, and centred only when it fits: centring a row wider than
+   the panel would push its left end past where the panel can scroll to. */
+.plan-tree > .plan-node { width: max-content; min-width: 100%; }
 .plan-node { display: flex; flex-direction: column; align-items: center; }
 .plan-children { display: flex; gap: 1rem; justify-content: center; }
 .plan-branch { display: flex; flex-direction: column; align-items: center; }

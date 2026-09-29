@@ -121,7 +121,11 @@ a.xref:hover { text-decoration: underline; }
              height: calc(100vh - var(--top)); overflow-y: auto; overscroll-behavior: contain;
              font: 14px/1.45 var(--chrome); padding: 1.4rem 1rem 3rem; }
 @media (max-width: 57.99rem) {
-  .nav { position: fixed; inset: var(--top) 0 0 0; z-index: 15; height: auto; background: var(--bg); }
+  /* Stretched between the bar and the bottom of the screen, and scrolled within: a fixed box keeps
+     the column's `align-self: start`, which would size it to the list and, once the list is taller
+     than the screen, push its top under the bar. */
+  .nav { position: fixed; inset: var(--top) 0 0 0; z-index: 15; height: auto; align-self: stretch;
+         background: var(--bg); }
   body.nav-open .nav { display: block; }
 }
 /* The middle column is the widest thing a chapter holds, and the group of columns is what

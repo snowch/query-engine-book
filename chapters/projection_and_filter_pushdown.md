@@ -98,6 +98,61 @@ Compare the two files.
 
 ## Building it
 
+[ch01](#the-plan-is-the-map) put the engine's operators together without opening them. This
+chapter opens them, starting with the shape every operator in the book shares:
+
+```{literalinclude} ../python/query_lab/operators.py
+:language: python
+:start-at: class Operator:
+:end-before: # A predicate the scan tests itself (ch03).
+```
+
+`batches` is a generator: ch01's pull model, in code. An operator produces a batch only when the
+operator above it asks for one, and asks its child for input only then. `take` and `emit` count
+every batch on its way in and out, so every operator reports the counters in COUNTERS.md without
+any code of its own for counting.
+
+### The scan
+
+The scan is the only operator that reads. It opens the file with the Parquet reader from *Parquet,
+byte by byte*, through that book's simulated object store, so every byte it reads is a request the
+store logged. It reads the footer, which says where everything is, then, for each row group, the
+chunks of the columns it was asked for. It decodes them and hands up one batch per row group.
+Opening the file through the store, and deciding which rows of a row group to read, are methods of
+their own, since later chapters grow them; the loop is the scan:
+
+```{literalinclude} ../python/query_lab/operators.py
+:language: python
+:start-at: # Row group by row group:
+:end-before: def open(self)
+```
+
+Called with no `filters`, as ch01's plan calls it, the scan reads every row group and hands up
+every row, and a filter above it throws most of them away.
+
+### Filter and project
+
+A filter asks its child for a batch. It evaluates its predicate for every row with a kernel from
+`pyarrow.compute`, a function that works on a whole column at once, and hands up the rows that
+are true. A projection computes each output column from the batch it receives. Neither changes
+how many batches flow; only the filter changes how many rows.
+
+```{literalinclude} ../python/query_lab/operators.py
+:language: python
+:start-at: class Filter(Operator):
+:end-before: def arrow_type(
+```
+
+```run
+tests: test_operators.py
+select: returned_unit_price or projection or nothing_is_read
+```
+
+Make the filter hand up every batch unfiltered, say, and run the engine's tests on your edit: the
+rows no longer match DuckDB's, and the tests say where.
+
+### Filters in the scan
+
 Your scan gains one argument, `filters`: the predicates it tests itself. Each is a column
 compared with a constant, the only kind of predicate a row group's smallest and largest value
 can answer.
@@ -117,11 +172,11 @@ row with a kernel from `pyarrow.compute`:
 
 ### The scan, pushed down
 
-The scan reads the columns it was asked for, and any column a filter tests. Its loop is
-[ch01](#the-plan-is-the-map)'s; what changes is how it decides, row group by row group, which rows
-to read. If the statistics rule the row group out, none, and no request is made for its columns.
-Otherwise all of them; the loop then tests every row against the filters and hands up only the
-rows that pass, in only the columns asked for:
+The scan reads the columns it was asked for, and any column a filter tests. Its loop is the one
+above; what changes is how it decides, row group by row group, which rows to read. If the
+statistics rule the row group out, none, and no request is made for its columns. Otherwise all of
+them; the loop then tests every row against the filters and hands up only the rows that pass, in
+only the columns asked for:
 
 ```{literalinclude} ../python/query_lab/operators.py
 :language: python
@@ -237,9 +292,9 @@ pushed into your scan, and then DuckDB's:
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+There are four problems. The first three are code with tests; the fourth is a slow query to
+diagnose, with no test. Write your answers to the first three in the workbench, and run the
+graders there. Your answers stay in this browser, and **Reset to the stubs** starts again.
 
 ```problems
 chapter: projection_and_filter_pushdown
@@ -259,7 +314,13 @@ did, and check that it hands up no `status` column and that the unit price is th
 to a filter. Before you run it, predict how many row groups your scan will skip, from the status
 counts in the fixtures' recipe in [ch01](#the-plan-is-the-map).
 
-**3.3 Diagnose the slow query.** No test. A colleague looks for the year's largest orders:
+**3.3 A limit.** Write `Limit`: an operator that hands up the first `n` rows its child produces,
+and no more. It must stop asking its child for batches as soon as it has `n` rows. The graders
+compare its rows with DuckDB's `LIMIT`, and count the batches its child produced, with and without
+a filter between them. A limit that drains its child fails even when its rows are right. This is
+the pull model reading less: a limit at the top of a plan stops the scan at the bottom.
+
+**3.4 Diagnose the slow query.** No test. A colleague looks for the year's largest orders:
 
 ```{literalinclude} ../queries/largest_orders.sql
 :language: sql

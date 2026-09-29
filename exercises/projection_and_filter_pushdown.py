@@ -4,9 +4,10 @@ with your answer, then press Run the graders.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
-import pyarrow as pa  # noqa: F401  (you may want it)
+import pyarrow as pa
 import pyarrow.compute as pc  # noqa: F401  (you may want it)
 
 from query_lab.operators import Comparison, Filter, Operator, Project, Scan  # noqa: F401
@@ -40,3 +41,26 @@ def returned_unit_price_pushed(root: Path) -> Operator:
     ``root / "fixtures" / "orders-sorted.parquet"``. Return the plan's top operator; do not run it.
     """
     raise NotImplementedError("problem 3.2: push the status test into the scan")
+
+
+class Limit(Operator):
+    """Problem 3.3: pass on the first ``n`` rows the child produces, and no more.
+
+    Stop asking the child for batches as soon as you have ``n`` rows: the graders count the
+    batches your child produced, and a limit that drains its input fails even when its result is
+    right. Cut the last batch short when it holds more rows than you need. A limit of zero asks
+    for nothing.
+
+    Count what you do with ``self.take`` and ``self.emit``, as the book's operators do.
+    """
+
+    def __init__(self, child: Operator, n: int) -> None:
+        super().__init__("Limit", str(n), [child])
+        self.child = child
+        self.n = n
+
+    def batches(self) -> Iterator[pa.RecordBatch]:
+        raise NotImplementedError("problem 3.3: a limit")
+
+    def schema(self) -> pa.Schema:
+        return self.child.schema()

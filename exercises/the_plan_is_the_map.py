@@ -4,40 +4,15 @@ answer, then press Run the graders.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from pathlib import Path
 
-import pyarrow as pa
 import pyarrow.compute as pc  # noqa: F401  (you will want it)
 
 from query_lab.operators import Filter, Operator, Project, Scan  # noqa: F401
 
 
-class Limit(Operator):
-    """Problem 1.1: pass on the first ``n`` rows the child produces, and no more.
-
-    Stop asking the child for batches as soon as you have ``n`` rows: the graders count the
-    batches your child produced, and a limit that drains its input fails even when its result is
-    right. Cut the last batch short when it holds more rows than you need. A limit of zero asks
-    for nothing.
-
-    Count what you do with ``self.take`` and ``self.emit``, as the book's operators do.
-    """
-
-    def __init__(self, child: Operator, n: int) -> None:
-        super().__init__("Limit", str(n), [child])
-        self.child = child
-        self.n = n
-
-    def batches(self) -> Iterator[pa.RecordBatch]:
-        raise NotImplementedError("problem 1.1: a limit")
-
-    def schema(self) -> pa.Schema:
-        return self.child.schema()
-
-
 def customer_orders(root: Path, customer_id: int) -> Operator:
-    """Problem 1.2: the plan, built from the book's operators, for
+    """Problem 1.1: the plan, built from the book's operators, for
 
         SELECT order_id, order_date, amount
         FROM 'fixtures/orders-sorted.parquet'
@@ -46,4 +21,16 @@ def customer_orders(root: Path, customer_id: int) -> Operator:
     ``root`` is the repository's root; the file is ``root / "fixtures" / "orders-sorted.parquet"``.
     Read only the columns the query needs. Return the plan's top operator; do not run it.
     """
-    raise NotImplementedError("problem 1.2: a plan of your own")
+    raise NotImplementedError("problem 1.1: a plan of your own")
+
+
+def expected_rows(rows: int, status_share: float, low: float, high: float, threshold: float) -> float:
+    """Problem 1.2: the rows the chapter's query keeps, worked out from the orders' recipe.
+
+    The generator wrote ``rows`` orders. A ``status_share`` of them have the status the query
+    asks for, and each order's unit price was drawn evenly between ``low`` and ``high``, whatever
+    its status. Return how many rows you expect the query to keep: those with the status whose
+    unit price is over ``threshold``. The planner could not work this out, since nobody gave it
+    the recipe; you can.
+    """
+    raise NotImplementedError("problem 1.2: work out the rows")
