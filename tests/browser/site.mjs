@@ -10,6 +10,7 @@
 // 3. The cover's picture sits in the text column, aligned with the paragraphs.
 // 4. On a phone, the list of chapters opens below the bar, starting at the cover, and scrolls
 //    within the screen when it is taller than the screen.
+// 5. On a phone, a plan wider than its panel, as a join's is, scrolls to both of its ends.
 
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -74,6 +75,30 @@ try {
     check(height > 600 || drawer.scrolls, "a short screen's chapter list scrolls");
   }
   console.log("  on a phone, the chapter list opens under the bar, starts at the cover, and scrolls");
+
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto(`${ORIGIN}/${BASE}the-plan-is-the-map.html`);
+  const ends = await page.evaluate(async () => {
+    const { EXPERIMENTS } = await import("./lab/panels.js");
+    const data = JSON.parse(document.querySelector("script.lab-data").textContent);
+    // The chapter's plan, with a second input beside the scan: two operators side by side.
+    const below = data.root.children[0];
+    below.children = [structuredClone(below.children[0]), structuredClone(below.children[0])];
+    const host = document.createElement("div");
+    host.className = "lab";
+    document.querySelector("#main").prepend(host);
+    EXPERIMENTS.plan(host, data, { store: { get: () => null, set() {}, drop() {} }, key: "wide" });
+    const tree = host.querySelector(".plan-tree");
+    const ops = [...host.querySelectorAll(".plan-op")];
+    const edge = () => tree.getBoundingClientRect();
+    tree.scrollLeft = 0;
+    const left = Math.min(...ops.map((o) => o.getBoundingClientRect().left)) >= edge().left;
+    tree.scrollLeft = tree.scrollWidth;
+    const right = Math.max(...ops.map((o) => o.getBoundingClientRect().right)) <= edge().right + 1;
+    return { left, right, wider: tree.scrollWidth > tree.clientWidth };
+  });
+  check(ends.wider && ends.left && ends.right, `a wide plan cannot be scrolled to both ends: ${JSON.stringify(ends)}`);
+  console.log("  on a phone, a plan wider than its panel scrolls to both of its ends");
 } finally {
   await browser.close();
 }
