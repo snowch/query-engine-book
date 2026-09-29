@@ -197,7 +197,9 @@ HEAD_SCRIPT = r"""<script>
   let last = null;
   try { last = JSON.parse(localStorage.getItem(PLACE)); } catch (e) {}
   const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
-  const launched = new URLSearchParams(location.search).has("resume") || (standalone && !document.referrer);
+  // Back to the cover is a return, not a launch, even though it keeps the launch's empty referrer.
+  const returned = (performance.getEntriesByType("navigation")[0] || {}).type === "back_forward";
+  const launched = !returned && (new URLSearchParams(location.search).has("resume") || (standalone && !document.referrer));
   if (page === "index.html" && launched && last && last.page && last.page !== "index.html") {
     try { sessionStorage.setItem(RESUME, String(last.y || 0)); } catch (e) {}
     location.replace(last.page);
@@ -331,7 +333,6 @@ RAILS = r"""<script>
   // opening it adds an entry to the history, and closing it any other way takes the entry away
   // again, so Back never has to be pressed twice to leave the page.
   const drawn = () => Boolean(history.state && history.state.chapters);
-  let going = null;
   const openList = () => {
     document.body.classList.add("nav-open");
     history.pushState({ chapters: true }, "");
@@ -343,7 +344,6 @@ RAILS = r"""<script>
   addEventListener("popstate", () => {
     document.body.classList.remove("nav-open");
     reflect();
-    if (going) { const to = going; going = null; location.href = to; }
   });
   // A page brought back from the browser's cache comes back as it was left: open or not, it must
   // match the history.
@@ -362,13 +362,14 @@ RAILS = r"""<script>
       else openList();
       reflect();
     });
-    // A chapter chosen from the open list: the list's history entry goes first, then the page.
+    // A chapter chosen from the open list takes the list's place in the history, so Back from it
+    // comes to this page with the list closed. Going back first and navigating from the popstate
+    // handler did the same in Chromium, but left some browsers on a blank page.
     document.getElementById("nav").addEventListener("click", (event) => {
       const link = event.target.closest("a[href]");
       if (!link || wide.matches || !drawn()) return;
       event.preventDefault();
-      going = link.href;
-      history.back();
+      location.replace(link.href);
     });
     document.getElementById("outline").addEventListener("click", () => {
       remember("toc", root.classList.toggle("toc-closed"));
