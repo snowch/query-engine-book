@@ -1,0 +1,104 @@
+{
+ "experiment": "branches",
+ "column": "amount",
+ "fixture": "orders-sorted.parquet",
+ "engine": "the book's engine and branch model",
+ "rows": 20000,
+ "cases": [
+  {
+   "label": "a run",
+   "test": "order_date < 2024-07-01",
+   "kernel": "with a branch",
+   "rows": 20000,
+   "kept": 9946,
+   "branches": 40000,
+   "mispredictions": 5
+  },
+  {
+   "label": "at random",
+   "test": "amount > 529.58",
+   "kernel": "with a branch",
+   "rows": 20000,
+   "kept": 9999,
+   "branches": 40000,
+   "mispredictions": 10182
+  },
+  {
+   "label": "at random, no branch",
+   "test": "amount > 529.58",
+   "kernel": "without a branch",
+   "rows": 20000,
+   "kept": 9999,
+   "branches": 20000,
+   "mispredictions": 2
+  }
+ ],
+ "sweep": [
+  {
+   "threshold": 2.04,
+   "kept": 19999,
+   "with": 4,
+   "without": 2
+  },
+  {
+   "threshold": 91.46,
+   "kept": 17999,
+   "with": 2212,
+   "without": 2
+  },
+  {
+   "threshold": 175.16,
+   "kept": 15999,
+   "with": 4756,
+   "without": 2
+  },
+  {
+   "threshold": 264.78,
+   "kept": 13999,
+   "with": 7284,
+   "without": 2
+  },
+  {
+   "threshold": 395.16,
+   "kept": 11997,
+   "with": 9334,
+   "without": 2
+  },
+  {
+   "threshold": 529.58,
+   "kept": 9999,
+   "with": 10182,
+   "without": 2
+  },
+  {
+   "threshold": 702.13,
+   "kept": 7999,
+   "with": 9317,
+   "without": 2
+  },
+  {
+   "threshold": 922.39,
+   "kept": 5999,
+   "with": 7295,
+   "without": 2
+  },
+  {
+   "threshold": 1199.15,
+   "kept": 3999,
+   "with": 4746,
+   "without": 2
+  },
+  {
+   "threshold": 1571.77,
+   "kept": 1999,
+   "with": 2196,
+   "without": 2
+  },
+  {
+   "threshold": 2496.85,
+   "kept": 0,
+   "with": 2,
+   "without": 2
+  }
+ ]
+}

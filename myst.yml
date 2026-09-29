@@ -47,6 +47,9 @@ project:
         - file: chapters/projection_and_filter_pushdown.md
         - file: chapters/statistics_and_pruning.md
         - file: chapters/where_work_happens.md
+    - file: parts/computing.md
+      children:
+        - file: chapters/expressions_and_vectorised_kernels.md
     - title: Appendices
       children:
         - file: appendices/running_the_lab.md

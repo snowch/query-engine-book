@@ -377,7 +377,76 @@ def _window(filters, leaf) -> tuple[tuple[float | None, str], tuple[float | None
     return low, high
 
 
-EXPERIMENTS = {"plan": plan, "gather": gather, "pruning": pruning}
+#: The thresholds of the branch panel's sweep, in tenths of the way up the sorted values.
+SWEEP_TENTHS = range(11)
+
+
+def branches(root: Path, column: str) -> dict:
+    """Which rows of the sorted orders pass a test, found with a branch and without one, through
+    the branch predictor model (ch06).
+
+    Three cases: a test on the column the file is sorted by, which keeps a run of rows; a test on
+    ``column`` that keeps about half the rows at random, with a branch; and the same test without
+    a branch. Then a sweep of the second test across thresholds that keep from nearly every row to
+    none, both ways, which is the curve the panel draws once the reader has predicted.
+    """
+    # The engine needs pyarrow, which the plan panel does not load in the page: imported here, so
+    # a plan runs with DuckDB alone.
+    from .cpu import Predictor, select_with_branch, select_without_branch
+    from .operators import Scan
+
+    fixture = "orders-sorted.parquet"
+    table = Scan(root / "fixtures" / fixture, ["order_date", column]).run()
+    values = table.column(column).to_pylist()
+    if not all(isinstance(v, int | float) for v in values):
+        raise ReportError(f"{column} is not a numeric column")
+    ordered = sorted(values)
+    median = ordered[len(ordered) // 2]
+    dates = table.column("order_date").to_pylist()
+    halfway = dt.date(2024, 7, 1)
+
+    def case(label: str, test: str, kernel: str, of: list, passes) -> dict:
+        predictor = Predictor()
+        select = select_with_branch if kernel == "with a branch" else select_without_branch
+        kept = select(of, passes, predictor)
+        return {
+            "label": label,
+            "test": test,
+            "kernel": kernel,
+            "rows": len(of),
+            "kept": len(kept),
+            **predictor.counters(),
+        }
+
+    above = f"{column} > {median:g}"
+    cases = [
+        case("a run", f"order_date < {halfway}", "with a branch", dates, lambda d: d < halfway),
+        case("at random", above, "with a branch", values, lambda v: v > median),
+        case("at random, no branch", above, "without a branch", values, lambda v: v > median),
+    ]
+    sweep = []
+    for tenth in SWEEP_TENTHS:
+        # The value this many tenths of the way up the sorted values: a test for values above it
+        # keeps the rest.
+        threshold = ordered[min(len(ordered) - 1, tenth * len(ordered) // 10)]
+        point = {"threshold": threshold}
+        for kernel, select in (("with", select_with_branch), ("without", select_without_branch)):
+            predictor = Predictor()
+            point["kept"] = len(select(values, lambda v, t=threshold: v > t, predictor))
+            point[kernel] = predictor.mispredictions
+        sweep.append(point)
+    return {
+        "experiment": "branches",
+        "column": column,
+        "fixture": fixture,
+        "engine": "the book's engine and branch model",
+        "rows": len(values),
+        "cases": cases,
+        "sweep": sweep,
+    }
+
+
+EXPERIMENTS = {"plan": plan, "gather": gather, "pruning": pruning, "branches": branches}
 
 
 def panel_name(config: dict[str, str]) -> str:

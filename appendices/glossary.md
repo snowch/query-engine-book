@@ -14,6 +14,10 @@ batches laid out as they are in memory. [ch05](#where-work-happens)
 **Batch.** A slice of a table, a few thousand rows held column by column as Arrow arrays: what
 one operator hands the next. [ch01](#the-plan-is-the-map)
 
+**Branch predictor.** The part of a processor that guesses which way a branch will go, from the
+way it went before, so the processor can start on the guessed path at once.
+[ch06](#expressions-and-vectorised-kernels)
+
 **Cache hit.** A read whose cache line is already in the cache. [ch02](#batches-in-memory)
 
 **Cache line.** The fixed-size block of memory a processor moves between memory and its caches.
@@ -28,11 +32,18 @@ before the query runs. [ch01](#the-plan-is-the-map)
 **Column index.** Part of a Parquet file's page index: the smallest and largest value of each
 page of a column chunk. [ch04](#statistics-and-pruning)
 
+**Constant folding.** Computing every part of an expression that depends on no column once, when the
+query is planned, instead of for every row. [ch06](#expressions-and-vectorised-kernels)
+
 **Data page.** The unit a Parquet column chunk is stored in: a run of a column's values, encoded
 and compressed together. [ch04](#statistics-and-pruning)
 
 **Dictionary page.** The page of a dictionary-encoded column chunk that holds its distinct
 values, which every data page of the chunk refers to by number. [ch04](#statistics-and-pruning)
+
+**Expression tree.** An expression as a planner holds it: columns and constants at the leaves, and
+an operator at each inner node, applied to the values of the nodes below it.
+[ch06](#expressions-and-vectorised-kernels)
 
 **Filter.** The operator that keeps the rows for which a predicate is true.
 [ch01](#the-plan-is-the-map)
@@ -46,6 +57,12 @@ output is row `positions[k]` of the input. A sort, a join and a lookup each end 
 
 **Hive partitioning.** Laying out a table's files in directories named for a column's value, such
 as `month=2024-03`, so a reader can rule out a file from its path. [ch05](#where-work-happens)
+
+**Lane.** One of the values a vector register holds side by side, each worked on by the same
+instruction. [ch06](#expressions-and-vectorised-kernels)
+
+**Misprediction.** A branch that goes the other way from the branch predictor's guess, so the work
+started on the guessed path is thrown away. [ch06](#expressions-and-vectorised-kernels)
 
 **Offset index.** Part of a Parquet file's page index: where each page of a column chunk starts,
 and the first row it holds. [ch04](#statistics-and-pruning)
@@ -88,9 +105,15 @@ with statistics for each column. [ch01](#the-plan-is-the-map)
 
 **Selectivity.** The fraction of its input rows a predicate keeps. [ch01](#the-plan-is-the-map)
 
+**SIMD.** Single instruction, multiple data: instructions that apply one operation to every lane of
+a wide register at once. [ch06](#expressions-and-vectorised-kernels)
+
 **Table metadata.** A file kept beside a table's data files that lists each of them with the
 smallest and largest value of every column, so a reader can rule out a file without opening it.
 [ch05](#where-work-happens)
 
 **Validity bitmap.** One bit per value in an Arrow array, saying whether the value is present or
 null. [ch02](#batches-in-memory)
+
+**Vectorised execution.** Evaluating an operator over a batch of values per call, with a kernel,
+instead of over one row per call. [ch06](#expressions-and-vectorised-kernels)

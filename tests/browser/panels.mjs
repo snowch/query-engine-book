@@ -112,6 +112,33 @@ async function drawnFiles(lab) {
   }));
 }
 
+/** The branches panel's cases, and its sweep once revealed, as the page drew them. */
+async function drawnCases(lab) {
+  const cases = await lab.$$eval(".branch-case", (cards) => cards.map((card) => {
+    const value = (s) => {
+      const e = card.querySelector(s);
+      if (!e) return undefined;
+      const text = e.textContent;
+      return text === "none" || text === "no guess" || text === "hidden" ? text : Number(text.replace(/,/g, ""));
+    };
+    const out = {
+      label: card.dataset.case,
+      rows: value(".plan-bar.estimated .plan-bar-value"),
+      mispredicted: value(".plan-bar.measured .plan-bar-value"),
+    };
+    for (const field of ["branches", "mispredictions", "kept"]) {
+      const v = value(`[data-field="${field}"]`);
+      if (v !== undefined) out[field] = v;
+    }
+    const predicted = value(".plan-bar.predicted .plan-bar-value");
+    if (predicted !== undefined) out.predicted = predicted;
+    return out;
+  }));
+  const sweep = await lab.$$eval(".branch-sweep circle", (dots) => dots.map((d) => [d.classList.contains("with") ? "with" : "without",
+    Number(d.dataset.kept), Number(d.dataset.mispredictions)]));
+  return { cases, sweep };
+}
+
 /** For each experiment: how to read its drawing, and what it must show asking and revealed. */
 const PANELS = {
   plan: {
@@ -139,6 +166,23 @@ const PANELS = {
       rows_decoded: f.rows_decoded, rows_out: f.rows_out, bytes_read: f.bytes_read, requests: f.requests, predicted: guesses[i],
     })),
     count: (data) => data.files.length,
+  },
+  branches: {
+    read: drawnCases,
+    asks: true,
+    // Asking, the sweep is not drawn: its curve is the answer.
+    asking: (data) => ({
+      cases: data.cases.map((c) => ({ label: c.label, rows: c.rows, mispredicted: "hidden" })),
+      sweep: [],
+    }),
+    revealed: (data, guesses) => ({
+      cases: data.cases.map((c, i) => ({
+        label: c.label, rows: c.rows, mispredicted: c.mispredictions,
+        branches: c.branches, mispredictions: c.mispredictions, kept: c.kept, predicted: guesses[i],
+      })),
+      sweep: ["with", "without"].flatMap((k) => data.sweep.map((p) => [k, p.kept, p[k]])),
+    }),
+    count: (data) => data.cases.length,
   },
 };
 

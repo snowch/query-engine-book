@@ -122,6 +122,11 @@ PARTS = (
         "Part II: Reading less",
         "How does an engine avoid reading most of its input?",
     ),
+    Part(
+        "computing",
+        "Part III: Computing",
+        "Once the rows are in memory, what does each operator cost the processor?",
+    ),
 )
 
 _P = {p.slug: p.title for p in PARTS}
@@ -177,6 +182,16 @@ _CHAPTERS = (
         ("pruning",),
         ("orders-by-month", "orders-sorted.parquet", "orders-shuffled.parquet"),
     ),
+    (
+        "expressions_and_vectorised_kernels",
+        "Expressions and vectorised kernels",
+        "computing",
+        "What does it cost to compute an expression for every row, and why do engines work a batch at a time?",
+        "An expression tree evaluated a row at a time and a batch at a time, a model of branch "
+        "prediction and of vector lanes, and a filter kernel with no branch on the data.",
+        ("branches",),
+        ("orders-sorted.parquet",),
+    ),
 )
 
 CHAPTERS = tuple(
@@ -205,4 +220,4 @@ BY_ANCHOR = {x.anchor: x for x in (*CHAPTERS, *APPENDICES)}
 #: The experiments ``web/lab/lab.js`` knows how to mount, each drawn from the JSON of the
 #: function of the same name in ``query_lab.report``. A ``lab`` block naming anything else fails
 #: the build, rather than rendering an empty box.
-EXPERIMENTS: tuple[str, ...] = ("plan", "gather", "pruning")
+EXPERIMENTS: tuple[str, ...] = ("plan", "gather", "pruning", "branches")
