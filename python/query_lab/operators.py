@@ -20,8 +20,9 @@ from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.compute as pc
-from parquet_lab import prune, stats
-from parquet_lab.column import read_column
+from parquet_lab import page_index, prune, stats
+from parquet_lab.bytes import Span
+from parquet_lab.column import read_column, read_column_pages
 from parquet_lab.metadata import FileMetaData, RowGroup
 from parquet_lab.object_store import Bounded, MemoryStore, NetworkModel, TracingStore
 from parquet_lab.reader import FooterOptions, read_footer
@@ -111,6 +112,24 @@ class Comparison:
             found = None
         return prune.against_bounds(predicate, found, chunk.statistics.null_count, chunk.num_values)
 
+    def against_page(
+        self, leaf: Leaf, metadata: FileMetaData, index: page_index.ColumnIndex, page: int, rows: int
+    ) -> prune.Decision:
+        """Whether one page can be skipped, from the column index's bounds for it (ch04).
+
+        The same question as :meth:`against_statistics`, asked of one page of ``rows`` rows
+        instead of a whole row group: the column index keeps a minimum and maximum for each page.
+        """
+        converted = metadata.schema[leaf.element].converted_type
+        predicate = prune.Predicate.new(leaf, converted, prune.Op(self.op), _literal(self.value))
+        orders = metadata.column_orders
+        type_order = orders is not None and orders[leaf.column] == "TYPE_ORDER"
+        if index.null_pages[page]:
+            return prune.against_bounds(predicate, None, rows, rows)
+        nulls = index.null_counts[page] if index.null_counts is not None else None
+        found = (index.min_values[page], index.max_values[page]) if type_order else None
+        return prune.against_bounds(predicate, found, nulls, rows)
+
 
 #: The kernel that tests each row, for each comparison.
 KERNELS = {
@@ -140,16 +159,24 @@ class Scan(Operator):
     rows that pass.
     """
 
-    def __init__(self, path: str | Path, columns: list[str], filters: list[Comparison] = ()) -> None:
+    def __init__(
+        self, path: str | Path, columns: list[str], filters: list[Comparison] = (), page_index: bool = False
+    ) -> None:
         detail = f"{Path(path).name}: {', '.join(columns)}"
         if filters:
             detail += f"; {' AND '.join(map(str, filters))}"
+        if page_index:
+            detail += "; by page"
         super().__init__("Scan", detail, [])
         self.path = Path(path)
         self.columns = columns
         self.filters = list(filters)
+        self.page_index = page_index
+        """Whether to consult each row group's page index and read only the pages it keeps (ch04)."""
         self.skipped: dict[int, str] = {}
         """Each row group the scan skipped, by its position in the file, with the reason."""
+        self.kept: dict[int, list[tuple[int, int]]] = {}
+        """Each row group the scan read, with the rows it read of it, as ``[start, end)`` ranges."""
 
     # Row group by row group: one the statistics rule out is never requested at all.
     def batches(self) -> Iterator[pa.RecordBatch]:
@@ -169,21 +196,23 @@ class Scan(Operator):
         reading = list(dict.fromkeys([*self.columns, *(f.column for f in self.filters)]))
         wanted = [by_name[name] for name in reading]
         schema = pa.schema([arrow_field(leaf) for leaf in wanted])
-        self.skipped = {}
+        self.skipped, self.kept = {}, {}
         self.count_requests(store)
+        reader = (store, key, have)
 
         for index, row_group in enumerate(footer.metadata.row_groups):
             why = self.ruled_out(row_group, footer.metadata, by_name)
             if why is not None:
                 self.skipped[index] = why
                 continue
-            arrays = []
-            for leaf in wanted:
-                chunk = row_group.columns[leaf.column]
-                got = store.get(key, Bounded(chunk.byte_range()), f"column {leaf.dotted_path()}")
-                have.add(got.span, got.data)
-                decoded = read_column(bytes(have.data), chunk, leaf)
-                arrays.append(to_arrow([t.value for t in decoded.triples], leaf))
+            rows = [(0, row_group.num_rows)]
+            if self.page_index:
+                rows = self.pages_kept(row_group, footer.metadata, by_name, reader)
+                if not rows:
+                    self.skipped[index] = "the page index rules out every page"
+                    continue
+            self.kept[index] = rows
+            arrays = [self.read(leaf, row_group, rows, reader) for leaf in wanted]
             batch = pa.RecordBatch.from_arrays(arrays, schema=schema)
             self.take(batch)
             # Until it has tested the rows, the scan holds every column it read, the filters' too.
@@ -208,6 +237,64 @@ class Scan(Operator):
     def count_requests(self, store: TracingStore) -> None:
         self.metrics.bytes_read = store.bytes_returned()
         self.metrics.requests = len(store.requests)
+
+    def pages_kept(
+        self, row_group: RowGroup, metadata: FileMetaData, by_name: dict[str, Leaf], reader: tuple
+    ) -> list[tuple[int, int]]:
+        """The rows of ``row_group`` the page index cannot rule out, as ``[start, end)`` ranges.
+
+        Each filter reads its column's page index and keeps the pages whose bounds might hold a
+        match. A row must pass every filter, so it is read only if every filter kept its page.
+        """
+        kept = [(0, row_group.num_rows)]
+        for f in self.filters:
+            leaf = by_name[f.column]
+            chunk = row_group.columns[leaf.column]
+            if chunk.column_index is None or chunk.offset_index is None:
+                continue
+            _fetch(reader, chunk.column_index, f"the column index of {leaf.dotted_path()}")
+            _fetch(reader, chunk.offset_index, f"the offset index of {leaf.dotted_path()}")
+            file = bytes(reader[2].data)
+            bounds = page_index.column_index(file, chunk)
+            pages = page_index.offset_index(file, chunk).row_ranges(row_group.num_rows)
+            might = [
+                rows
+                for i, rows in enumerate(pages)
+                if not f.against_page(leaf, metadata, bounds, i, rows[1] - rows[0]).skip
+            ]
+            kept = _intersect(kept, might)
+        return kept
+
+    def read(self, leaf: Leaf, row_group: RowGroup, rows: list[tuple[int, int]], reader: tuple) -> pa.Array:
+        """One column of ``row_group``, as an Arrow array of the rows in ``rows``.
+
+        Reading the whole row group, the scan fetches the column chunk. Reading some of its rows,
+        it fetches the chunk's offset index, which says where each page starts and which rows it
+        holds, and then only the pages that hold those rows: every column's pages end at
+        different rows, so each column reads its own.
+        """
+        chunk = row_group.columns[leaf.column]
+        if rows == [(0, row_group.num_rows)] or chunk.offset_index is None:
+            _fetch(reader, chunk.byte_range(), f"column {leaf.dotted_path()}")
+            values = [t.value for t in read_column(bytes(reader[2].data), chunk, leaf).triples]
+            return to_arrow([v for start, end in rows for v in values[start:end]], leaf)
+        _fetch(reader, chunk.offset_index, f"the offset index of {leaf.dotted_path()}")
+        index = page_index.offset_index(bytes(reader[2].data), chunk)
+        pages = index.row_ranges(row_group.num_rows)
+        wanted = [i for i, page in enumerate(pages) if _intersect([page], rows)]
+        # A dictionary page, if the chunk has one, sits before the first data page: every page needs it.
+        if index.pages[0].offset > chunk.byte_range().start:
+            dictionary = Span(chunk.byte_range().start, index.pages[0].offset)
+            _fetch(reader, dictionary, f"the dictionary page of {leaf.dotted_path()}")
+        for i in wanted:
+            _fetch(reader, index.pages[i].span(), f"page {i} of {leaf.dotted_path()}")
+        decoded = read_column_pages(
+            bytes(reader[2].data), chunk, leaf, [index.pages[i].offset for i in wanted]
+        )
+        # The pages decode one after another, so each value's row follows from its page's rows.
+        at_row = [row for i in wanted for row in range(*pages[i])]
+        value = dict(zip(at_row, (t.value for t in decoded.triples), strict=True))
+        return to_arrow([value[row] for start, end in rows for row in range(start, end)], leaf)
 
     def schema(self) -> pa.Schema:
         by_name = {leaf.dotted_path(): leaf for leaf in leaves(build(_footer(self.path).schema))}
@@ -249,6 +336,31 @@ class Project(Operator):
         # An expression's type is the type of what it returns, so ask it of an empty batch.
         empty = pa.RecordBatch.from_pylist([], schema=self.child.schema())
         return pa.schema([(name, f(empty).type) for name, f in self.columns.items()])
+
+
+def _fetch(reader: tuple, span: Span, why: str) -> None:
+    """Fetch the parts of ``span`` the reader does not hold yet, one request each."""
+    store, key, have = reader
+    for part in have.missing(span):
+        got = store.get(key, Bounded(part), why)
+        have.add(got.span, got.data)
+
+
+def _intersect(a: list[tuple[int, int]], b: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """The rows in both lists of ``[start, end)`` ranges, as ranges in order."""
+    out = []
+    for start, end in a:
+        for lo, hi in b:
+            if max(start, lo) < min(end, hi):
+                out.append((max(start, lo), min(end, hi)))
+    out.sort()
+    merged: list[tuple[int, int]] = []
+    for start, end in out:
+        if merged and start <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+        else:
+            merged.append((start, end))
+    return merged
 
 
 def arrow_type(leaf: Leaf) -> pa.DataType:

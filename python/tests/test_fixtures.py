@@ -56,7 +56,7 @@ def test_customer_keys_are_skewed_and_all_point_into_customers():
     assert max(counts) > 50 * orders.num_rows / len(ids)
 
 
-@pytest.mark.parametrize("name", ["orders-sorted", "orders-shuffled", "customers"])
+@pytest.mark.parametrize("name", ["orders-sorted", "orders-shuffled", "orders-paged", "customers"])
 def test_the_manifest_describes_its_file(name):
     m = manifest(name)
     md = pq.ParquetFile(FIXTURES / f"{name}.parquet").metadata
@@ -68,3 +68,14 @@ def test_the_manifest_describes_its_file(name):
 def test_the_note_column_has_nulls_for_the_validity_bitmap():
     m = manifest("orders-sorted")
     assert 0 < m["nulls"]["note"] < m["rows"]
+
+
+def test_the_paged_file_is_the_sorted_orders_in_one_row_group_with_a_page_index():
+    paged = pq.ParquetFile(FIXTURES / "orders-paged.parquet")
+    assert paged.read().equals(pq.read_table(FIXTURES / "orders-sorted.parquet"))
+    assert paged.metadata.num_row_groups == 1
+    for c in range(paged.metadata.num_columns):
+        chunk = paged.metadata.row_group(0).column(c)
+        assert chunk.has_column_index and chunk.has_offset_index
+    dates = manifest("orders-paged")["row_groups"][0]["columns"]["order_date"]
+    assert (dates["min"], dates["max"]) == ("2024-01-01", "2024-12-31"), "its one row group spans the year"

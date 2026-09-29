@@ -20,6 +20,7 @@ The first datasets are the ones the pilot chapters need:
 
 - ``orders``, a fact table, written twice: sorted by date, and shuffled. The same rows in two
   orders are the whole of the pruning argument, and of the cache argument in ch02.
+- ``orders-paged``, the sorted orders in one row group with a page index (ch04).
 - ``customers``, the small dimension table ``orders.customer_id`` points into, with a skewed
   distribution of orders per customer ready for the join and skew chapters.
 """
@@ -62,6 +63,10 @@ WORDS = (
     "urgent", "reorder", "same", "as", "last", "time", "no", "invoice", "please", "wrap",
 )  # fmt: skip
 
+#: The page size orders-paged aims at, in bytes. The writer checks it once per batch of rows it
+#: writes, so pages come out at about a thousand rows each: a few weeks of orders.
+PAGE_BYTES = 1024
+
 #: Customer ``k`` (1-based) receives orders in proportion to ``1 / k**SKEW``: a Zipf-like
 #: distribution, so a few customers place many orders and most place few.
 SKEW = 1.1
@@ -77,6 +82,14 @@ class Fixture:
     row_group_size: int
     #: What the generator promises about the rows, checked by tests/test_fixtures.py.
     properties: dict
+    #: Whether the writer adds a page index (a column index and an offset index per column chunk),
+    #: and the size it aims each data page at. None keeps the writer's default.
+    page_index: bool = False
+    data_page_size: int | None = None
+    #: The columns the writer dictionary-encodes. None keeps the writer's default, which is every
+    #: column: a column of nearly unique values then gets a dictionary page holding nearly every
+    #: value, which any page of it needs.
+    dictionary: list[str] | None = None
 
 
 def orders_rows(n: int, seed: int) -> dict[str, list]:
@@ -169,6 +182,25 @@ def fixtures(n: int = ORDERS, row_group: int = ROW_GROUP) -> list[Fixture]:
             {**common, "sorted_by": []},
         ),
         Fixture(
+            "orders-paged",
+            "The sorted orders in one row group, with a page index and small pages, and a "
+            "dictionary only for the columns with few distinct values. Its one row group spans the "
+            "year, so row group statistics can skip nothing; its pages each hold a few weeks, so a "
+            "reader that uses the page index can skip most of them.",
+            sorted_orders,
+            n,
+            {
+                **common,
+                "row_group_size": n,
+                "sorted_by": ["order_date", "order_id"],
+                "page_index": True,
+                "dictionary": ["order_date", "customer_id", "status", "quantity"],
+            },
+            page_index=True,
+            data_page_size=PAGE_BYTES,
+            dictionary=["order_date", "customer_id", "status", "quantity"],
+        ),
+        Fixture(
             "customers",
             "The dimension table orders.customer_id points into: one row per customer, small enough "
             "to be the build side of any join.",
@@ -180,6 +212,9 @@ def fixtures(n: int = ORDERS, row_group: int = ROW_GROUP) -> list[Fixture]:
 
 
 def write(f: Fixture, out: Path) -> None:
+    pages = {"data_page_size": f.data_page_size} if f.data_page_size is not None else {}
+    if f.dictionary is not None:
+        pages["use_dictionary"] = f.dictionary
     pq.write_table(
         f.table,
         out / f"{f.name}.parquet",
@@ -187,6 +222,8 @@ def write(f: Fixture, out: Path) -> None:
         compression="snappy",
         write_statistics=True,
         data_page_version="1.0",
+        write_page_index=f.page_index,
+        **pages,
     )
 
 

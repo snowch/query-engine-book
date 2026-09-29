@@ -98,7 +98,7 @@ async function drawnFiles(lab) {
     };
     const out = {
       fixture: file.dataset.fixture,
-      row_groups: value(".plan-bar.estimated .plan-bar-value"),
+      units: value(".plan-bar.estimated .plan-bar-value"),
       read: value(".plan-bar.measured .plan-bar-value"),
       drawn: [...file.querySelectorAll(".pruning-group")].map((g) => g.dataset.read === "true"),
     };
@@ -132,10 +132,10 @@ const PANELS = {
   pruning: {
     read: drawnFiles,
     asks: true,
-    // Asking, no row group is drawn: its range and its verdict are the answer.
-    asking: (data) => data.files.map((f) => ({ fixture: f.fixture, row_groups: f.row_groups.length, read: "hidden", drawn: [] })),
+    // Asking, no unit is drawn: its range and its verdict are the answer.
+    asking: (data) => data.files.map((f) => ({ fixture: f.fixture, units: f.units.length, read: "hidden", drawn: [] })),
     revealed: (data, guesses) => data.files.map((f, i) => ({
-      fixture: f.fixture, row_groups: f.row_groups.length, read: f.row_groups_read, drawn: f.row_groups.map((g) => g.read),
+      fixture: f.fixture, units: f.units.length, read: f.units_read, drawn: f.units.map((g) => g.read),
       rows_decoded: f.rows_decoded, rows_out: f.rows_out, bytes_read: f.bytes_read, requests: f.requests, predicted: guesses[i],
     })),
     count: (data) => data.files.length,

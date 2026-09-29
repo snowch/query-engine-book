@@ -20,6 +20,7 @@ import struct
 from pathlib import Path
 
 import duckdb
+from parquet_lab import page_index
 from parquet_lab.object_store import MemoryStore, NetworkModel, TracingStore
 from parquet_lab.reader import FooterOptions, read_footer
 from parquet_lab.schema import build, leaves
@@ -164,10 +165,14 @@ def gather(root: Path, column: str) -> dict:
     }
 
 
-def pruning(root: Path, query: str) -> dict:
+def pruning(root: Path, query: str, fixtures: str = "") -> dict:
     """The engine's scan for a query in ``queries/``, pushed down as its plan in
-    ``query_lab.plans`` pushes it, run against each orders file: which row groups the statistics
-    let it skip and why, each row group's range of the filtered column, and the scan's counters.
+    ``query_lab.plans`` pushes it, run against each of ``fixtures`` (the two orders files unless
+    the block names others): what the scan skipped and why, each unit's range of the filtered
+    column, and the scan's counters.
+
+    A unit is a row group, or, where the scan reads the page index and the file has one, a page of
+    the filtered column (ch04).
     """
     # The engine needs pyarrow, which the plan panel does not load in the page.
     from .operators import Scan
@@ -180,37 +185,37 @@ def pruning(root: Path, query: str) -> dict:
     if not isinstance(scan, Scan) or not scan.filters:
         raise ReportError(f"the plan for queries/{query} is not a scan with filters")
     files = []
-    for fixture in GATHER_FIXTURES:
+    for fixture in _names(fixtures) or GATHER_FIXTURES:
         scan = PLANS[query](root, fixture)
         scan.run()
         column = scan.filters[0].column
+        data = (root / "fixtures" / fixture).read_bytes()
         footer = read_footer(_store(root / "fixtures" / fixture), fixture, FooterOptions())
         leaf = next(x for x in leaves(build(footer.metadata.schema)) if x.dotted_path() == column)
-        groups = []
+        by_page = scan.page_index and all(
+            g.columns[leaf.column].column_index for g in footer.metadata.row_groups
+        )
+        units = []
         for index, row_group in enumerate(footer.metadata.row_groups):
-            low, high = _bounds(leaf, row_group)
-            groups.append(
-                {
-                    "rows": row_group.num_rows,
-                    "min": low[0],
-                    "max": high[0],
-                    "min_label": low[1],
-                    "max_label": high[1],
-                    "read": index not in scan.skipped,
-                    "why": scan.skipped.get(index, "the statistics cannot rule it out"),
-                }
-            )
+            if by_page:
+                units += _pages(data, leaf, row_group, scan.kept.get(index, []), scan.skipped.get(index))
+            else:
+                low, high = _bounds(leaf, row_group)
+                units.append(
+                    _unit(row_group.num_rows, low, high, index not in scan.skipped, scan.skipped.get(index))
+                )
         m = scan.metrics
         files.append(
             {
                 "fixture": fixture,
-                "row_groups": groups,
-                "row_groups_read": m.batches_in,
+                "unit": "page" if by_page else "row group",
+                "units": units,
+                "units_read": sum(u["read"] for u in units),
                 "rows_decoded": m.rows_in,
                 "rows_out": m.rows_out,
                 "bytes_read": m.bytes_read,
                 "requests": m.requests,
-                "file_bytes": (root / "fixtures" / fixture).stat().st_size,
+                "file_bytes": len(data),
             }
         )
     low, high = _window(scan.filters, leaf)
@@ -223,6 +228,42 @@ def pruning(root: Path, query: str) -> dict:
         "window": {"min": low[0], "max": high[0], "min_label": low[1], "max_label": high[1]},
         "files": files,
     }
+
+
+def _unit(rows: int, low: tuple, high: tuple, read: bool, why: str | None) -> dict:
+    return {
+        "rows": rows,
+        "min": low[0],
+        "max": high[0],
+        "min_label": low[1],
+        "max_label": high[1],
+        "read": read,
+        "why": why or "nothing rules it out",
+    }
+
+
+def _pages(data: bytes, leaf, row_group, kept: list, skipped: str | None) -> list[dict]:
+    """Each page of the column in ``row_group``, from its page index: its rows, its bounds, and
+    whether the scan read it, which it did if the page holds any row the scan kept."""
+    column_index = page_index.column_index(data, row_group.columns[leaf.column])
+    ranges = page_index.offset_index(data, row_group.columns[leaf.column]).row_ranges(row_group.num_rows)
+    out = []
+    for i, (start, end) in enumerate(ranges):
+        read = any(max(start, a) < min(end, b) for a, b in kept)
+        low = _position(leaf, _decode(leaf, column_index.min_values[i]))
+        high = _position(leaf, _decode(leaf, column_index.max_values[i]))
+        out.append(
+            _unit(end - start, low, high, read, skipped or (None if read else "the page index rules it out"))
+        )
+    return out
+
+
+def _decode(leaf, plain: bytes) -> float:
+    formats = {"INT32": "<i", "INT64": "<q", "DOUBLE": "<d", "FLOAT": "<f"}
+    fmt = formats.get(leaf.physical_type.name)
+    if fmt is None:
+        raise ReportError(f"{leaf.dotted_path()} has no numeric bounds to draw")
+    return struct.unpack(fmt, plain)[0]
 
 
 def _store(path: Path) -> TracingStore:
@@ -242,14 +283,12 @@ def _position(leaf, value: object) -> tuple[float, str]:
 
 def _bounds(leaf, row_group) -> tuple[tuple[float, str], tuple[float, str]]:
     """A row group's minimum and maximum of the column, from its statistics."""
-    formats = {"INT32": "<i", "INT64": "<q", "DOUBLE": "<d", "FLOAT": "<f"}
-    fmt = formats.get(leaf.physical_type.name)
     st = row_group.columns[leaf.column].statistics
-    if fmt is None or st is None:
-        raise ReportError(f"{leaf.dotted_path()} has no numeric statistics to draw")
+    if st is None:
+        raise ReportError(f"{leaf.dotted_path()} has no statistics to draw")
     low = st.min_value if st.min_value is not None else st.min
     high = st.max_value if st.max_value is not None else st.max
-    return _position(leaf, struct.unpack(fmt, low)[0]), _position(leaf, struct.unpack(fmt, high)[0])
+    return _position(leaf, _decode(leaf, low)), _position(leaf, _decode(leaf, high))
 
 
 def _window(filters, leaf) -> tuple[tuple[float | None, str], tuple[float | None, str]]:

@@ -2,10 +2,11 @@
 // in date order and against the shuffled one, from query_lab.report.pruning.
 //
 // It asks first and answers second, as the other panels do. Each file shows the range of values
-// the filters let through, on the scale of the file's values, the number of row groups in the
-// file, and a box for the reader's prediction of the row groups the scan reads. The measurement
-// stays hidden until the reader reveals it. Then each row group is drawn as the range its
-// statistics record, marked read or skipped with the reason, and under them the scan's counters.
+// the filters let through, on the scale of the file's values, the number of units in the file
+// (row groups, or pages where the scan reads the page index), and a box for the reader's
+// prediction of the units the scan reads. The measurement stays hidden until the reader reveals
+// it. Then each unit is drawn as the range its statistics record, marked read or skipped with the
+// reason, and under them the scan's counters.
 //
 // Every number drawn is a field of the report's JSON or a number the reader typed. Positions on
 // the scale come from the report's values; nothing here counts.
@@ -18,6 +19,9 @@ function el(tag, className, text) {
   if (text !== undefined) e.textContent = text;
   return e;
 }
+
+/** A unit's name, capitalised and plural, for a bar's label: "Row groups", "Pages". */
+const plural = (unit) => `${unit[0].toUpperCase()}${unit.slice(1)}s`;
 
 function bar(label, value, max, kind, missing = "none") {
   const row = el("div", `plan-bar ${kind}`);
@@ -38,7 +42,7 @@ function predictionBox(value, onInput) {
   input.min = "0";
   input.step = "1";
   input.inputMode = "numeric";
-  input.placeholder = "row groups read";
+  input.placeholder = "read";
   if (value !== undefined) input.value = String(value);
   input.addEventListener("input", () => onInput(input.value === "" ? undefined : Math.max(0, Math.round(Number(input.value)))));
   row.append(input);
@@ -47,8 +51,8 @@ function predictionBox(value, onInput) {
 
 /** The scale every range of one file is drawn on: from its smallest recorded value to its largest. */
 function scale(file, windowRange) {
-  const lows = file.row_groups.map((g) => g.min);
-  const highs = file.row_groups.map((g) => g.max);
+  const lows = file.units.map((g) => g.min);
+  const highs = file.units.map((g) => g.max);
   const low = Math.min(...lows, ...(windowRange.min === null ? [] : [windowRange.min]));
   const high = Math.max(...highs, ...(windowRange.max === null ? [] : [windowRange.max]));
   const span = Math.max(1e-9, high - low);
@@ -66,15 +70,15 @@ function span(className, a, b, at) {
 /** The filters' range, as a band across the track: open at an end no filter bounds. */
 function windowBand(data, file, at) {
   const w = data.window;
-  const lows = file.row_groups.map((g) => g.min);
-  const highs = file.row_groups.map((g) => g.max);
+  const lows = file.units.map((g) => g.min);
+  const highs = file.units.map((g) => g.max);
   return span("pruning-window", w.min ?? Math.min(...lows), w.max ?? Math.max(...highs), at);
 }
 
 function rowGroups(data, file, at) {
   const list = el("ol", "pruning-groups");
   list.start = 0;
-  for (const g of file.row_groups) {
+  for (const g of file.units) {
     const item = el("li", `pruning-group ${g.read ? "read" : "skipped"}`);
     item.dataset.read = String(g.read);
     item.title = `${g.min_label} to ${g.max_label}: ${g.read ? "read" : "skipped"}. ${g.why}.`;
@@ -88,8 +92,8 @@ function rowGroups(data, file, at) {
 
 /** The ends of the file's scale, labelled with its smallest and largest recorded value. */
 function axis(file) {
-  const lowest = file.row_groups.reduce((a, g) => (g.min < a.min ? g : a));
-  const highest = file.row_groups.reduce((a, g) => (g.max > a.max ? g : a));
+  const lowest = file.units.reduce((a, g) => (g.min < a.min ? g : a));
+  const highest = file.units.reduce((a, g) => (g.max > a.max ? g : a));
   const row = el("div", "pruning-axis");
   row.append(el("span", "", lowest.min_label), el("span", "", highest.max_label));
   return row;
@@ -109,22 +113,22 @@ function fileCard(file, data, view, index) {
     card.append(track, axis(file), el("p", "pruning-caption", `The band: the ${data.column} values the filters let through, on the scale of the file's values.`));
   } else {
     card.append(rowGroups(data, file, at), axis(file));
-    card.append(el("p", "pruning-caption", `Each row group's range of ${data.column}, from its statistics, and the filters' band across it.`));
+    card.append(el("p", "pruning-caption", `Each ${file.unit}'s range of ${data.column}, from its statistics, and the filters' band across it.`));
   }
   const bars = el("div", "plan-bars");
   const predicted = view.predictions[slot];
-  const total = file.row_groups.length;
+  const total = file.units.length;
   if (view.asking) {
     bars.append(
       predictionBox(predicted, (v) => view.predict(slot, v)),
-      bar("Row groups", total, total, "estimated"),
+      bar(plural(file.unit), total, total, "estimated"),
       bar("Read", null, total, "measured hidden", "hidden"),
     );
   } else {
     bars.append(
       bar("You predicted", predicted ?? null, Math.max(total, predicted ?? 0), "predicted", "no guess"),
-      bar("Row groups", total, Math.max(total, predicted ?? 0), "estimated"),
-      bar("Read", file.row_groups_read, Math.max(total, predicted ?? 0), "measured"),
+      bar(plural(file.unit), total, Math.max(total, predicted ?? 0), "estimated"),
+      bar("Read", file.units_read, Math.max(total, predicted ?? 0), "measured"),
     );
     const flow = el("div", "plan-op-flow");
     for (const [label, field] of [["rows decoded", "rows_decoded"], ["rows handed up", "rows_out"],
@@ -155,7 +159,7 @@ export function mountPruning(root, data, ctx) {
 
   const head = el("div", "lab-head");
   head.append(el("span", "lab-title", asking
-    ? "The scan, filters pushed down: predict the row groups it reads"
+    ? "The scan, filters pushed down: predict what it reads of each file"
     : "The scan, filters pushed down, as it ran"));
   const note = el("span", "lab-note");
   note.append(el("code", "", `queries/${data.query}`));
@@ -202,7 +206,7 @@ export function mountPruning(root, data, ctx) {
       redraw();
     });
     ask.append(reveal, el("span", "lab-hint",
-      "Type your prediction of the row groups each scan reads first, or reveal without guessing."));
+      "Type your prediction of the units each scan reads first, or reveal without guessing."));
     root.append(ask);
   }
 }
