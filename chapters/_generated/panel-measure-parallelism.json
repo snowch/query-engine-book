@@ -1,0 +1,201 @@
+{
+ "experiment": "measure",
+ "of": "parallelism",
+ "engine": "the book's engine",
+ "title": "Four workers",
+ "predict": {
+  "label": "Work until done",
+  "ask": "the work before each query is done, with four workers",
+  "placeholder": "rows of work"
+ },
+ "facts": "A morsel is one row group. The sorted orders are ten row groups of equal size; the paged orders are one. Work is the rows each operator takes in. Each worker takes the next morsel when it is free.",
+ "cases": [
+  {
+   "label": "ch01's returned orders",
+   "detail": "orders-sorted: a filter and a projection",
+   "reference": {
+    "label": "Work on one worker",
+    "value": 41912
+   },
+   "measured": 12585,
+   "counters": [
+    [
+     "morsels",
+     10
+    ],
+    [
+     "busiest worker's work",
+     12585
+    ],
+    [
+     "work combining the workers' tables",
+     0
+    ]
+   ]
+  },
+  {
+   "label": "ch07's orders per customer",
+   "detail": "orders-sorted: an aggregate",
+   "reference": {
+    "label": "Work on one worker",
+    "value": 40000
+   },
+   "measured": 14633,
+   "counters": [
+    [
+     "morsels",
+     10
+    ],
+    [
+     "busiest worker's work",
+     12000
+    ],
+    [
+     "work combining the workers' tables",
+     2633
+    ]
+   ]
+  },
+  {
+   "label": "The returned orders, one row group",
+   "detail": "orders-paged: the same pipeline",
+   "reference": {
+    "label": "Work on one worker",
+    "value": 41912
+   },
+   "measured": 41912,
+   "counters": [
+    [
+     "morsels",
+     1
+    ],
+    [
+     "busiest worker's work",
+     41912
+    ],
+    [
+     "work combining the workers' tables",
+     0
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "workers",
+  "y_label": "speedup",
+  "x_scale": "linear",
+  "series": [
+   {
+    "label": "ch01's returned orders",
+    "points": [
+     [
+      1,
+      1.0
+     ],
+     [
+      2,
+      2.0
+     ],
+     [
+      3,
+      2.5
+     ],
+     [
+      4,
+      3.33
+     ],
+     [
+      6,
+      4.99
+     ],
+     [
+      8,
+      5.0
+     ],
+     [
+      12,
+      9.93
+     ],
+     [
+      16,
+      9.93
+     ]
+    ]
+   },
+   {
+    "label": "ch07's orders per customer",
+    "points": [
+     [
+      1,
+      1.0
+     ],
+     [
+      2,
+      1.85
+     ],
+     [
+      3,
+      2.2
+     ],
+     [
+      4,
+      2.73
+     ],
+     [
+      6,
+      3.55
+     ],
+     [
+      8,
+      3.41
+     ],
+     [
+      12,
+      4.85
+     ],
+     [
+      16,
+      4.85
+     ]
+    ]
+   },
+   {
+    "label": "The returned orders, one row group",
+    "points": [
+     [
+      1,
+      1.0
+     ],
+     [
+      2,
+      1.0
+     ],
+     [
+      3,
+      1.0
+     ],
+     [
+      4,
+      1.0
+     ],
+     [
+      6,
+      1.0
+     ],
+     [
+      8,
+      1.0
+     ],
+     [
+      12,
+      1.0
+     ],
+     [
+      16,
+      1.0
+     ]
+    ]
+   }
+  ]
+ }
+}

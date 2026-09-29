@@ -581,6 +581,273 @@ def join_orders(root: Path) -> dict:
     }
 
 
+#: The workers the parallelism panel's chart runs each pipeline with.
+WORKER_SWEEP = (1, 2, 3, 4, 6, 8, 12, 16)
+
+
+def parallelism(root: Path) -> dict:
+    """Two pipelines run by four simulated workers on the sorted orders, and one on the same
+    orders in a single row group, counting the work until each query is done; then the speedup of
+    each as the workers grow."""
+    from .parallel import PER_CUSTOMER, RETURNED, run
+
+    fixtures = root / "fixtures"
+    ways = [
+        (
+            "ch01's returned orders",
+            "orders-sorted: a filter and a projection",
+            fixtures / "orders-sorted.parquet",
+            RETURNED,
+        ),
+        (
+            "ch07's orders per customer",
+            "orders-sorted: an aggregate",
+            fixtures / "orders-sorted.parquet",
+            PER_CUSTOMER,
+        ),
+        (
+            "The returned orders, one row group",
+            "orders-paged: the same pipeline",
+            fixtures / "orders-paged.parquet",
+            RETURNED,
+        ),
+    ]
+    cases, series = [], []
+    for label, detail, path, (columns, pipeline, keys) in ways:
+        four = run(path, columns, pipeline, 4, keys)
+        cases.append(
+            {
+                "label": label,
+                "detail": detail,
+                "reference": {"label": "Work on one worker", "value": four.total},
+                "measured": four.finished,
+                "counters": [
+                    ["morsels", len(four.morsels)],
+                    ["busiest worker's work", max(four.workers)],
+                    ["work combining the workers' tables", four.after],
+                ],
+            }
+        )
+        series.append(
+            {
+                "label": label,
+                "points": [
+                    [w, round(run(path, columns, pipeline, w, keys).speedup, 2)] for w in WORKER_SWEEP
+                ],
+            }
+        )
+    return {
+        "title": "Four workers",
+        "predict": {
+            "label": "Work until done",
+            "ask": "the work before each query is done, with four workers",
+            "placeholder": "rows of work",
+        },
+        "facts": (
+            "A morsel is one row group. The sorted orders are ten row groups of equal size; the paged "
+            "orders are one. Work is the rows each operator takes in. Each worker takes the next morsel "
+            "when it is free."
+        ),
+        "cases": cases,
+        "chart": {"x_label": "workers", "y_label": "speedup", "x_scale": "linear", "series": series},
+    }
+
+
+#: The nodes the shuffle panel's chart spreads the tables over.
+NODE_SWEEP = (2, 4, 8, 16, 32, 64)
+
+
+def shuffle(root: Path) -> dict:
+    """The orders per customer and the orders with their country, each done two ways on four
+    simulated nodes, counting the bytes sent between nodes; then the joins on more nodes."""
+    import pyarrow.parquet as pq
+
+    from . import distributed as d
+
+    fixtures = root / "fixtures"
+
+    def spread(nodes: int):
+        orders = d.place(fixtures / "orders-sorted.parquet", ["order_id", "customer_id", "amount"], nodes)
+        customers = pq.read_table(fixtures / "customers.parquet", columns=["customer_id", "country"])
+        return orders, customers
+
+    orders, customers = spread(4)
+    ids = [t.select(["order_id", "customer_id"]) for t in orders]
+    held = d.place(fixtures / "customers.parquet", ["customer_id", "country"], 4)
+    rows = sum(d.ipc_bytes(t) for t in orders)
+    cases = []
+    for label, detail, result, of in (
+        (
+            "Aggregate after shuffling every order",
+            "GROUP BY customer_id",
+            d.aggregate_after_shuffle(orders),
+            rows,
+        ),
+        ("Aggregate in two phases", "GROUP BY customer_id", d.aggregate_in_two_phases(orders), rows),
+        ("Join, shuffling both sides", "orders JOIN customers", d.join_by_shuffle(ids, held), None),
+        (
+            "Join, broadcasting the customers",
+            "orders JOIN customers",
+            d.join_by_broadcast(ids, customers),
+            None,
+        ),
+    ):
+        reference = of if of is not None else sum(d.ipc_bytes(t) for t in ids) + d.ipc_bytes(customers)
+        cases.append(
+            {
+                "label": label,
+                "detail": detail,
+                "reference": {"label": "Bytes of the rows", "value": reference},
+                "measured": result.shuffled,
+                "counters": [["rows out", result.table().num_rows]],
+            }
+        )
+    shuffled, broadcast = [], []
+    for nodes in NODE_SWEEP:
+        orders, customers = spread(nodes)
+        ids = [t.select(["order_id", "customer_id"]) for t in orders]
+        held = d.place(fixtures / "customers.parquet", ["customer_id", "country"], nodes)
+        shuffled.append([nodes, d.join_by_shuffle(ids, held).shuffled])
+        broadcast.append([nodes, d.join_by_broadcast(ids, customers).shuffled])
+    return {
+        "title": "Four nodes",
+        "predict": {
+            "label": "Bytes shuffled",
+            "ask": "the bytes each sends between nodes",
+            "placeholder": "bytes",
+        },
+        "facts": (
+            "The orders' row groups are dealt out to the nodes in turn. The customers are one row "
+            "group, on one node. A row costs its Arrow IPC bytes to send, and nothing to keep."
+        ),
+        "cases": cases,
+        "chart": {
+            "x_label": "nodes",
+            "y_label": "bytes shuffled by the join",
+            "x_scale": "linear",
+            "series": [
+                {"label": "Shuffling both sides", "points": shuffled},
+                {"label": "Broadcasting the customers", "points": broadcast},
+            ],
+        },
+    }
+
+
+#: The nodes the skew panel's chart spreads the join over.
+SKEW_NODES = (2, 4, 8, 16, 32)
+
+
+def skew(root: Path) -> dict:
+    """ch15's join of the orders and their customers on sixteen simulated nodes, three ways,
+    counting the rows the busiest node joins; then the plain and the salted shuffle on more
+    nodes."""
+    import pyarrow.parquet as pq
+
+    from . import distributed as d
+    from .skew import busiest, join_salted
+
+    fixtures = root / "fixtures"
+    customers = pq.read_table(fixtures / "customers.parquet", columns=["customer_id", "country"])
+
+    def spread(nodes: int):
+        orders = d.place(fixtures / "orders-sorted.parquet", ["order_id", "customer_id"], nodes)
+        return orders, d.place(fixtures / "customers.parquet", ["customer_id", "country"], nodes)
+
+    nodes = 16
+    orders, held = spread(nodes)
+    even = sum(t.num_rows for t in orders) // nodes
+    cases = []
+    for label, detail, result in (
+        ("Shuffled by customer", "ch15's shuffle join", d.join_by_shuffle(orders, held)),
+        (
+            "The heaviest customers salted",
+            f"their orders spread over {nodes} nodes",
+            join_salted(orders, held, nodes),
+        ),
+        ("The customers broadcast", "the orders stay where they are", d.join_by_broadcast(orders, customers)),
+    ):
+        cases.append(
+            {
+                "label": label,
+                "detail": detail,
+                "reference": {"label": "An even share", "value": even},
+                "measured": busiest(result.parts),
+                "counters": [["bytes shuffled", result.shuffled], ["rows out", result.table().num_rows]],
+            }
+        )
+    plain, salted, shares = [], [], []
+    for n in SKEW_NODES:
+        orders, held = spread(n)
+        plain.append([n, busiest(d.join_by_shuffle(orders, held).parts)])
+        salted.append([n, busiest(join_salted(orders, held, n).parts)])
+        shares.append([n, sum(t.num_rows for t in orders) // n])
+    return {
+        "title": "Sixteen nodes, one heavy customer",
+        "predict": {
+            "label": "Rows on the busiest node",
+            "ask": "the rows the busiest node joins",
+            "placeholder": "rows",
+        },
+        "facts": (
+            "The heaviest customer placed about a fifth of the orders, and the next few many more than "
+            "their share. The orders are ten row groups, dealt out to the nodes in turn."
+        ),
+        "cases": cases,
+        "chart": {
+            "x_label": "nodes",
+            "y_label": "rows on the busiest node",
+            "x_scale": "log",
+            "series": [
+                {"label": "Shuffled by customer", "points": plain},
+                {"label": "Salted", "points": salted},
+                {"label": "An even share", "points": shares},
+            ],
+        },
+    }
+
+
+def stages(root: Path) -> dict:
+    """ch17's query in four stages on sixteen simulated nodes, one node failing in the third
+    stage, with the shuffled rows kept three ways; then a failure in each stage."""
+    from . import stages as st
+
+    _, run = st.spend_by_country(root, 16)
+    total = sum(s.tasks for s in run)
+    written = sum(s.bytes_out for s in run)
+    cases = []
+    for kept, detail in st.KEPT.items():
+        cases.append(
+            {
+                "label": f"Kept {kept}",
+                "detail": detail,
+                "reference": {"label": "Tasks in the query", "value": total},
+                "measured": st.rerun(run, 2, kept),
+                "counters": [["bytes kept between stages", 0 if kept == "nowhere" else written]],
+            }
+        )
+    return {
+        "title": "A node fails in the third stage",
+        "predict": {"label": "Tasks run again", "ask": "the tasks each runs again", "placeholder": "tasks"},
+        "facts": (
+            f"The query runs in {len(run)} stages on sixteen nodes: three of sixteen tasks each, and a "
+            "sort of one. The node fails while the third stage runs."
+        ),
+        "cases": cases,
+        "chart": {
+            "x_label": "the stage the node fails in",
+            "y_label": "tasks run again",
+            "x_scale": "linear",
+            "series": [
+                {
+                    "label": f"Kept {kept}",
+                    "points": [[i + 1, st.rerun(run, i, kept)] for i in range(len(run))],
+                }
+                for kept in st.KEPT
+            ],
+        },
+    }
+
+
 #: Every measure panel, by the name a lab block gives it as ``of``.
 MEASURES: dict[str, Callable[[Path], dict]] = {
     "aggregation": aggregation,
@@ -590,4 +857,8 @@ MEASURES: dict[str, Callable[[Path], dict]] = {
     "planning": planning,
     "rules": rules,
     "join_orders": join_orders,
+    "parallelism": parallelism,
+    "shuffle": shuffle,
+    "skew": skew,
+    "stages": stages,
 }

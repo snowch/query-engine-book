@@ -132,6 +132,11 @@ PARTS = (
         "Part IV: Planning",
         "How does an engine decide what to run for a query, from its text alone?",
     ),
+    Part(
+        "scaling_out",
+        "Part V: Scaling out",
+        "What changes when a query's work is shared among many workers, on one machine or many?",
+    ),
 )
 
 _P = {p.slug: p.title for p in PARTS}
@@ -266,6 +271,46 @@ _CHAPTERS = (
         "joins and each join's build side by dynamic programming over those estimates.",
         ("measure",),
         ("orders-sorted.parquet", "customers.parquet", "countries.parquet"),
+    ),
+    (
+        "parallelism_on_one_machine",
+        "Parallelism on one machine",
+        "scaling_out",
+        "How much faster does a query finish with more cores, and what stops it going faster still?",
+        "Simulated workers that take a row group at a time through a pipeline, counting each "
+        "worker's work and the combining an aggregate needs after them.",
+        ("measure",),
+        ("orders-sorted.parquet", "orders-paged.parquet"),
+    ),
+    (
+        "partitioning_and_shuffle",
+        "Partitioning and shuffle",
+        "scaling_out",
+        "When a table is spread over many machines, what must move between them to answer a query, and how much?",
+        "Simulated nodes that hold a table's row groups, a shuffle and a broadcast that count the "
+        "bytes they send, and an aggregate and a join each done two ways.",
+        ("measure",),
+        ("orders-sorted.parquet", "customers.parquet"),
+    ),
+    (
+        "skew",
+        "Skew",
+        "scaling_out",
+        "What happens when a few keys hold most of the rows, and how can an engine share them out anyway?",
+        "A join whose heaviest keys are salted over several nodes, with the other side's rows copied "
+        "to each, counting the rows on the busiest node.",
+        ("measure",),
+        ("orders-sorted.parquet", "customers.parquet"),
+    ),
+    (
+        "stages_and_distributed_execution",
+        "Stages and distributed execution",
+        "scaling_out",
+        "How does a distributed engine run a whole plan across many machines, and what does it do when one of them fails partway through?",
+        "A query cut into stages at its shuffles and run a stage at a time on simulated nodes, and "
+        "the tasks a failed node costs for each place the rows between stages can be kept.",
+        ("measure",),
+        ("orders-sorted.parquet", "customers.parquet"),
     ),
 )
 

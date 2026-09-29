@@ -1109,6 +1109,131 @@ def _estimates(node: dict, name: str) -> list[int]:
     return found
 
 
+def threads_table() -> str:
+    """ch07's orders per customer run by DuckDB with one thread and with four (ch14): the rows each
+    operator hands up, and the row groups of the file it reads."""
+    text = read_query(ROOT / "queries" / "orders_per_customer.sql")
+    walks = []
+    for threads in (1, 4):
+        con = connect()
+        con.execute(f"SET threads = {threads}")
+        walks.append(list(observe(text, con).metrics.walk()))
+    rows = [
+        f"| {one.operator} | {one.rows_out:,} | {four.rows_out:,} |" for one, four in zip(*walks, strict=True)
+    ]
+    head = "| Operator, top down | Rows out, one thread | Rows out, four threads |\n|---|---:|---:|\n"
+    groups = "\n".join(
+        f"| `{name}` | {pq.ParquetFile(ROOT / 'fixtures' / name).metadata.num_row_groups} |"
+        for name in ("orders-sorted.parquet", "orders-paged.parquet")
+    )
+    return (
+        head
+        + "\n".join(rows)
+        + "\n\n| File | Row groups |\n|---|---:|\n"
+        + groups
+        + "\n"
+        + conditions(
+            f"DuckDB {duckdb.__version__} with one thread and with four",
+            "orders-sorted.parquet` and `fixtures/orders-paged.parquet",
+        )
+    )
+
+
+def partitions_table() -> str:
+    """Where DuckDB's hash of the customer id would send the orders and the customers, on four
+    nodes (ch15)."""
+    con = connect()
+    counts = {}
+    for name in ("orders-sorted.parquet", "customers.parquet"):
+        counts[name] = dict(
+            con.execute(
+                f"SELECT hash(customer_id) % 4 AS node, count(*) FROM 'fixtures/{name}' GROUP BY node"
+            ).fetchall()
+        )
+    rows = [
+        f"| {node} | {counts['orders-sorted.parquet'].get(node, 0):,} | {counts['customers.parquet'].get(node, 0):,} |"
+        for node in range(4)
+    ]
+    head = "| Node, `hash(customer_id) % 4` | Orders | Customers |\n|---:|---:|---:|\n"
+    return (
+        head
+        + "\n".join(rows)
+        + "\n"
+        + duckdb_conditions("orders-sorted.parquet` and `fixtures/customers.parquet")
+    )
+
+
+def unique_keys_table() -> str:
+    """The orders grouped by customer and by order on four simulated nodes, each after a shuffle
+    and in two phases: the bytes each sends (ch15, problem 15.3)."""
+    from . import distributed as d
+
+    orders = d.place(ROOT / "fixtures" / "orders-sorted.parquet", ["order_id", "customer_id", "amount"], 4)
+    rows = []
+    for key in ("customer_id", "order_id"):
+        after, two = d.aggregate_after_shuffle(orders, key), d.aggregate_in_two_phases(orders, key)
+        rows.append(
+            f"| `GROUP BY {key}` | {two.table().num_rows:,} | {after.shuffled:,} | {two.shuffled:,} |"
+        )
+    head = "| Query | Groups | Bytes shuffled, every order | Bytes shuffled, two phases |\n|---|---:|---:|---:|\n"
+    return (
+        head
+        + "\n".join(rows)
+        + "\n"
+        + conditions("the book's engine on four simulated nodes", "orders-sorted.parquet")
+    )
+
+
+def heavy_customers_table() -> str:
+    """The customers with the most orders, counted by DuckDB, and the five its sketch names (ch16)."""
+    con = connect()
+    top = con.execute(
+        "SELECT customer_id, count(*) AS orders, count(*) / (SELECT count(*) FROM 'fixtures/orders-sorted.parquet') "
+        "FROM 'fixtures/orders-sorted.parquet' GROUP BY customer_id ORDER BY orders DESC, customer_id LIMIT 5"
+    ).fetchall()
+    sketch = con.execute(
+        "SELECT approx_top_k(customer_id, 5) FROM 'fixtures/orders-sorted.parquet'"
+    ).fetchone()[0]
+    rows = [f"| {c} | {n:,} | {share:.1%} |" for c, n, share in top]
+    return (
+        "| Customer | Orders | Share of all orders |\n|---:|---:|---:|\n"
+        + "\n".join(rows)
+        + f"\n\n`approx_top_k(customer_id, 5)` names customers {', '.join(map(str, sketch))}.\n"
+        + duckdb_conditions("orders-sorted.parquet")
+    )
+
+
+def busy_month_table() -> str:
+    """The orders partitioned by month over twelve nodes, and the rows a report on March reads on
+    each (ch16, problem 16.3)."""
+    con = connect()
+    rows = con.execute(
+        "SELECT month(order_date) AS node, count(*), count(*) FILTER (WHERE month(order_date) = 3) "
+        "FROM 'fixtures/orders-sorted.parquet' GROUP BY node ORDER BY node"
+    ).fetchall()
+    lines = [f"| {node} | {held:,} | {march:,} |" for node, held, march in rows]
+    head = "| Node, by month | Rows it holds | Rows the March report reads |\n|---:|---:|---:|\n"
+    return head + "\n".join(lines) + "\n" + duckdb_conditions("orders-sorted.parquet")
+
+
+def stages_table() -> str:
+    """ch17's query run in stages on sixteen simulated nodes: each stage's tasks, rows and bytes."""
+    from .stages import spend_by_country
+
+    _, run = spend_by_country(ROOT, 16)
+    rows = [f"| {i + 1}. {s.name} | {s.tasks} | {s.rows_in:,} | {s.bytes_out:,} |" for i, s in enumerate(run)]
+    head = "| Stage | Tasks | Rows in | Bytes shuffled on |\n|---|---:|---:|---:|\n"
+    return (
+        head
+        + "\n".join(rows)
+        + "\n"
+        + conditions(
+            "the book's engine on sixteen simulated nodes",
+            "orders-sorted.parquet` and `fixtures/customers.parquet",
+        )
+    )
+
+
 def orders_recipe() -> str:
     """How the orders were generated, from the generator's own constants and manifest."""
     sys.path.insert(0, str(ROOT / "fixtures"))
@@ -1216,6 +1341,13 @@ FIGURES = (
     ),
     Figure("asian-orders-estimates", join_estimates_table, query="asian_orders.sql"),
     Figure("misestimates", misestimates_table),
+    Figure("threads", threads_table, query="orders_per_customer.sql"),
+    Figure("partitions", partitions_table),
+    Figure("unique-keys", unique_keys_table),
+    Figure("heavy-customers", heavy_customers_table),
+    Figure("busy-month", busy_month_table),
+    Figure("spend-by-country-plan", plan_of("spend_by_country.sql", ORDERS_AND_CUSTOMERS)),
+    Figure("spend-by-country-stages", stages_table, query="spend_by_country.sql"),
     Figure(
         "enterprise-orders-rewritten",
         logical_of("enterprise_orders.sql", ORDERS_AND_CUSTOMERS, rewritten=True),
@@ -1247,6 +1379,10 @@ PANELS = (
     {"experiment": "measure", "of": "planning"},
     {"experiment": "measure", "of": "rules"},
     {"experiment": "measure", "of": "join_orders"},
+    {"experiment": "measure", "of": "parallelism"},
+    {"experiment": "measure", "of": "shuffle"},
+    {"experiment": "measure", "of": "skew"},
+    {"experiment": "measure", "of": "stages"},
 )
 
 

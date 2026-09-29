@@ -1,0 +1,153 @@
+{
+ "experiment": "measure",
+ "of": "skew",
+ "engine": "the book's engine",
+ "title": "Sixteen nodes, one heavy customer",
+ "predict": {
+  "label": "Rows on the busiest node",
+  "ask": "the rows the busiest node joins",
+  "placeholder": "rows"
+ },
+ "facts": "The heaviest customer placed about a fifth of the orders, and the next few many more than their share. The orders are ten row groups, dealt out to the nodes in turn.",
+ "cases": [
+  {
+   "label": "Shuffled by customer",
+   "detail": "ch15's shuffle join",
+   "reference": {
+    "label": "An even share",
+    "value": 1250
+   },
+   "measured": 4442,
+   "counters": [
+    [
+     "bytes shuffled",
+     302056
+    ],
+    [
+     "rows out",
+     20000
+    ]
+   ]
+  },
+  {
+   "label": "The heaviest customers salted",
+   "detail": "their orders spread over 16 nodes",
+   "reference": {
+    "label": "An even share",
+    "value": 1250
+   },
+   "measured": 2188,
+   "counters": [
+    [
+     "bytes shuffled",
+     300168
+    ],
+    [
+     "rows out",
+     20000
+    ]
+   ]
+  },
+  {
+   "label": "The customers broadcast",
+   "detail": "the orders stay where they are",
+   "reference": {
+    "label": "An even share",
+    "value": 1250
+   },
+   "measured": 2000,
+   "counters": [
+    [
+     "bytes shuffled",
+     156120
+    ],
+    [
+     "rows out",
+     20000
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "nodes",
+  "y_label": "rows on the busiest node",
+  "x_scale": "log",
+  "series": [
+   {
+    "label": "Shuffled by customer",
+    "points": [
+     [
+      2,
+      10415
+     ],
+     [
+      4,
+      6042
+     ],
+     [
+      8,
+      5348
+     ],
+     [
+      16,
+      4442
+     ],
+     [
+      32,
+      4001
+     ]
+    ]
+   },
+   {
+    "label": "Salted",
+    "points": [
+     [
+      2,
+      10415
+     ],
+     [
+      4,
+      6210
+     ],
+     [
+      8,
+      4582
+     ],
+     [
+      16,
+      2188
+     ],
+     [
+      32,
+      946
+     ]
+    ]
+   },
+   {
+    "label": "An even share",
+    "points": [
+     [
+      2,
+      10000
+     ],
+     [
+      4,
+      5000
+     ],
+     [
+      8,
+      2500
+     ],
+     [
+      16,
+      1250
+     ],
+     [
+      32,
+      625
+     ]
+    ]
+   }
+  ]
+ }
+}

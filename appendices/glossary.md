@@ -21,6 +21,9 @@ to, checked against the tables' schemas. [ch11](#from-sql-to-a-logical-plan)
 way it went before, so the processor can start on the guessed path at once.
 [ch06](#expressions-and-vectorised-kernels)
 
+**Broadcast.** Sending a copy of a whole, small table to every machine, so that a join need not move
+the large one. [ch15](#partitioning-and-shuffle)
+
 **Build side.** The input a hash join reads first and holds, in a hash table on its key, until the
 join ends. [ch08](#joins)
 
@@ -90,6 +93,9 @@ engine finds a row's group, or a row's match. [ch07](#hash-aggregation)
 element is always the best: the top-k keeps the worst of its rows there, to replace it cheaply.
 [ch09](#sorting-and-top-k)
 
+**Heavy hitter.** A key that holds far more than its share of the rows: a customer who placed a fifth
+of the orders. [ch16](#skew)
+
 **Hive partitioning.** Laying out a table's files in directories named for a column's value, such
 as `month=2024-03`, so a reader can rule out a file from its path. [ch05](#where-work-happens)
 
@@ -113,6 +119,9 @@ together and needs no table. [ch08](#joins)
 
 **Misprediction.** A branch that goes the other way from the branch predictor's guess, so the work
 started on the guessed path is thrown away. [ch06](#expressions-and-vectorised-kernels)
+
+**Morsel.** A slice of a query's input one worker takes at a time; for a Parquet scan, a row group.
+[ch14](#parallelism-on-one-machine)
 
 **Offset index.** Part of a Parquet file's page index: where each page of a column chunk starts,
 and the first row it holds. [ch04](#statistics-and-pruning)
@@ -139,6 +148,9 @@ subtracting the smallest key: possible when the keys are whole numbers from a sm
 
 **Physical plan.** The operators an engine will run for a query, and how rows flow between them.
 DuckDB draws it for `EXPLAIN`. [ch01](#the-plan-is-the-map)
+
+**Pipeline.** The operators a morsel passes through, from the scan up to the first operator that must
+see all its input before it can hand anything up. [ch14](#parallelism-on-one-machine)
 
 **Predicate.** A condition that each row either meets or does not, such as
 `status = 'returned'`. [ch01](#the-plan-is-the-map)
@@ -174,10 +186,16 @@ data: moving a condition down, reading fewer columns. [ch12](#optimiser-rules)
 **Row group.** A horizontal slice of a Parquet file: every column's values for a run of rows,
 with statistics for each column. [ch01](#the-plan-is-the-map)
 
+**Salt.** A small number taken from a row and added to a heavy key, so that the key's rows spread over
+several machines instead of one. [ch16](#skew)
+
 **Scan.** The operator that reads rows from storage: the only operator that reads.
 [ch01](#the-plan-is-the-map)
 
 **Selectivity.** The fraction of its input rows a predicate keeps. [ch01](#the-plan-is-the-map)
+
+**Shuffle.** Sending every row to the machine that owns its key, by the key's hash, so that rows with
+equal keys meet. [ch15](#partitioning-and-shuffle)
 
 **SIMD.** Single instruction, multiple data: instructions that apply one operation to every lane of
 a wide register at once. [ch06](#expressions-and-vectorised-kernels)
@@ -185,9 +203,15 @@ a wide register at once. [ch06](#expressions-and-vectorised-kernels)
 **Sorted run.** A sequence of rows already in order: part of the input a sort finds in order, or a
 piece of a large sort written to disk, to be merged with the others. [ch09](#sorting-and-top-k)
 
+**Speedup.** How many times sooner a query finishes with several workers than with one.
+[ch14](#parallelism-on-one-machine)
+
 **Spilling.** Writing what does not fit in memory to temporary storage, to read it back later: a
 query finishes in less memory, and pays in bytes written and read.
 [ch10](#memory-limits-and-spilling)
+
+**Stage.** The operators between two shuffles of a distributed plan, run the same way on every
+machine over that machine's rows. [ch17](#stages-and-distributed-execution)
 
 **Syntax tree.** The parts of a query's text as a tree, as the text wrote them, before any name in it
 is checked. [ch11](#from-sql-to-a-logical-plan)
@@ -195,6 +219,8 @@ is checked. [ch11](#from-sql-to-a-logical-plan)
 **Table metadata.** A file kept beside a table's data files that lists each of them with the
 smallest and largest value of every column, so a reader can rule out a file without opening it.
 [ch05](#where-work-happens)
+
+**Task.** One machine's run of a stage. [ch17](#stages-and-distributed-execution)
 
 **Token.** One word, number, string or operator of a query's text: what a parser reads, once the
 spaces and comments are dropped. [ch11](#from-sql-to-a-logical-plan)

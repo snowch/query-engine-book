@@ -1,0 +1,129 @@
+{
+ "experiment": "measure",
+ "of": "stages",
+ "engine": "the book's engine",
+ "title": "A node fails in the third stage",
+ "predict": {
+  "label": "Tasks run again",
+  "ask": "the tasks each runs again",
+  "placeholder": "tasks"
+ },
+ "facts": "The query runs in 4 stages on sixteen nodes: three of sixteen tasks each, and a sort of one. The node fails while the third stage runs.",
+ "cases": [
+  {
+   "label": "Kept nowhere",
+   "detail": "passed straight on, kept by no one",
+   "reference": {
+    "label": "Tasks in the query",
+    "value": 49
+   },
+   "measured": 48,
+   "counters": [
+    [
+     "bytes kept between stages",
+     0
+    ]
+   ]
+  },
+  {
+   "label": "Kept on the node",
+   "detail": "on the disk of the node that wrote it",
+   "reference": {
+    "label": "Tasks in the query",
+    "value": 49
+   },
+   "measured": 3,
+   "counters": [
+    [
+     "bytes kept between stages",
+     382120
+    ]
+   ]
+  },
+  {
+   "label": "Kept in shared storage",
+   "detail": "in storage every node can read",
+   "reference": {
+    "label": "Tasks in the query",
+    "value": 49
+   },
+   "measured": 1,
+   "counters": [
+    [
+     "bytes kept between stages",
+     382120
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "the stage the node fails in",
+  "y_label": "tasks run again",
+  "x_scale": "linear",
+  "series": [
+   {
+    "label": "Kept nowhere",
+    "points": [
+     [
+      1,
+      16
+     ],
+     [
+      2,
+      32
+     ],
+     [
+      3,
+      48
+     ],
+     [
+      4,
+      49
+     ]
+    ]
+   },
+   {
+    "label": "Kept on the node",
+    "points": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      2
+     ],
+     [
+      3,
+      3
+     ],
+     [
+      4,
+      4
+     ]
+    ]
+   },
+   {
+    "label": "Kept in shared storage",
+    "points": [
+     [
+      1,
+      1
+     ],
+     [
+      2,
+      1
+     ],
+     [
+      3,
+      1
+     ],
+     [
+      4,
+      1
+     ]
+    ]
+   }
+  ]
+ }
+}
