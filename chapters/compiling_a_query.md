@@ -71,8 +71,8 @@ ways again in your browser.
   node once a batch.
 - **The compiled loop writes only the result and visits nothing.** The compiler visited each node
   once, before any row was read.
-- **The compiled loop runs the most instructions.** It computes one value at a time, where a kernel
-  fills every lane of the vector unit. That is what it gives up.
+- **The compiled loop runs several times the instructions of a batch at a time.** It computes one
+  value at a time, where a kernel fills every lane of the vector unit. That is what it gives up.
 - **The chart lengthens the computed column.** Every operation adds an array to the interpreter's
   bytes; the compiled loop's stay where they were.
 
@@ -106,7 +106,7 @@ experiment: measure
 of: compiling
 ```
 
-Stop it sharing, changing `if uses[expr] > 1` to `if False`, and run the panel's report on your
+Stop it sharing, changing `uses[expr] > 1` to `False`, and run the panel's report on your
 edit: the compiled loop's instructions rise by a division for every order it returns, the second
 unit price DuckDB computed too.
 
@@ -185,7 +185,8 @@ each; they check the generated code is one loop, and computes a shared value onc
   loop it writes decides nothing as it runs.
 - **Values stay in variables.** A compiled loop writes only its result; an interpreter writes an
   array for every kernel and a batch for every filter.
-- **A kernel fills the vector lanes; a loop fills one.** The compiled loop runs more instructions.
+- **A kernel fills the vector lanes; a loop fills one.** The compiled loop runs more instructions
+  than the kernels do.
 - **Compiling costs once a query, interpreting once a batch.** Which is cheaper depends on how
   many batches a query runs over.
 :::
