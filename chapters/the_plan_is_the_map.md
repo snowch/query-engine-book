@@ -24,7 +24,9 @@ its own answer:
 go; the profile says how much of it went through each part of the map. This chapter reads both for
 one query, then builds the same plan and checks it against them.
 
-A query pays in four ways, and the rest of the book measures each:
+Engines count many things, and a query costs more than any one table can hold: processor time,
+requests to storage, decompression, waiting for other threads. Four kinds of cost recur throughout
+this book, and the rest of it measures each:
 
 | What a query pays | The question it asks | Where the book measures it |
 |---|---|---|
@@ -33,8 +35,8 @@ A query pays in four ways, and the rest of the book measures each:
 | Memory held | How much did a step hold at once? | [Part III](#part-computing) |
 | Rows sent between machines | How much crossed from one machine to another? | [Part V](#part-scaling-out) |
 
-Every design choice in the book makes an engine read less, move less, hold less or send less, and
-every chapter measures which.
+They are the book's way of looking at a query, not a complete list. Every design choice in the book
+makes an engine read less, move less, hold less or send less, and every chapter measures which.
 
 ## Observe
 
@@ -56,7 +58,9 @@ back is the physical plan, drawn as DuckDB draws it in a terminal:
 ```{include} _generated/returned-orders-explain.md
 ```
 
-The whole plan is one box. Each box is an **operator**: one job, with one input and one output.
+DuckDB draws a plan with the first operator to touch the data at the bottom and the result at the
+top, and the rows travel upwards. The whole plan is one box. Each box is an **operator**: one job,
+with one input and one output.
 This one is a **scan**, the operator that reads rows from storage, and it does three things at
 once. It reads only the columns the query names, its `Projections`. It tests each row's status as
 it reads it, its `Filters`. And it hands up only the rows that pass. The status test is a
@@ -79,8 +83,11 @@ The plan grew two operators. The new predicate divides one column by another, an
 only a column against a constant, so the price test gets an operator of its own: a **filter**,
 which keeps the rows for which a predicate is true. The unit price is computed, not read, so a
 **projection** computes the columns the query returns from the columns it is given. The status
-test stayed in the scan. Read the plan from the bottom, as the rows travel: the scan hands up the
-returned orders, the filter keeps the dear ones, and the projection computes their unit price.
+test stayed in the scan.
+
+**Read a plan from the bottom up, the way the rows travel.** The scan at the bottom hands up the
+returned orders, the filter above it keeps the dear ones, and the projection at the top computes
+their unit price. The top of the plan is where the rows end up, not where the work starts.
 
 A plan tells you what the engine intends. To see what it did, you run the query with profiling on,
 and DuckDB writes the profile: the same operators, each with the rows it took in and handed out.
@@ -92,8 +99,8 @@ section sets the profile beside the plan.
 In the chapters that follow, you predict what an operator will do before you measure it. Here
 the prediction is the planner's: `EXPLAIN` printed an estimate for each operator before the
 query ran, and running the query measures what each operator did. The panel sets the two side by
-side, operator by operator. The profile names the scan `TABLE_SCAN`, where the plan drew it as
-`PARQUET_SCAN`.
+side, operator by operator. DuckDB calls the scan `PARQUET_SCAN` in the plan and
+`TABLE_SCAN` in the profile: two names for the same operator, not two operators.
 
 Above the plan are two changes to try: a higher price threshold, and shipped orders in place of
 returned ones. Before you press either, look at the plan and decide which of its operators each
@@ -141,14 +148,16 @@ The profile, read as a journey from the file to the result:
 That is the book in miniature. Every later chapter asks what happened to a flow of rows like this
 one, and what each step of it cost.
 
-The measurements are no mystery. They follow from the generator's recipe:
+**The measurements are predictable because you know how the fixture was generated. The planner
+does not: it has to estimate from what the file tells it.** For the curious, the generator's
+recipe:
 
 ```{include} _generated/orders-recipe.md
 ```
 
-You know the recipe, and the planner does not. Problem 1.2 asks you to work the measurements out
-from it; [ch13](#statistics-cost-and-join-order) gives a planner part of the same knowledge, from
-what a file says about itself.
+Problem 1.2 asks you to work the measurements out from it;
+[ch13](#statistics-cost-and-join-order) gives a planner part of the same knowledge, from what a
+file says about itself.
 
 Keep the book's three measurements. When you build the same plan in the next section, your
 operators report the same counters, and they must agree with these.
@@ -170,8 +179,9 @@ out, the counters in COUNTERS.md.
 
 The scan is the only operator that reads. A Parquet file is cut into **row groups**: horizontal
 slices of the table, each holding every column's values for a run of rows. The scan reads the
-columns it is asked for, a row group at a time, through the Parquet reader from *Parquet, byte by
-byte*, and hands up one batch per row group. A filter evaluates its predicate on each batch and
+columns it is asked for from each row group and decodes them into Arrow arrays, one batch per row
+group. The reader underneath it comes from this book's companion, which takes the file's layout
+apart; this book needs only the row groups. A filter evaluates its predicate on each batch and
 hands up the rows that are true; a projection computes each output column from the batch it
 receives.
 
@@ -235,6 +245,11 @@ filter is the one the scan never hands up.
 jobs and hand up the same rows; DuckDB's does one of the jobs inside its scan, where yours gives it
 an operator of its own, and pays for it in rows moved.
 
+So the next question is not how fast a query runs. It is **how much work the engine can avoid doing
+in the first place**: which columns, row groups and rows it need never read or hand up. That is
+[Part II](#part-reading-less)'s question, from [ch03](#projection-and-filter-pushdown). First,
+[ch02](#batches-in-memory) opens the batches the rows travel in, to see what moving one costs.
+
 ## What this cannot tell you
 
 - **How long anything took.** The counters say how much work each operator did, not how fast.
@@ -260,7 +275,8 @@ an operator of its own, and pays for it in rows moved.
 
 Read any plan in five steps, and each step points at a part of the book:
 
-1. **Start at the scan.** What enters the engine: which files, which columns, which rows?
+1. **Start at the bottom, at the scan.** What enters the engine: which files, which columns,
+   which rows?
 2. **Move up.** Where are rows dropped, computed or combined?
 3. **Compare the estimates with the measurements.** Where did the planner guess wrong, and did it
    matter? ([Part IV](#part-planning))
