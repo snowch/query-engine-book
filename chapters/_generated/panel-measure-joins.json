@@ -1,0 +1,127 @@
+{
+ "experiment": "measure",
+ "of": "joins",
+ "engine": "the book's engine",
+ "title": "Joining the orders and their customers",
+ "predict": {
+  "label": "Cache misses",
+  "ask": "the cache misses of each",
+  "placeholder": "cache misses"
+ },
+ "facts": "The join holds its build side: a table of 16-byte slots, and each row at 8 bytes a column plus 8. The cache holds 512 lines of 64 bytes.",
+ "cases": [
+  {
+   "label": "Build on the customers",
+   "detail": "customers: 1 row each",
+   "reference": {
+    "label": "Rows joined",
+    "value": 20000
+   },
+   "measured": 2404,
+   "counters": [
+    [
+     "build rows",
+     1000
+    ],
+    [
+     "held bytes",
+     48768
+    ],
+    [
+     "probes",
+     25259
+    ]
+   ]
+  },
+  {
+   "label": "Build on the orders",
+   "detail": "orders: many rows per customer",
+   "reference": {
+    "label": "Rows joined",
+    "value": 20000
+   },
+   "measured": 19689,
+   "counters": [
+    [
+     "build rows",
+     20000
+    ],
+    [
+     "held bytes",
+     352768
+    ],
+    [
+     "probes",
+     26847
+    ]
+   ]
+  },
+  {
+   "label": "Build on enterprise customers",
+   "detail": "segment = 'enterprise'",
+   "reference": {
+    "label": "Rows joined",
+    "value": 6642
+   },
+   "measured": 298,
+   "counters": [
+    [
+     "build rows",
+     232
+    ],
+    [
+     "held bytes",
+     11904
+    ],
+    [
+     "probes",
+     48402
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "build rows",
+  "y_label": "cache misses while probing",
+  "x_scale": "log",
+  "series": [
+   {
+    "label": "Every order probing a build side of that many orders",
+    "points": [
+     [
+      256,
+      130
+     ],
+     [
+      512,
+      258
+     ],
+     [
+      1024,
+      3081
+     ],
+     [
+      2048,
+      15407
+     ],
+     [
+      4096,
+      23876
+     ],
+     [
+      8192,
+      30537
+     ],
+     [
+      16384,
+      38187
+     ],
+     [
+      20000,
+      42286
+     ]
+    ]
+   }
+  ]
+ }
+}

@@ -9,7 +9,8 @@
 // The edit is kept in the browser's storage, and reopens its editor on a reload.
 //
 // A quoted query, the first on each page: an edited query must draw what a desk's report prints
-// for the same text, and a broken one must report DuckDB's error.
+// for the same text, and mark every figure and panel computed for the book's query as the book's,
+// until reset; a broken one must report DuckDB's error.
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
@@ -17,7 +18,9 @@ import { join, resolve } from "node:path";
 import { ORIGIN, directory, launch, openPage } from "./chromium.mjs";
 
 const site = resolve(process.argv[2] || "_build/html");
-const pages = readdirSync(site).filter((f) => f.endsWith(".html") && readFileSync(join(site, f), "utf8").includes('class="quoted"'));
+// ONLY=<part of a file name> checks one page, while working on it.
+const pages = readdirSync(site).filter((f) => f.endsWith(".html") && readFileSync(join(site, f), "utf8").includes('class="quoted"')
+  && (!process.env.ONLY || f.includes(process.env.ONLY)));
 
 function check(ok, message) {
   if (!ok) throw new Error(message);
@@ -82,11 +85,16 @@ try {
           check(got.ready === "true" && got.status.startsWith("Your query"), `${label}, edited: ${got.status}`);
           const want = operators(desk(name.slice("queries/".length), EDITED).root);
           check(JSON.stringify(got.operators) === JSON.stringify(want), `${label}: drew ${got.operators}, the desk ${want}`);
+          // Every figure and panel computed for the book's query now says so, and reset clears it.
+          const tagged = await page.$$eval(`#main [data-query="${name.slice("queries/".length)}"]`,
+            (els) => els.map((e) => e.dataset.stale === "true" && !!e.querySelector(":scope > .stale-note")));
+          check(tagged.every(Boolean), `${label}: ${tagged.filter((t) => !t).length} of the book's figures were not marked`);
           await editor.fill("SELECT nothing FROM nowhere");
           const broken = await run(page, figure);
           check(broken.ready === "error" && broken.status.startsWith("DuckDB could not run your query"), `${label}, broken: ${broken.status}`);
           await (await figure.$(".edit-reset")).click();
-          console.log(`  ${label}: an edited query draws the desk's plan, and a broken one DuckDB's error`);
+          check(await page.$$eval("#main [data-stale]", (els) => els.length) === 0, `${label}: reset left figures marked`);
+          console.log(`  ${label}: an edited query draws the desk's plan, marks the book's figures, and a broken one DuckDB's error`);
         } else {
           const shipped = await run(page, figure);
           check(shipped.ready === "true", `${label}, as the book quotes it: ${shipped.status}`);

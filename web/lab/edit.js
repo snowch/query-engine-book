@@ -56,6 +56,20 @@ function testResults(root, report) {
   return passed;
 }
 
+/**
+ * Say which of the page's figures and panels were computed for the book's query, while the
+ * reader's edit of it is what ran last; `edited` false takes the notes away again.
+ */
+function markTheBooks(query, edited) {
+  for (const node of document.querySelectorAll(`#main [data-query="${CSS.escape(query)}"]`)) {
+    node.querySelector(":scope > .stale-note")?.remove();
+    delete node.dataset.stale;
+    if (!edited) continue;
+    node.dataset.stale = "true";
+    node.prepend(el("p", "stale-note", "Computed for the book's query, not your edit of it. Reset the query, and this matches again."));
+  }
+}
+
 function mountEdit(figure, then) {
   const file = figure.dataset.file;
   const pre = figure.querySelector(":scope > pre");
@@ -80,6 +94,7 @@ function mountEdit(figure, then) {
     result.remove();
     editor = result = null;
     pre.hidden = false;
+    if (query) markTheBooks(file.slice("queries/".length), false);
     open.textContent = "Edit and run";
     delete figure.dataset.editing;
   }
@@ -130,6 +145,7 @@ function mountEdit(figure, then) {
       body.replaceChildren();
       status.classList.remove("lab-error");
       status.textContent = "Reset to the code the book quotes.";
+      if (query) markTheBooks(file.slice("queries/".length), false);
     });
     run.addEventListener("click", async () => {
       run.disabled = true;
@@ -144,8 +160,9 @@ function mountEdit(figure, then) {
           const json = await runReport({ experiment: "plan", query: name, sql: text }, (t) => { status.textContent = t; });
           EXPERIMENTS.plan(body, JSON.parse(json), { store: revealed, key });
           status.textContent = edited
-            ? "Your query, run in your browser by DuckDB under Pyodide."
+            ? "Your query, run in your browser by DuckDB under Pyodide. The figures computed for the book's query say so."
             : "The book's query, run in your browser by DuckDB under Pyodide.";
+          markTheBooks(name, edited);
         } else {
           const answer = JSON.parse(await runEdit(file, listing, text, then, (t) => { status.textContent = t; }));
           if (answer.error) throw new Error(answer.error);

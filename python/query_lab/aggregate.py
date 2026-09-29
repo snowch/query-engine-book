@@ -121,6 +121,24 @@ class HashTable:
                 return group, False
             i = (i + 1) & mask
 
+    def get(self, key: object) -> int | None:
+        """The group number of ``key``, or None if the table has no such key: a lookup that
+        never inserts, as a join's probe side makes (ch08)."""
+        h = hash_key(key)
+        self.lookups += 1
+        mask = self.capacity - 1
+        i = h & mask
+        while True:
+            self.probes += 1
+            if self.cache is not None:
+                self.cache.read(f"{self.name} {self.resizes}", i * SLOT_BYTES, SLOT_BYTES)
+            group = self.slots[i]
+            if group == -1:
+                return None
+            if self.hashes[group] == h and self.keys[group] == key:
+                return group
+            i = (i + 1) & mask
+
     def _grow(self) -> None:
         """Double the slots and put every group back, in its new slot."""
         self.capacity *= 2

@@ -202,6 +202,16 @@ _CHAPTERS = (
         ("measure",),
         ("orders-sorted.parquet",),
     ),
+    (
+        "joins",
+        "Joins",
+        "computing",
+        "Which side of a join does an engine hold, and what does holding it cost?",
+        "A hash join that builds a table on one input and probes it with the other, holding the "
+        "build rows through the cache model, beside DuckDB's choice of build side.",
+        ("measure",),
+        ("orders-sorted.parquet", "orders-shuffled.parquet", "customers.parquet"),
+    ),
 )
 
 CHAPTERS = tuple(

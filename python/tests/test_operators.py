@@ -10,7 +10,7 @@ import pyarrow.compute as pc
 import pytest
 
 from query_lab.operators import Filter, Project, Scan
-from query_lab.plans import DUCKDB_PARTNERS, PLANS, plan_for
+from query_lab.plans import DUCKDB_PARTNERS, PLANS, duckdb_partner, plan_for
 from query_lab.reference import observe, read_query
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -37,10 +37,10 @@ def test_every_plan_counts_as_duckdb_does_where_they_do_the_same_job(query):
     plan = plan_for(ROOT, query)
     plan.run()
     plan.metrics.check()
-    theirs = {m.operator: m for m in observe(read_query(ROOT / "queries" / query)).metrics.walk()}
+    theirs = list(observe(read_query(ROOT / "queries" / query)).metrics.walk())
     for ours, partner in zip(plan.metrics.walk(), DUCKDB_PARTNERS[query], strict=True):
         if partner is not None:
-            assert (ours.operator, ours.rows_out) == (ours.operator, theirs[partner].rows_out), partner
+            assert ours.rows_out == duckdb_partner(theirs, partner).rows_out, partner
 
 
 def test_the_scan_reads_what_the_reader_logged_and_hands_up_a_batch_per_row_group():

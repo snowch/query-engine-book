@@ -51,6 +51,7 @@ ROOT = Path(__file__).resolve().parent.parent
 for path in (ROOT / "external" / "parquet-book" / "python", ROOT / "python"):
     if str(path) not in sys.path:
         sys.path.insert(0, str(path))
+from query_lab.figures import QUERY_OF_FRAGMENT  # noqa: E402
 from query_lab.report import panel_name  # noqa: E402
 
 REPO_URL = "https://github.com/snowch/query-engine-book/blob/main/"
@@ -319,7 +320,11 @@ def render(node: dict, footnotes: list | None = None, label: str = "") -> str:
                 + "".join(render(c, footnotes) for c in node.get("children", []))
                 + "</figure>"
             )
-        return f'<div class="generated">{children()}</div>'
+        # A fragment computed from a query carries the query's name, so the page can say which
+        # figures are the book's when the reader runs their own edit of that query.
+        query = QUERY_OF_FRAGMENT.get(Path(_repo_path(node)).name)
+        attr = f' data-query="{html.escape(query)}"' if query else ""
+        return f'<div class="generated"{attr}>{children()}</div>'
     if kind == "blockquote":
         return f"<blockquote>{children()}</blockquote>"
     if kind == "list":

@@ -156,6 +156,20 @@ Invariants: `probes >= lookups`, and no more than three quarters of a hash table
 full; a perfect table's `probes` is its `lookups`. `python/tests/test_aggregate.py` holds the
 table to them, and its groups to DuckDB's.
 
+**The hash join** (`python/query_lab/join.py`, ch08) holds its build side: ch07's hash table
+over the build rows' keys, and the rows themselves, eight bytes per column plus eight for the
+link to the next row with the same key. Given a cache, each probe's slots and each matched build
+row are reads of the cache model.
+
+| Field | Meaning |
+|---|---|
+| `build_rows` | Rows the build side handed up, every one held until the join ends. |
+| `held_bytes` | The rows as held, and the table's slots: what the join keeps in memory. |
+
+The table's own counters (`lookups`, `probes`, `resizes`, `table_bytes`) count the build's
+inserts and the probe side's lookups together. `python/tests/test_join.py` checks the join's rows
+against DuckDB's, from either build side.
+
 ## What the counters leave out
 
 Counters say how much work was done, not how long it took. Two plans with the same counters can

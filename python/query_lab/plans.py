@@ -1,4 +1,4 @@
-"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch07).
+"""Plans written by hand, one for each query in ``queries/`` that the engine runs (ch01 to ch08).
 
 The engine has no planner yet: that is Part IV. Until then, each query the book runs through
 the engine has a plan here, built from operators the way DuckDB's ``EXPLAIN`` drew its own,
@@ -20,6 +20,7 @@ import pyarrow.parquet as pq
 from .aggregate import Aggregate, HashAggregate, HashTable, PerfectTable
 from .cache import Cache
 from .expressions import Call, Column, Literal, evaluate
+from .join import HashJoin
 from .memory import fixed_width_array, gather
 from .operators import Comparison, Filter, Operator, Project, Scan, TableScan
 from .storage import ComputingStore, StorageScan
@@ -206,6 +207,36 @@ def orders_per_status(root: Path) -> Operator:
     return HashAggregate(scan, ["status"], ORDERS_AND_SPEND)
 
 
+def orders_with_country(root: Path) -> Operator:
+    """queries/orders_with_country.sql: a hash join, built on the table written second, the
+    customers, and probed by the orders (ch08). Your engine has no planner, so it builds on
+    whichever side the query names second."""
+    fixtures = root / "fixtures"
+    orders = Scan(fixtures / "orders-sorted.parquet", ["order_id", "customer_id"])
+    customers = Scan(fixtures / "customers.parquet", ["customer_id", "country"])
+    return HashJoin(
+        orders, customers, "customer_id", "customer_id", [("probe", "order_id"), ("build", "country")]
+    )
+
+
+def customers_with_orders(root: Path) -> Operator:
+    """queries/customers_with_orders.sql: the same join written the other way round, so your engine
+    builds on the orders and probes with the customers (ch08)."""
+    fixtures = root / "fixtures"
+    customers = Scan(fixtures / "customers.parquet", ["customer_id", "country"])
+    orders = Scan(fixtures / "orders-sorted.parquet", ["order_id", "customer_id"])
+    return HashJoin(
+        customers, orders, "customer_id", "customer_id", [("build", "order_id"), ("probe", "country")]
+    )
+
+
+def duckdb_partner(walk: list, name: str):
+    """The operator of DuckDB's profile ``name`` names, in the order the profile walks its tree:
+    ``TABLE_SCAN`` is the first scan, ``TABLE_SCAN#2`` the second."""
+    operator, _, nth = name.partition("#")
+    return [m for m in walk if m.operator == operator][int(nth or 1) - 1]
+
+
 #: Each plan, by the query file it answers.
 PLANS: dict[str, Callable[[Path], Operator]] = {
     "returned_unit_price.sql": returned_unit_price,
@@ -216,13 +247,16 @@ PLANS: dict[str, Callable[[Path], Operator]] = {
     "with_tax.sql": with_tax,
     "orders_per_customer.sql": orders_per_customer,
     "orders_per_status.sql": orders_per_status,
+    "orders_with_country.sql": orders_with_country,
+    "customers_with_orders.sql": customers_with_orders,
 }
 
 #: For each plan, the DuckDB operator that does the same job as each of the plan's operators,
 #: top down, or None where DuckDB has no operator of its own for it. DuckDB tests
 #: ``status = 'returned'`` inside its scan, so its scan's output is the output of this plan's
-#: first filter, and this plan's scan has no partner. tests/test_operators.py requires each pair
-#: to produce the same rows.
+#: first filter, and this plan's scan has no partner. A name that appears twice in DuckDB's profile
+#: takes its place in the profile's walk, as ``TABLE_SCAN#2`` (:func:`duckdb_partner`).
+#: tests/test_operators.py requires each pair to produce the same rows.
 DUCKDB_PARTNERS: dict[str, list[str | None]] = {
     "returned_unit_price.sql": ["PROJECTION", "FILTER", "TABLE_SCAN", None],
     "early_march.sql": ["TABLE_SCAN"],
@@ -232,6 +266,8 @@ DUCKDB_PARTNERS: dict[str, list[str | None]] = {
     "with_tax.sql": ["PROJECTION", "FILTER", None],
     "orders_per_customer.sql": ["PERFECT_HASH_GROUP_BY", "TABLE_SCAN"],
     "orders_per_status.sql": ["HASH_GROUP_BY", "TABLE_SCAN"],
+    "orders_with_country.sql": ["HASH_JOIN", "TABLE_SCAN", "TABLE_SCAN#2"],
+    "customers_with_orders.sql": ["HASH_JOIN", "TABLE_SCAN#2", "TABLE_SCAN"],
 }
 
 

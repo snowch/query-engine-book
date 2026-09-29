@@ -39,6 +39,14 @@ OUT = ROOT / "chapters" / "_generated"
 class Figure:
     name: str
     make: Callable[[], str]
+    #: The query in ``queries/`` the figure was computed from, if it was: a page marks the
+    #: figure as the book's when the reader runs their own edit of that query. A figure made by
+    #: one of the ``*_of(query, ...)`` functions knows its query already.
+    query: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.query is None:
+            object.__setattr__(self, "query", getattr(self.make, "query", None))
 
 
 def conditions(what: str, fixture: str) -> str:
@@ -76,6 +84,7 @@ def plan_of(query: str, fixture: str) -> Callable[[], str]:
         head = "| Operator | Rows out, estimated | What it does |\n|---|---:|---|\n"
         return head + "\n".join(rows) + "\n" + duckdb_conditions(fixture)
 
+    make.query = query
     return make
 
 
@@ -126,6 +135,7 @@ def engine_of(query: str, fixture: str) -> Callable[[], str]:
         plan.run()
         return engine_table(plan.metrics) + conditions("the book's engine", fixture)
 
+    make.query = query
     return make
 
 
@@ -135,10 +145,10 @@ def compare_of(query: str, fixture: str) -> Callable[[], str]:
     def make() -> str:
         plan = plans.plan_for(ROOT, query)
         plan.run()
-        theirs = {m.operator: m for m in observe(read_query(ROOT / "queries" / query)).metrics.walk()}
+        theirs = list(observe(read_query(ROOT / "queries" / query)).metrics.walk())
         rows = []
         for m, partner in zip(plan.metrics.walk(), plans.DUCKDB_PARTNERS[query], strict=True):
-            duck = theirs[partner] if partner else None
+            duck = plans.duckdb_partner(theirs, partner) if partner else None
             rows.append(
                 f"| {m.operator} `{m.detail}` | {m.rows_in:,} | {m.rows_out:,} | "
                 + (f"{duck.operator} | {duck.rows_in:,} | {duck.rows_out:,} |" if duck else "none | | |")
@@ -154,6 +164,7 @@ def compare_of(query: str, fixture: str) -> Callable[[], str]:
             + conditions(f"the book's engine and DuckDB {duckdb.__version__} with one thread", fixture)
         )
 
+    make.query = query
     return make
 
 
@@ -163,6 +174,7 @@ def profile_of(query: str, fixture: str) -> Callable[[], str]:
     def make() -> str:
         return profile_table(observe(read_query(ROOT / "queries" / query))) + duckdb_conditions(fixture)
 
+    make.query = query
     return make
 
 
@@ -189,6 +201,7 @@ def first_rows_of(query: str, fixture: str, columns: list[str]) -> Callable[[], 
         lines += ["| " + " | ".join(_value(r[c]) for c in columns) + " |" for r in rows]
         return "\n".join(lines) + "\n" + duckdb_conditions(fixture)
 
+    make.query = query
     return make
 
 
@@ -226,6 +239,7 @@ def arrow_buffers_of(query: str, fixture: str) -> Callable[[], str]:
             )
         return "\n".join(lines) + "\n" + duckdb_conditions(fixture)
 
+    make.query = query
     return make
 
 
@@ -247,6 +261,7 @@ def buffers_compare_of(query: str, fixture: str) -> Callable[[], str]:
             + conditions(f"the book's engine and DuckDB {duckdb.__version__} with one thread", fixture)
         )
 
+    make.query = query
     return make
 
 
@@ -337,6 +352,7 @@ def row_groups_of(query: str, fixture: str) -> Callable[[], str]:
         )
         return "\n".join(lines) + "\n" + conditions("the book's engine", fixture)
 
+    make.query = query
     return make
 
 
@@ -670,6 +686,65 @@ def wider_keys_table() -> str:
     )
 
 
+def build_sides_table() -> str:
+    """The two ways of writing ch08's join: the side DuckDB built its table on, found in its
+    profile, and the side your engine built on, with what it held and what probing cost."""
+    from .aggregate import HashTable
+    from .cache import Cache
+
+    rows_of = {
+        json.loads((ROOT / "fixtures" / f"{name}.json").read_text())["rows"]: name
+        for name in ("customers", "orders-sorted")
+    }
+    lines = [
+        "| Query | DuckDB builds on | Your engine builds on | Build rows held | Held bytes | Cache misses |",
+        "|---|---|---|---:|---:|---:|",
+    ]
+    for query in ("orders_with_country.sql", "customers_with_orders.sql"):
+        seen = observe(read_query(ROOT / "queries" / query))
+        join = plans.duckdb_partner(list(seen.metrics.walk()), "HASH_JOIN")
+        duck_build = rows_of[join.children[1].rows_out]
+        plan = plans.plan_for(ROOT, query)
+        plan.table = HashTable(cache=Cache())
+        plan.run()
+        ours = plan.build.path.stem
+        lines.append(
+            f"| `{query}` | `{duck_build}` | `{ours}` | {plan.build_rows:,} | {plan.held_bytes:,} | "
+            f"{plan.table.cache.misses:,} |"
+        )
+    return (
+        "\n".join(lines)
+        + "\n"
+        + conditions(
+            f"the book's engine and cache model, and DuckDB {duckdb.__version__} with one thread",
+            "orders-sorted.parquet` and `fixtures/customers.parquet",
+        )
+    )
+
+
+def self_join_table() -> str:
+    """ch08's problem 8.3: the orders joined to themselves on the customer, counted by DuckDB."""
+    con = connect()
+    orders = f"'{ROOT / 'fixtures' / 'orders-sorted.parquet'}'"
+    total = con.execute(
+        f"SELECT count(*) FROM {orders} AS a JOIN {orders} AS b ON a.customer_id = b.customer_id"
+    ).fetchone()[0]
+    top = con.execute(
+        f"SELECT customer_id, count(*) AS n FROM {orders} GROUP BY customer_id ORDER BY n DESC, customer_id LIMIT 5"
+    ).fetchall()
+    lines = [
+        "| Customer | Orders | Rows the join makes for them | Share of the join's rows |",
+        "|---:|---:|---:|---:|",
+    ]
+    for customer, n in top:
+        lines.append(f"| {customer} | {n:,} | {n * n:,} | {100 * n * n / total:.1f}% |")
+    lines += [
+        "",
+        f"The join makes {total:,} rows from {con.execute(f'SELECT count(*) FROM {orders}').fetchone()[0]:,} orders.",
+    ]
+    return "\n".join(lines) + "\n" + duckdb_conditions("orders-sorted.parquet")
+
+
 def orders_recipe() -> str:
     """How the orders were generated, from the generator's own constants and manifest."""
     sys.path.insert(0, str(ROOT / "fixtures"))
@@ -724,26 +799,30 @@ FIGURES = (
     Figure("early-march-plan", plan_of("early_march.sql", "orders-sorted.parquet")),
     Figure("early-march-profile", profile_of("early_march.sql", "orders-sorted.parquet")),
     Figure("early-march-compare", compare_of("early_march.sql", "orders-sorted.parquet")),
-    Figure("early-march-pushdown", pushdown_table),
+    Figure("early-march-pushdown", pushdown_table, query="early_march.sql"),
     Figure("largest-orders-row-groups", row_groups_of("largest_orders.sql", "orders-sorted.parquet")),
     Figure("early-march-paged-plan", plan_of("early_march_paged.sql", "orders-paged.parquet")),
     Figure("grain", grain_table),
-    Figure("early-march-paged-compare", paged_compare),
+    Figure("early-march-paged-compare", paged_compare, query="early_march_paged.sql"),
     Figure("dictionary-pages", dictionary_table),
     Figure("early-march-table-plan", plan_of("early_march_table.sql", "orders-by-month/")),
     Figure("early-march-partition-plan", plan_of("early_march_partition.sql", "orders-by-month/")),
-    Figure("early-march-table-compare", table_compare),
+    Figure("early-march-table-compare", table_compare, query="early_march_table.sql"),
     Figure("storage", storage_table),
     Figure("one-customer-table", one_customer_table),
     Figure("with-tax-plan", plan_of("with_tax.sql", "orders-sorted.parquet")),
     Figure("with-tax-compare", compare_of("with_tax.sql", "orders-sorted.parquet")),
-    Figure("batch-sizes", batch_sizes_table),
+    Figure("batch-sizes", batch_sizes_table, query="with_tax.sql"),
     Figure("sorted-branches", sorted_branches_table),
     Figure("orders-per-customer-plan", plan_of("orders_per_customer.sql", "orders-sorted.parquet")),
     Figure("orders-per-status-plan", plan_of("orders_per_status.sql", "orders-sorted.parquet")),
     Figure("orders-per-customer-compare", compare_of("orders_per_customer.sql", "orders-sorted.parquet")),
     Figure("hash-and-perfect", hash_and_perfect_table),
     Figure("wider-keys", wider_keys_table),
+    Figure("orders-with-country-plan", plan_of("orders_with_country.sql", "orders-sorted.parquet")),
+    Figure("orders-with-country-compare", compare_of("orders_with_country.sql", "orders-sorted.parquet")),
+    Figure("build-sides", build_sides_table, query="customers_with_orders.sql"),
+    Figure("self-join", self_join_table),
 )
 
 
@@ -765,7 +844,12 @@ PANELS = (
     {"experiment": "pruning", "query": "early_march_table.sql", "scans": "by its metadata, by its files"},
     {"experiment": "branches", "column": "amount"},
     {"experiment": "measure", "of": "aggregation"},
+    {"experiment": "measure", "of": "joins"},
 )
+
+
+#: Each generated fragment computed from a query, by its file name: the query it was computed from.
+QUERY_OF_FRAGMENT = {f"{f.name}.md": f.query for f in FIGURES if f.query}
 
 
 def panel_json(config: dict[str, str]) -> str:
