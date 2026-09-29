@@ -151,6 +151,7 @@ a.xref:hover { text-decoration: underline; }
 .nav .part { margin: 1.1rem 0 .3rem; font-size: 11.5px; font-weight: 600; letter-spacing: .06em;
              text-transform: uppercase; color: var(--faint); }
 .nav .part a { color: inherit; text-decoration: none; }
+.nav .part span { display: block; padding: .22rem .5rem; border-left: 2px solid transparent; }
 .nav a { display: block; color: var(--muted); text-decoration: none; padding: .22rem .5rem;
          border-left: 2px solid transparent; border-radius: 0 4px 4px 0; }
 .nav a:hover { color: var(--accent); background: var(--wash); }
