@@ -1,5 +1,6 @@
 | File | Rows | Row groups | Bytes | Why it exists |
 |---|---:|---:|---:|---|
+| `countries.parquet` | 12 | 1 | 1,077 | The countries customers.country names, each with its region: the smallest table of ch13's three-way join, whose region a query filters on. |
 | `customers.parquet` | 1,000 | 1 | 18,117 | The dimension table orders.customer_id points into: one row per customer, small enough to be the build side of any join. |
 | `orders-by-month.parquet` | 20,000 | 12 | 513,221 | The sorted orders as a table of twelve monthly files in Hive's layout, with the table's metadata listing each file and the bounds of every column. A reader of the metadata can skip a file without opening it; a reader of the files alone must open each footer. |
 | `orders-paged.parquet` | 20,000 | 1 | 415,368 | The sorted orders in one row group, with a page index and small pages, and a dictionary only for the columns with few distinct values. Its one row group spans the year, so row group statistics can skip nothing; its pages each hold a few weeks, so a reader that uses the page index can skip most of them. |

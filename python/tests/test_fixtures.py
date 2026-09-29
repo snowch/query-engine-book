@@ -56,13 +56,23 @@ def test_customer_keys_are_skewed_and_all_point_into_customers():
     assert max(counts) > 50 * orders.num_rows / len(ids)
 
 
-@pytest.mark.parametrize("name", ["orders-sorted", "orders-shuffled", "orders-paged", "customers"])
+@pytest.mark.parametrize(
+    "name", ["orders-sorted", "orders-shuffled", "orders-paged", "customers", "countries"]
+)
 def test_the_manifest_describes_its_file(name):
     m = manifest(name)
     md = pq.ParquetFile(FIXTURES / f"{name}.parquet").metadata
     assert m["rows"] == md.num_rows
     assert len(m["row_groups"]) == md.num_row_groups
     assert m["file_bytes"] == (FIXTURES / f"{name}.parquet").stat().st_size
+
+
+def test_every_customers_country_is_a_country_with_a_region():
+    countries = pq.read_table(FIXTURES / "countries.parquet")
+    customers = pq.read_table(FIXTURES / "customers.parquet")
+    assert set(customers.column("country").to_pylist()) <= set(countries.column("country").to_pylist())
+    assert len(set(countries.column("country").to_pylist())) == countries.num_rows
+    assert set(countries.column("region").to_pylist()) == {"Europe", "Americas", "Asia"}
 
 
 def test_the_note_column_has_nulls_for_the_validity_bitmap():

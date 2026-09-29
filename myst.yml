@@ -58,6 +58,7 @@ project:
       children:
         - file: chapters/from_sql_to_a_logical_plan.md
         - file: chapters/optimiser_rules.md
+        - file: chapters/statistics_cost_and_join_order.md
     - title: Appendices
       children:
         - file: appendices/running_the_lab.md
