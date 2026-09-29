@@ -11,6 +11,8 @@
 // 4. On a phone, the list of chapters opens below the bar, starting at the cover, and scrolls
 //    within the screen when it is taller than the screen.
 // 5. On a phone, a plan wider than its panel, as a join's is, scrolls to both of its ends.
+// 6. On a phone, Back closes the open list of chapters and stays on the page, and the list leaves
+//    nothing behind in the history, however it was closed.
 
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -58,9 +60,9 @@ try {
   check(Math.abs(img[0] - text[0]) <= 1 && img[1] <= text[1] + 1, `the cover's picture spans ${img}, the text ${text}`);
   console.log("  the cover's picture sits in the text column");
 
-  for (const height of [900, 480]) {
+  for (const [height, chapter] of [[900, "joins.html"], [480, "sorting-and-top-k.html"]]) {
     await page.setViewportSize({ width: 390, height });
-    await page.goto(`${ORIGIN}/${BASE}joins.html`);
+    await page.goto(`${ORIGIN}/${BASE}${chapter}`);
     await page.click("#menu");
     const drawer = await page.evaluate(() => {
       const nav = document.querySelector("#nav").getBoundingClientRect();
@@ -99,6 +101,38 @@ try {
   });
   check(ends.wider && ends.left && ends.right, `a wide plan cannot be scrolled to both ends: ${JSON.stringify(ends)}`);
   console.log("  on a phone, a plan wider than its panel scrolls to both of its ends");
+
+  const open = () => page.evaluate(() => document.body.classList.contains("nav-open"));
+  const at = () => new URL(page.url()).pathname.split("/").pop();
+  const back = async () => { await page.goBack(); await page.waitForTimeout(150); };
+  await page.setViewportSize({ width: 390, height: 800 });
+  // Back closes the list, and a second Back leaves the page.
+  await page.goto(`${ORIGIN}/${BASE}skew.html`);
+  await page.goto(`${ORIGIN}/${BASE}joins.html`);
+  await page.click("#menu");
+  check(await open(), "the menu did not open the chapter list");
+  await back();
+  check(!(await open()) && at() === "joins.html", `Back did not close the list in place: ${at()}`);
+  await back();
+  check(at() === "skew.html", `the list left an entry in the history: Back went to ${at()}`);
+  // Closed with its own button, the list leaves nothing behind either.
+  await page.goto(`${ORIGIN}/${BASE}joins.html`);
+  await page.click("#menu");
+  await page.click("#menu");
+  await page.waitForTimeout(150);
+  check(!(await open()), "the menu did not close the chapter list");
+  await back();
+  check(at() === "skew.html", `closing the list left an entry in the history: Back went to ${at()}`);
+  // A chapter chosen from the list: Back returns to the page, with the list closed.
+  await page.goto(`${ORIGIN}/${BASE}joins.html`);
+  await page.click("#menu");
+  await Promise.all([page.waitForURL(/hash-aggregation\.html/), page.click('#nav a[href="hash-aggregation.html"]')]);
+  check(!(await open()), "the chosen chapter opened with the list open");
+  await back();
+  check(at() === "joins.html" && !(await open()), `Back from the chosen chapter: ${at()}, list open ${await open()}`);
+  await back();
+  check(at() === "skew.html", `choosing a chapter left an entry in the history: Back went to ${at()}`);
+  console.log("  on a phone, Back closes the chapter list, and the list leaves nothing in the history");
 } finally {
   await browser.close();
 }

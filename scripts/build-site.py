@@ -327,15 +327,48 @@ RAILS = r"""<script>
   const remember = (key, closed) => {
     try { if (closed) localStorage.setItem(key, "closed"); else localStorage.removeItem(key); } catch (e) {}
   };
+  // On a phone the list of chapters covers the page, and Back closes it, as it would a dialog:
+  // opening it adds an entry to the history, and closing it any other way takes the entry away
+  // again, so Back never has to be pressed twice to leave the page.
+  const drawn = () => Boolean(history.state && history.state.chapters);
+  let going = null;
+  const openList = () => {
+    document.body.classList.add("nav-open");
+    history.pushState({ chapters: true }, "");
+  };
+  const closeList = () => {
+    if (drawn()) history.back();
+    else document.body.classList.remove("nav-open");
+  };
+  addEventListener("popstate", () => {
+    document.body.classList.remove("nav-open");
+    reflect();
+    if (going) { const to = going; going = null; location.href = to; }
+  });
+  // A page brought back from the browser's cache comes back as it was left: open or not, it must
+  // match the history.
+  addEventListener("pageshow", () => {
+    document.body.classList.toggle("nav-open", !wide.matches && drawn());
+    reflect();
+  });
   reflect();
   addEventListener("resize", reflect);
-  wide.addEventListener("change", () => { document.body.classList.remove("nav-open"); reflect(); });
+  wide.addEventListener("change", () => { if (drawn()) history.back(); document.body.classList.remove("nav-open"); reflect(); });
   roomy.addEventListener("change", reflect);
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("menu").addEventListener("click", () => {
       if (wide.matches) remember("nav", root.classList.toggle("nav-closed"));
-      else document.body.classList.toggle("nav-open");
+      else if (document.body.classList.contains("nav-open")) closeList();
+      else openList();
       reflect();
+    });
+    // A chapter chosen from the open list: the list's history entry goes first, then the page.
+    document.getElementById("nav").addEventListener("click", (event) => {
+      const link = event.target.closest("a[href]");
+      if (!link || wide.matches || !drawn()) return;
+      event.preventDefault();
+      going = link.href;
+      history.back();
     });
     document.getElementById("outline").addEventListener("click", () => {
       remember("toc", root.classList.toggle("toc-closed"));
