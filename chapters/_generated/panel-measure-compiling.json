@@ -1,0 +1,128 @@
+{
+ "experiment": "measure",
+ "of": "compiling",
+ "engine": "the book's engine",
+ "title": "Three ways to run one pipeline",
+ "predict": {
+  "label": "Bytes written",
+  "ask": "the bytes each way writes",
+  "placeholder": "bytes"
+ },
+ "facts": "The pipeline tests the status, then the unit price, and returns three columns of the orders that pass. A kernel writes an array for its result; a filter a batch of the rows it keeps. A value held in a variable is written nowhere.",
+ "cases": [
+  {
+   "label": "Interpreted, a row at a time",
+   "detail": "ch06's evaluate_row",
+   "reference": {
+    "label": "Bytes of the result",
+    "value": 14580
+   },
+   "measured": 14580,
+   "counters": [
+    [
+     "nodes visited while running",
+     69560
+    ],
+    [
+     "instructions",
+     23095
+    ]
+   ]
+  },
+  {
+   "label": "Interpreted, a batch at a time",
+   "detail": "ch06's evaluate, a kernel a node",
+   "reference": {
+    "label": "Bytes of the result",
+    "value": 14580
+   },
+   "measured": 101690,
+   "counters": [
+    [
+     "nodes visited while running",
+     130
+    ],
+    [
+     "instructions",
+     5784
+    ]
+   ]
+  },
+  {
+   "label": "Compiled into one loop",
+   "detail": "generate, then compile",
+   "reference": {
+    "label": "Bytes of the result",
+    "value": 14580
+   },
+   "measured": 14580,
+   "counters": [
+    [
+     "nodes visited while running",
+     0
+    ],
+    [
+     "instructions",
+     22366
+    ]
+   ]
+  }
+ ],
+ "chart": {
+  "x_label": "operations in the computed column",
+  "y_label": "bytes written",
+  "x_scale": "linear",
+  "series": [
+   {
+    "label": "a batch at a time",
+    "points": [
+     [
+      0,
+      54745
+     ],
+     [
+      1,
+      64209
+     ],
+     [
+      2,
+      73673
+     ],
+     [
+      4,
+      92601
+     ],
+     [
+      8,
+      130457
+     ]
+    ]
+   },
+   {
+    "label": "compiled",
+    "points": [
+     [
+      0,
+      18928
+     ],
+     [
+      1,
+      18928
+     ],
+     [
+      2,
+      18928
+     ],
+     [
+      4,
+      18928
+     ],
+     [
+      8,
+      18928
+     ]
+    ]
+   }
+  ]
+ }
+}

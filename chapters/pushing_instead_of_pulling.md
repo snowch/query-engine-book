@@ -292,7 +292,7 @@ skip.
 
 - **Push-based execution.** Thomas Neumann, *Efficiently Compiling Efficient Query Plans for
   Modern Hardware*, VLDB 2011: pipelines, pushed from the source to each breaker, as the unit an
-  engine runs.
+  engine runs. [ch19](#compiling-a-query) takes up the rest of the paper.
 - **Morsels and pipelines.** Viktor Leis, Peter Boncz, Alfons Kemper and Thomas Neumann,
   *Morsel-Driven Parallelism*, SIGMOD 2014: a scheduler handing pipelines' morsels to workers.
 - **Push and pull compared.** Amir Shaikhha, Mohammad Dashti and Christoph Koch, *Push versus

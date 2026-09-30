@@ -330,6 +330,17 @@ _CHAPTERS = (
         ("measure",),
         ("orders-sorted.parquet",),
     ),
+    (
+        "compiling_a_query",
+        "Compiling a query",
+        "other_ways_to_run_a_plan",
+        "What does an engine save by turning a query into code before it runs it, and what does it give up?",
+        "A compiler that writes one loop of Python for a pipeline from its expression trees, run "
+        "against the same pipeline interpreted a row and a batch at a time, counting the nodes each "
+        "visits, the bytes each writes and the instructions each runs.",
+        ("measure",),
+        ("orders-sorted.parquet",),
+    ),
 )
 
 CHAPTERS = tuple(
@@ -349,7 +360,8 @@ CHAPTERS = tuple(
 APPENDICES = (
     Appendix("A", "running_the_lab", "Running the lab"),
     Appendix("B", "the_fixtures", "The fixtures"),
-    Appendix("C", "glossary", "Glossary"),
+    Appendix("C", "the_machine_in_one_page", "The machine in one page"),
+    Appendix("D", "glossary", "Glossary"),
 )
 
 BY_SLUG = {c.slug: c for c in CHAPTERS}

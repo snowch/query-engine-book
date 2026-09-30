@@ -1362,6 +1362,146 @@ def earliest_orders_table() -> str:
     )
 
 
+def unit_price_calls_table() -> str:
+    """How many unit prices DuckDB computed for ch01's query, counted by a function that stands in
+    for the division, beside the rows its filter tested and its projection returned (ch19)."""
+    import pyarrow.compute as pc
+
+    con = connect()
+    calls, values = [0], [0]
+
+    def price(amount, quantity):
+        calls[0] += 1
+        values[0] += len(amount)
+        return pc.divide(pc.cast(amount, pa.float64()), pc.cast(quantity, pa.float64()))
+
+    con.create_function(
+        "price", price, [duckdb.typing.DOUBLE, duckdb.typing.INTEGER], duckdb.typing.DOUBLE, type="arrow"
+    )
+    text = read_query(ROOT / "queries" / "returned_unit_price.sql")
+    returned = con.execute(
+        "SELECT count(*) FROM 'fixtures/orders-sorted.parquet' WHERE status = 'returned'"
+    ).fetchone()[0]
+    kept = len(con.execute(text.replace("amount / quantity", "price(amount, quantity)")).fetchall())
+    rows = [
+        ("Returned orders, whose unit price the filter tests", returned),
+        ("Orders the projection returns, with their unit price", kept),
+        ("Unit prices computed", values[0]),
+        ("Calls that computed them, each on a vector of rows", calls[0]),
+    ]
+    return (
+        "| | Count |\n|---|---:|\n"
+        + "\n".join(f"| {what} | {n:,} |" for what, n in rows)
+        + "\n"
+        + f"\n*Computed by DuckDB {duckdb.__version__} with one thread on `fixtures/orders-sorted.parquet`, "
+        "with the division replaced by a function that counts its calls, at build time.*\n"
+    )
+
+
+def generated_pipeline() -> str:
+    """The code the book's compiler writes for ch01's query (ch19)."""
+    from .compile import Pipeline, generate
+
+    generated = generate(Pipeline.of(read_query(ROOT / "queries" / "returned_unit_price.sql")))
+    return (
+        "```python\n"
+        + generated.source
+        + "```\n\n*Written by the book's compiler from `queries/returned_unit_price.sql`, at build time.*\n"
+    )
+
+
+#: The rows ch19's problem 19.3 runs the pipeline on, from a handful to the whole file.
+SMALL_TO_LARGE = (10, 100, 2_000, 20_000)
+
+
+def compile_or_interpret_table() -> str:
+    """ch01's pipeline over more and more of the sorted orders: the nodes each way visits, and the
+    code the compiler writes once (ch19, problem 19.3)."""
+    from .compile import Pipeline, generate, interpreted
+
+    pipeline = Pipeline.of(read_query(ROOT / "queries" / "returned_unit_price.sql"))
+    table = pq.read_table(ROOT / "fixtures" / "orders-sorted.parquet", columns=pipeline.columns())
+    generated = generate(pipeline)
+    lines = []
+    for n in SMALL_TO_LARGE:
+        batches = table.slice(0, n).to_batches(max_chunksize=2_000)
+        run = interpreted(pipeline, batches)
+        lines.append(
+            f"| {n:,} | {len(batches)} | {run.dispatches:,} | {generated.nodes} | {generated.source.count(chr(10))} |"
+        )
+    head = (
+        "| Rows | Batches | Nodes interpreting visits | Nodes compiling visits | Lines of code compiled |\n"
+        "|---:|---:|---:|---:|---:|\n"
+    )
+    return head + "\n".join(lines) + "\n" + conditions("the book's engine", "orders-sorted.parquet")
+
+
+def machine_table() -> str:
+    """The model machine the book's simulators count on, each part with its settings as the code
+    sets them, and the chapter that builds it (appendix, The machine in one page)."""
+    from .cpu import LANES
+    from .measures import NODE_SWEEP, SPILL_SHARES, WORKER_SWEEP
+
+    rows = [
+        (
+            "Data cache",
+            "One level; a line may sit anywhere; the line used longest ago is pushed out",
+            f"{LINES:,} lines of {LINE_BYTES} bytes: {LINES * LINE_BYTES // 1024} KiB",
+            "[ch02](#batches-in-memory)",
+        ),
+        (
+            "Branch predictor",
+            "A two-bit counter for each branch in the code",
+            "Four states; predicts taken in the top two",
+            "[ch06](#expressions-and-vectorised-kernels)",
+        ),
+        (
+            "Vector unit",
+            "One instruction applies an operation to a lane-full of values",
+            f"{LANES} lanes of eight bytes",
+            "[ch06](#expressions-and-vectorised-kernels)",
+        ),
+        (
+            "Storage",
+            "An object store that logs every request and the bytes it returns",
+            "Every byte the scan reads is a byte a request returned",
+            "[ch03](#projection-and-filter-pushdown)",
+        ),
+        (
+            "Memory",
+            "A limit on the bytes an operator holds; beyond it, runs are written out and merged",
+            "Limits of "
+            + ", ".join(f"{s:.0%}" for s in SPILL_SHARES[:-1])
+            + f" and {SPILL_SHARES[-1]:.0%} of the input's bytes",
+            "[ch10](#memory-limits-and-spilling)",
+        ),
+        (
+            "Cores",
+            "Workers that each take the next morsel when free, and never wait on each other",
+            f"From {WORKER_SWEEP[0]} to {WORKER_SWEEP[-1]} workers",
+            "[ch14](#parallelism-on-one-machine)",
+        ),
+        (
+            "Machines",
+            "Nodes that each hold some row groups, and send rows as Arrow IPC bytes",
+            f"From {NODE_SWEEP[0]} to {NODE_SWEEP[-1]} nodes",
+            "[ch15](#partitioning-and-shuffle)",
+        ),
+        (
+            "The reference",
+            "DuckDB, pinned, with one thread, at the book's build and in the page",
+            f"DuckDB {duckdb.__version__}",
+            "[ch01](#the-plan-is-the-map)",
+        ),
+    ]
+    head = "| Part | The book's model | Its settings | Built in |\n|---|---|---|---|\n"
+    return (
+        head
+        + "\n".join(f"| {a} | {b} | {c} | {d} |" for a, b, c, d in rows)
+        + "\n\n*Read from the settings of the book's simulators and its pinned DuckDB, at build time.*\n"
+    )
+
+
 def stages_table() -> str:
     """ch17's query run in stages on sixteen simulated nodes: each stage's tasks, rows and bytes."""
     from .stages import spend_by_country
@@ -1499,6 +1639,10 @@ FIGURES = (
     Figure("pushing-bytes", pushing_table),
     Figure("pushing-compare", pushing_compare_table),
     Figure("earliest-orders", earliest_orders_table, query="earliest_orders.sql"),
+    Figure("unit-price-calls", unit_price_calls_table, query="returned_unit_price.sql"),
+    Figure("generated-pipeline", generated_pipeline, query="returned_unit_price.sql"),
+    Figure("compile-or-interpret", compile_or_interpret_table),
+    Figure("machine", machine_table),
     Figure("spend-by-country-plan", plan_of("spend_by_country.sql", ORDERS_AND_CUSTOMERS)),
     Figure("spend-by-country-stages", stages_table, query="spend_by_country.sql"),
     Figure(
@@ -1537,6 +1681,7 @@ PANELS = (
     {"experiment": "measure", "of": "skew"},
     {"experiment": "measure", "of": "stages"},
     {"experiment": "measure", "of": "pushing"},
+    {"experiment": "measure", "of": "compiling"},
 )
 
 
