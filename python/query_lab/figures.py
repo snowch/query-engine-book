@@ -59,52 +59,19 @@ def duckdb_conditions(fixture: str) -> str:
 
 
 def plan_of(query: str, fixture: str, plan: str = "physical_plan") -> Callable[[], str]:
-    """DuckDB's plan for a query, before it runs, as a table: one row per operator, top down.
-    ``plan`` names which of DuckDB's plans (:func:`query_lab.reference.explain`); the logical
-    plan as bound has no estimates, and its table no column for them.
+    """DuckDB's plan for a query, before it runs, as ``EXPLAIN`` draws it in a terminal, boxes and
+    all. ``plan`` names which of DuckDB's plans (:func:`query_lab.reference.explain`): the physical
+    plan it will run, or the logical plan as the query was bound, which has no estimates.
 
-    DuckDB draws its plan in box-drawing characters, and a monospace font without them (Android's,
-    for one) pulls the boxes apart. A table reads the same on every screen, and the panel beside
-    it draws the plan as a tree.
-    """
-
-    def make() -> str:
-        rows = []
-        estimated = plan != "logical_plan"
-
-        def walk(node: dict) -> None:
-            extra = {k: v for k, v in (node.get("extra_info") or {}).items() if v}
-            estimate = extra.pop("Estimated Cardinality", None)
-            # The scan's function repeats its operator's name; the rest says what the operator does.
-            extra.pop("Function", None)
-            does = "; ".join(f"{k}: {_cell(v)}" for k, v in extra.items())
-            # The estimate sits beside the name, and the long details last, where a phone wraps them.
-            guess = f"{int(estimate):,}" if estimate else "none"
-            rows.append(f"| {node['name'].strip()} | " + (f"{guess} | " if estimated else "") + f"{does} |")
-            for child in node.get("children", []):
-                walk(child)
-
-        walk(explain(read_query(ROOT / "queries" / query), plan=plan))
-        if estimated:
-            head = "| Operator | Rows out, estimated | What it does |\n|---|---:|---|\n"
-        else:
-            head = "| Operator | What it does |\n|---|---|\n"
-        return head + "\n".join(rows) + "\n" + duckdb_conditions(fixture)
-
-    make.query = query
-    return make
-
-
-def explain_of(query: str, fixture: str) -> Callable[[], str]:
-    """DuckDB's plan for a query, as ``EXPLAIN`` draws it in a terminal, boxes and all (ch01).
-
-    The page shows it in the book's own monospace font, which has every box-drawing character, so
-    the boxes stay joined on any screen.
+    The page shows the drawing in the book's own monospace font, which has every box-drawing
+    character, so the boxes stay joined on any screen; a plan wider than the column scrolls.
     """
 
     def make() -> str:
         con = connect()
-        drawn = con.execute(f"EXPLAIN {read_query(ROOT / 'queries' / query)}").fetchall()[0][1]
+        if plan != "physical_plan":
+            con.execute("PRAGMA explain_output = 'all'")
+        drawn = dict(con.execute(f"EXPLAIN {read_query(ROOT / 'queries' / query)}").fetchall())[plan]
         return "```diagram\n" + drawn.rstrip() + "\n```\n" + duckdb_conditions(fixture)
 
     make.query = query
@@ -144,12 +111,6 @@ def journey_of(query: str, fixture: str) -> Callable[[], str]:
 
     make.query = query
     return make
-
-
-def _cell(value: object) -> str:
-    """A plan detail as table text: a list joined, and a pipe kept from ending the cell."""
-    text = ", ".join(map(str, value)) if isinstance(value, list) else str(value)
-    return "`" + text.replace("|", "\\|") + "`"
 
 
 def profile_table(seen: Observation) -> str:
@@ -1554,10 +1515,10 @@ def fixtures_table() -> str:
 
 
 FIGURES = (
-    Figure("returned-orders-explain", explain_of("returned_orders.sql", "orders-sorted.parquet")),
-    Figure("returned-unit-price-explain", explain_of("returned_unit_price.sql", "orders-sorted.parquet")),
+    Figure("returned-orders-explain", plan_of("returned_orders.sql", "orders-sorted.parquet")),
+    Figure("returned-unit-price-explain", plan_of("returned_unit_price.sql", "orders-sorted.parquet")),
     Figure("returned-unit-price-journey", journey_of("returned_unit_price.sql", "orders-sorted.parquet")),
-    Figure("lower-status-explain", explain_of("lower_status.sql", "orders-sorted.parquet")),
+    Figure("lower-status-explain", plan_of("lower_status.sql", "orders-sorted.parquet")),
     Figure("orders-recipe", orders_recipe),
     Figure("returned-unit-price-engine", engine_of("returned_unit_price.sql", "orders-sorted.parquet")),
     Figure("returned-unit-price-compare", compare_of("returned_unit_price.sql", "orders-sorted.parquet")),
@@ -1635,7 +1596,7 @@ FIGURES = (
     Figure("unique-keys", unique_keys_table),
     Figure("heavy-customers", heavy_customers_table),
     Figure("busy-month", busy_month_table),
-    Figure("any-returned-explain", explain_of("any_returned.sql", "orders-sorted.parquet")),
+    Figure("any-returned-explain", plan_of("any_returned.sql", "orders-sorted.parquet")),
     Figure("pushing-bytes", pushing_table),
     Figure("pushing-compare", pushing_compare_table),
     Figure("earliest-orders", earliest_orders_table, query="earliest_orders.sql"),

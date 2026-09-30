@@ -6,7 +6,8 @@
 // 1. Another book's saved place is not offered. The Parquet book, on the same origin, keeps its
 //    reader's place in the same browser storage; this book must neither read it nor write where
 //    that book reads.
-// 2. This book's own place is offered on the cover, and links to a page it has.
+// 2. This book's own place is offered on the cover, and links to a page it has. Launched from a
+//    home screen, the book resumes there once a session, and then draws the cover.
 // 3. The cover's picture sits in the text column, aligned with the paragraphs.
 // 4. On a phone, the list of chapters opens below the bar, starting at the cover, and scrolls
 //    within the screen when it is taller than the screen.
@@ -52,6 +53,16 @@ try {
   const foreign = await page.evaluate(() => JSON.parse(localStorage.getItem("last-read")).page);
   check(foreign === "why-parquet-exists.html", "this book overwrote the Parquet book's saved place");
   console.log("  this book's own place is offered, and the other book's is left alone");
+
+  // Launched from a home screen, the book resumes at the saved page, once a session: a launch page
+  // that redirected every time left Firefox on Android a white page to come back to.
+  await page.goto(`${ORIGIN}/${BASE}index.html?resume`);
+  await page.waitForURL(/the-plan-is-the-map\.html$/);
+  await page.goto(`${ORIGIN}/${BASE}index.html?resume`);
+  await page.waitForTimeout(300);
+  check(new URL(page.url()).pathname.endsWith("/index.html"), `a second launch in the session went to ${page.url()}`);
+  check(await page.$("article.page h1"), "a second launch in the session did not draw the cover");
+  console.log("  a launch resumes at the saved page once a session, and then draws the cover");
 
   const [img, text] = await page.evaluate(() => {
     const box = (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.left), Math.round(r.right)]; };

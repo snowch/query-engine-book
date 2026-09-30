@@ -1,9 +1,52 @@
-| Operator | Rows out, estimated | What it does |
-|---|---:|---|
-| PROJECTION | 10,000 | Projections: `__internal_decompress_integral_integer(#0, 1), #1, #2` |
-| PERFECT_HASH_GROUP_BY | none | Groups: `#0`; Aggregates: `count_star(), sum(#1)` |
-| PROJECTION | 20,000 | Projections: `customer_id, amount` |
-| PROJECTION | 20,000 | Projections: `__internal_compress_integral_usmallint(#0, 1), #1` |
-| PARQUET_SCAN | 20,000 | Projections: `customer_id, amount` |
+```diagram
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_decompress_integ│
+│     ral_integer(#0, 1)    │
+│             #1            │
+│             #2            │
+│                           │
+│        ~10000 Rows        │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│   PERFECT_HASH_GROUP_BY   │
+│    ────────────────────   │
+│         Groups: #0        │
+│                           │
+│        Aggregates:        │
+│        count_star()       │
+│          sum(#1)          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│        customer_id        │
+│           amount          │
+│                           │
+│        ~20000 Rows        │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│__internal_compress_integra│
+│     l_usmallint(#0, 1)    │
+│             #1            │
+│                           │
+│        ~20000 Rows        │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│       PARQUET_SCAN        │
+│    ────────────────────   │
+│         Function:         │
+│        PARQUET_SCAN       │
+│                           │
+│        Projections:       │
+│        customer_id        │
+│           amount          │
+│                           │
+│        ~20000 Rows        │
+└───────────────────────────┘
+```
 
 *Computed by DuckDB 1.1.2 with one thread on `fixtures/orders-sorted.parquet`, at build time.*
