@@ -6,7 +6,8 @@
 // it must give the build's answer (a panel's report, compared with the build's JSON) or pass the
 // engine's tests the block names. An edit that does not parse must say so, with the line of the
 // edit it failed on, and a run after it must give the build's answer again: the edit was undone.
-// The edit is kept in the browser's storage, and reopens its editor on a reload.
+// The edit is kept in the browser's storage, and reopens its editor on a reload. A block that
+// shows a plan must draw its rows and counters as a desk computes them.
 //
 // A listing over thirty lines is folded, with a button that shows the rest.
 //
@@ -37,7 +38,23 @@ async function run(page, figure) {
     ready: r.dataset.ready, agrees: r.dataset.agrees, passed: r.dataset.passed, total: r.dataset.total,
     status: r.querySelector(".lab-status").textContent,
     operators: [...r.querySelectorAll(".plan-op")].map((op) => op.dataset.operator),
+    // What the page drew of the plan a run block shows, and which plan the block names.
+    shown: r.querySelector(".edit-shown")?.dataset.shown ?? null,
+    show: (() => {
+      const s = r.nextElementSibling;
+      return s && s.matches("script.run-then") ? (JSON.parse(s.textContent).tests || {}).show || null : null;
+    })(),
   }));
+}
+
+/** What a plan returns and counts at a desk, as a run block shows it in the page. */
+function deskShown(query) {
+  const code = "import json, sys; from pathlib import Path; from query_lab.edits import shown; "
+    + "print(json.dumps(shown(Path('.'), sys.argv[1])))";
+  const out = execFileSync("python3", ["-c", code, query], {
+    env: { ...process.env, PYTHONPATH: "python:external/parquet-book/python" },
+  });
+  return JSON.stringify(JSON.parse(out.toString()));
 }
 
 function desk(query, sql) {
@@ -121,6 +138,10 @@ try {
           check(shipped.ready === "true", `${label}, as the book quotes it: ${shipped.status}`);
           const right = (r) => (r.total !== undefined ? r.passed === r.total && Number(r.total) > 0 : r.agrees === "true");
           check(right(shipped), `${label}: ${shipped.status}`);
+          if (shipped.show) {
+            check(shipped.shown && JSON.stringify(JSON.parse(shipped.shown)) === deskShown(shipped.show),
+              `${label}: the plan it shows differs from the desk's: ${shipped.shown}`);
+          }
           await editor.fill(`${listing}\n(`);
           const broken = await run(page, figure);
           check(broken.ready === "error" && /(Syntax|Indentation)Error: .*\(line \d+ of your edit\)$/.test(broken.status), `${label}, broken: ${broken.status}`);
@@ -133,7 +154,8 @@ try {
           check(restored.ready === "true" && right(restored), `${label}, after a broken edit and a reset: ${restored.status}`);
           await (await figure.$(".edit-open")).click();
           check(!(await figure.$("textarea.code-area")), `${label}: closing the editor left it open`);
-          console.log(`  ${label}: as quoted it gives the build's answer; a broken edit says where, and is undone`);
+          const also = shipped.show ? `, shows ${shipped.show}'s plan as a desk runs it` : "";
+          console.log(`  ${label}: as quoted it gives the build's answer${also}; a broken edit says where, and is undone`);
         }
         checked += 1;
       } catch (error) {

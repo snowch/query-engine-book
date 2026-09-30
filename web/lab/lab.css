@@ -189,6 +189,15 @@ figure.quoted textarea.code-area:focus { outline: 2px solid var(--accent); outli
 .run-result > .lab-body:empty { display: none; }
 .edit-tests { margin: .6rem 0; padding: 0 1rem 0 2.2rem; font-size: 13px; }
 .edit-tests li { margin: .15rem 0; }
+/* What the plan returned on an edit: its first rows, and each operator's counters, top down. */
+.edit-shown { padding: 0 1rem .8rem; border-top: 1px solid var(--edge); }
+.edit-shown-title { margin: .7rem 0 .3rem; font: 13px/1.4 var(--chrome); color: var(--muted); }
+.edit-shown table { font: 12.5px/1.4 var(--mono); border-collapse: collapse; margin: 0; }
+.edit-shown th, .edit-shown td { padding: .2rem .7rem .2rem 0; text-align: right; vertical-align: top; }
+.edit-shown th { font-family: var(--chrome); font-weight: 600; border-bottom: 1px solid var(--edge); }
+.edit-counters td:first-child, .edit-counters th:first-child { text-align: left; }
+.edit-op { display: inline-flex; flex-direction: column; }
+.edit-op code { font-size: 11.5px; color: var(--muted); white-space: normal; }
 .edit-tests li.passed code { color: var(--go); }
 .edit-tests li.failed code { color: var(--stop); }
 

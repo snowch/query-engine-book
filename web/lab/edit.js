@@ -56,6 +56,68 @@ function testResults(root, report) {
   return passed;
 }
 
+/** A value of the plan's result as the page shows it: a long fraction cut to a few places. */
+function cell(value) {
+  if (value === null) return "NULL";
+  if (typeof value === "number" && !Number.isInteger(value)) return value.toLocaleString("en-GB", { maximumFractionDigits: 3 });
+  return String(value);
+}
+
+function table(head, rows, className) {
+  const t = el("table", className);
+  const tr = el("tr");
+  for (const h of head) tr.append(el("th", "", h));
+  t.append(el("thead"));
+  t.tHead.append(tr);
+  const body = el("tbody");
+  for (const row of rows) {
+    const r = el("tr");
+    for (const v of row) {
+      const td = el("td");
+      if (v instanceof Node) td.append(v);
+      else td.textContent = v;
+      r.append(td);
+    }
+    body.append(r);
+  }
+  t.append(body);
+  return t;
+}
+
+/** What the plan returned and counted on the reader's edit: its first rows, and each operator's
+ * counters, top down. Python computed every number; this only draws them. */
+function shownResult(root, shown) {
+  const box = el("div", "edit-shown");
+  if (shown.error) {
+    box.append(el("p", "lab-error", `The plan could not run: ${shown.error}`));
+    root.append(box);
+    return;
+  }
+  const rows = shown.total.toLocaleString("en-GB");
+  box.append(el("p", "edit-shown-title", shown.rows.length < shown.total
+    ? `The plan returned ${rows} rows. The first ${shown.rows.length}:`
+    : `The plan returned ${rows} rows:`));
+  const wrap = el("div", "table-wrap");
+  wrap.append(table(shown.columns, shown.rows.map((r) => r.map(cell)), "edit-rows"));
+  box.append(wrap);
+  box.append(el("p", "edit-shown-title", "What each operator counted, from the top of the plan down:"));
+  const counted = el("div", "table-wrap");
+  counted.append(table(
+    ["Operator", "Rows in", "Rows out", "Batches out", "Bytes read"],
+    shown.operators.map((op) => {
+      const name = el("span", "edit-op");
+      name.style.paddingLeft = `${op.depth}em`;
+      name.append(el("strong", "", op.operator), el("code", "", op.detail));
+      return [name, op.rows_in.toLocaleString("en-GB"), op.rows_out.toLocaleString("en-GB"),
+        op.batches_out.toLocaleString("en-GB"), op.bytes_read.toLocaleString("en-GB")];
+    }),
+    "edit-counters",
+  ));
+  box.append(counted);
+  box.dataset.shown = JSON.stringify(shown);
+  root.append(box);
+}
+
 /**
  * Say which of the page's figures and panels were computed for the book's query, while the
  * reader's edit of it is what ran last; `edited` false takes the notes away again.
@@ -175,6 +237,7 @@ function mountEdit(figure, then) {
               : "Your edit changed the answer: this is what your code counted, and the panel above is the book's.";
           } else {
             const passed = testResults(body, answer);
+            if (answer.shown) shownResult(body, answer.shown);
             result.dataset.passed = String(passed);
             result.dataset.total = String(answer.tests.length);
             status.textContent = `${passed} of ${answer.tests.length} of the engine's tests pass on ${edited ? "your edit" : "the book's code"}.`;

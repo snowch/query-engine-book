@@ -88,7 +88,7 @@ def run_edit(file, listing, text, then_json):
     chapter's run block names: a panel's report, or some of the engine's tests."""
     import pytest
     from query_lab import report
-    from query_lab.edits import edited
+    from query_lab.edits import edited, shown
 
     then = json.loads(then_json)
     try:
@@ -106,7 +106,14 @@ def run_edit(file, listing, text, then_json):
                 args += ["-k", tests["select"]]
             with redirect_stdout(out), redirect_stderr(out):
                 code = int(pytest.main(args, plugins=[collect]))
-            return json.dumps({"tests": collect.tests, "exit": code, "output": out.getvalue()})
+            answer = {"tests": collect.tests, "exit": code, "output": out.getvalue()}
+            # What the plan returns on the edit, for the reader to see, as well as the tests.
+            if tests.get("show"):
+                try:
+                    answer["shown"] = shown(Path("${ROOT}"), tests["show"])
+                except Exception as error:
+                    answer["shown"] = {"error": _last_lines(error)}
+            return json.dumps(answer)
     except Exception as error:
         return json.dumps({"error": _last_lines(error)})
 `;
