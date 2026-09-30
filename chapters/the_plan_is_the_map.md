@@ -188,8 +188,18 @@ receives.
 ### The plan
 
 The engine has no planner yet, so you write the plan by hand, bottom up, the way `EXPLAIN` drew
-DuckDB's. The scan reads the five columns the query uses. Two filters take the two predicates in
-turn, and a projection computes the unit price:
+DuckDB's. The plan's module imports Arrow's Python library, pyarrow, as `pa`, and its compute
+functions, the kernels an operator runs on a whole column at once, as `pc`:
+
+```{literalinclude} ../python/query_lab/plans.py
+:language: python
+:start-at: import pyarrow as pa
+:end-before: import pyarrow.parquet as pq
+```
+
+`Scan`, `Filter` and `Project` are the engine's operators, from `query_lab.operators`. The scan
+reads the five columns the query uses. Two filters take the two predicates in turn, and a
+projection computes the unit price:
 
 ```{literalinclude} ../python/query_lab/plans.py
 :language: python
@@ -200,13 +210,15 @@ turn, and a projection computes the unit price:
 ```run
 tests: test_operators.py
 select: returned_unit_price or projection or nothing_is_read
+show: returned_unit_price.sql
 ```
 
-Press **Edit and run** on a listing like this one to change it and run it in your browser. Skip
-the filter on the status, say, by handing the price filter `scan` in place of `returned`, and run
-the engine's tests on your edit: the rows no longer match DuckDB's, and the tests say so. The
-book's own code comes back when you close the editor, and nothing you change moves a number the
-chapter prints.
+Press **Edit and run** on a listing like this one to change it and run it in your browser. It runs
+the engine's tests on your code, then the plan itself, and shows the first rows it returned and
+what each operator counted. Skip the filter on the status, say, by handing the price filter `scan`
+in place of `returned`: more rows come back, the price filter takes in every row of the file, and
+the tests say the rows no longer match DuckDB's. The book's own code comes back when you close the
+editor, and nothing you change moves a number the chapter prints.
 
 Called with no `filters`, as this plan calls it, the scan reads every row group and hands up
 every row. It tests no predicate, where DuckDB's did. That difference is the first thing the

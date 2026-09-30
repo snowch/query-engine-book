@@ -146,10 +146,12 @@ how many batches flow; only the filter changes how many rows.
 ```run
 tests: test_operators.py
 select: returned_unit_price or projection or nothing_is_read
+show: returned_unit_price.sql
 ```
 
 Make the filter hand up every batch unfiltered, say, and run the engine's tests on your edit: the
-rows no longer match DuckDB's, and the tests say where.
+rows no longer match DuckDB's, the tests say where, and ch01's plan shows every filter handing up
+all it took in.
 
 ### Filters in the scan
 

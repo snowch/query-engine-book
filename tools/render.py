@@ -154,13 +154,16 @@ def parse_run_block(value: str) -> dict:
     """A ``run`` block says what to run on the reader's edit of the listing above it: a panel's
     report, as a ``lab`` block names one (and the build must have its JSON, which the page
     compares the edit's answer with), or ``tests``, a file in ``python/tests/``, with an optional
-    ``select``, a pytest ``-k`` expression."""
+    ``select``, a pytest ``-k`` expression, and an optional ``show``, a query in ``queries/`` whose
+    hand-written plan runs after the tests, so the reader sees what it returns and counts."""
     config = parse_key_values(value, "run")
     if "tests" in config:
-        if set(config) - {"tests", "select"}:
-            raise RunBlockError(f"a run block with tests takes only tests and select; got {config}")
+        if set(config) - {"tests", "select", "show"}:
+            raise RunBlockError(f"a run block with tests takes only tests, select and show; got {config}")
         if not (ROOT / "python" / "tests" / config["tests"]).is_file():
             raise RunBlockError(f"run block names python/tests/{config['tests']}, which does not exist")
+        if "show" in config and not (ROOT / "queries" / config["show"]).is_file():
+            raise RunBlockError(f"run block shows queries/{config['show']}, which does not exist")
         return config
     if "experiment" in config:
         parse_lab_block(value)
