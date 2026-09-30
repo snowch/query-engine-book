@@ -200,8 +200,19 @@ HEAD_SCRIPT = r"""<script>
   // Back to the cover is a return, not a launch, even though it keeps the launch's empty referrer.
   const returned = (performance.getEntriesByType("navigation")[0] || {}).type === "back_forward";
   const launched = !returned && (new URLSearchParams(location.search).has("resume") || (standalone && !document.referrer));
-  if (page === "index.html" && launched && last && last.page && last.page !== "index.html") {
-    try { sessionStorage.setItem(RESUME, String(last.y || 0)); } catch (e) {}
+  // A launch resumes once a session. Firefox on Android keeps the launch page, empty, in the
+  // history even though it was replaced, so Back from the resumed page came to a white page; once
+  // the session has resumed, the launch page draws the cover instead, and a page brought back from
+  // the cache reloads to draw it.
+  const RESUMED = `resumed:${location.pathname.replace(/[^/]*$/, "")}`;
+  let resumed = false;
+  try { resumed = sessionStorage.getItem(RESUMED) === "yes"; } catch (e) {}
+  if (page === "index.html" && launched && !resumed && last && last.page && last.page !== "index.html") {
+    try {
+      sessionStorage.setItem(RESUMED, "yes");
+      sessionStorage.setItem(RESUME, String(last.y || 0));
+    } catch (e) {}
+    addEventListener("pageshow", (event) => { if (event.persisted) location.reload(); });
     location.replace(last.page);
     return;
   }
