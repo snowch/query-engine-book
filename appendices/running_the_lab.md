@@ -25,6 +25,14 @@ on it, so you can see what your change does to the counts, or which tests it bre
 code is back as soon as the run ends, your edit stays in this browser, and **Reset to the book's
 code** starts again.
 
+## Timings
+
+Some chapters time a few cases: a top-k against a full sort, say. Nothing is timed until you
+press **Time it in your browser**; then each case runs, several times if it is quick, and shows
+how long it took and how it compares with the fastest. A time is your machine's, now: it moves
+from run to run, and Python and DuckDB run slower in a browser than at a desk, so compare the
+cases with each other. Nothing else on the page runs while the cases are timed.
+
 ## Problems
 
 Each chapter's problems open with a workbench. Write your answers in it and press **Run the
@@ -63,6 +71,7 @@ below run from the repository's root, with the engine and the reader on Python's
 export PYTHONPATH=python:external/parquet-book/python
 python3 -m query_lab observe queries/returned_unit_price.sql   # DuckDB's plan and profile
 python3 -m query_lab run queries/returned_unit_price.sql       # your engine's plan and counters
+python3 -m query_lab time top_k                                # a chapter's timed cases, timed here
 ```
 
 A chapter's problems are stubs in `exercises/<chapter>.py`, and their graders are in

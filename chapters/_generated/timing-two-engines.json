@@ -1,0 +1,15 @@
+{
+ "of": "two_engines",
+ "title": "One plan, two engines",
+ "data": "queries/returned_unit_price.sql, on fixtures/orders-sorted.parquet.",
+ "cases": [
+  {
+   "label": "The book's engine",
+   "detail": "returned_unit_price(root).run()"
+  },
+  {
+   "label": "DuckDB",
+   "detail": "queries/returned_unit_price.sql"
+  }
+ ]
+}

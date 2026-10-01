@@ -51,6 +51,16 @@ def test_a_problems_block_becomes_a_workbench():
         render({"type": "code", "lang": "problems", "value": "chapter: no_such_chapter"})
 
 
+def test_a_timed_block_carries_its_cases_and_never_a_time():
+    html = render({"type": "code", "lang": "timed", "value": "of: top_k"})
+    assert 'class="timed" data-of="top_k"' in html
+    data = json.loads(html.split('class="timed-data">', 1)[1].split("</script>", 1)[0])
+    assert data["of"] == "top_k" and [c["label"] for c in data["cases"]]
+    assert "seconds" not in html
+    with pytest.raises(LabBlockError, match="the timings are"):
+        render({"type": "code", "lang": "timed", "value": "of: no_such_timing"})
+
+
 def test_text_is_escaped():
     assert render({"type": "text", "value": "<b>&"}) == "&lt;b&gt;&amp;"
 

@@ -240,11 +240,27 @@ pushed into your scan, and then DuckDB's:
   Shuffled, they are not. The order the rows were written in changes the size of what a scan
   must fetch, before any row is skipped.
 
+Bytes are what pushdown saves, and time follows them, in your engine more than in most: it
+decodes every value in Python, so every value it need not decode is time it gets back. Time your
+engine's scan of the chapter's query with nothing pushed into it, with the columns pushed, and
+with the columns and the filter:
+
+```timed
+of: pushdown
+```
+
+- **Each push saves time as well as bytes.** Pushing the columns saves decoding the columns the
+  query never asks for. Pushing the filter saves the row groups the statistics ruled out, and
+  handing their rows up to a filter that would throw them away.
+- **The rows the scan never decodes are the cheapest.** With both pushed, the scan does a small
+  part of the work it did with neither, for the same rows out.
+
 ## What this cannot tell you
 
-- **How long the reads took.** The counters give bytes and requests. On object storage, each
-  request costs a wait before its first byte arrives, so fewer requests matter as much as fewer
-  bytes. *Parquet, byte by byte* models that; this book counts the requests.
+- **How long the reads take from object storage.** The timing above reads a file already in
+  your browser's memory, so it times decoding, not waiting. On object storage, each request
+  costs a wait before its first byte arrives, so fewer requests matter as much as fewer bytes.
+  *Parquet, byte by byte* models that; this book counts the requests.
 - **Anything finer than a row group.** Your scan decides once per row group. A Parquet file can
   also carry a page index and Bloom filters, which let a reader skip pages inside a row group or
   rule out one exact value. The Parquet book's reader uses them; your scan does not yet, and

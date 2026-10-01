@@ -29,8 +29,12 @@ used and data shuffled, in any engine, including Vast DataBase.
 - **The Parquet book's reader is the scan layer,** imported as a package, not copied.
 - **DuckDB is the single reference engine.** It's used as a library in the browser (Pyodide) and
   at the desk, with its version pinned.
-- **Counters, not time.** The book never prints a time. There are no desk labs: the reader needs
-  only a browser, and runs every panel and problem in the page.
+- **Counters in the page; times only live.** No time is written into a page. Where a time
+  teaches something, a ```` ```timed ```` block times cases in the reader's browser when asked,
+  with a caveat, and the prose compares them with each other. (This replaced "the book never
+  prints a time": a rule that cost the reader the lesson of seeing what a design saves on their
+  own machine was the wrong rule.) There are no desk labs: the reader needs only a browser, and
+  runs every panel, timing and problem in the page.
 - **Small simulators for CPU concepts:** a cache model, a 2-bit branch predictor, and a SIMD lane
   view.
 - **Self-contained.** Hardware and format concepts are introduced at the point they're first

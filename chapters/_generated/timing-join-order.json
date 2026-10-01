@@ -1,0 +1,15 @@
+{
+ "of": "join_order",
+ "title": "The order the optimiser chooses, and the order written",
+ "data": "o: the orders, 50 times over; c and n: the customers and the countries.",
+ "cases": [
+  {
+   "label": "The optimiser's order",
+   "detail": "SELECT count(*), max(c.name), max(n.name) FROM o JOIN c ON o.customer_id = c.customer_id JOIN n ON c.country = n.country WHERE n.region = 'Asia'"
+  },
+  {
+   "label": "As written",
+   "detail": "SET disabled_optimizers = 'join_order'; SELECT count(*), max(c.name), max(n.name) FROM o JOIN c ON o.customer_id = c.customer_id JOIN n ON c.country = n.country WHERE n.region = 'Asia'"
+  }
+ ]
+}

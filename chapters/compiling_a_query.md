@@ -76,6 +76,21 @@ ways again in your browser.
 - **The chart lengthens the computed column.** Every operation adds an array to the interpreter's
   bytes; the compiled loop's stay where they were.
 
+Now time the three ways, none of them counting as it runs, in your browser:
+
+```timed
+of: compiling
+```
+
+- **The compiled loop beats interpreting a row at a time.** Both handle one row at a time in
+  Python; the loop no longer walks a tree to do it. The nodes it stopped visiting are the time it
+  saved.
+- **A batch at a time beats both, by far.** Its kernels are pyarrow's, compiled ahead of time to
+  machine code, and the compiled loop is still Python, run by an interpreter. The bytes the
+  kernels write cost less than the interpreter's work on every value. Compiling pays when it
+  writes machine code, as HyPer and Umbra do; compiled into Python, it cannot catch a native
+  kernel.
+
 ## Building it
 
 ### An expression as Python
@@ -160,8 +175,9 @@ each; they check the generated code is one loop, and computes a shared value onc
 - **The branches.** The compiled loop has an `if` for every filter and every row, and each is
   predicted as in ch06. The interpreter's filters can select rows without branching on them.
   The panel does not count either.
-- **Python's own speed.** The generated loop runs under Python's interpreter, and is slower than
-  pyarrow's kernels. The counts describe what compiled machine code would do.
+- **What compiling to machine code would gain.** The generated loop runs under Python's
+  interpreter, which is why the timing above puts it behind pyarrow's kernels. The counts
+  describe what compiled machine code would do; the time describes this loop.
 
 ## What this means for your design
 

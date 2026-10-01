@@ -1,0 +1,23 @@
+{
+ "of": "kernels",
+ "title": "A row at a time, and a batch at a time",
+ "data": "The expressions of queries/with_tax.sql, by the book's engine, over fixtures/orders-sorted.parquet.",
+ "cases": [
+  {
+   "label": "A row at a time",
+   "detail": "evaluate_row, for each row"
+  },
+  {
+   "label": "Batches of 16 rows",
+   "detail": "evaluate, for each batch"
+  },
+  {
+   "label": "Batches of 256 rows",
+   "detail": "evaluate, for each batch"
+  },
+  {
+   "label": "Batches of 2,048 rows",
+   "detail": "evaluate, for each batch"
+  }
+ ]
+}

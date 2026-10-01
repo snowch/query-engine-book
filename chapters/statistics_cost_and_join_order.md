@@ -154,6 +154,20 @@ Each join of the chosen plan, your planner's estimate and DuckDB's beside the ro
 - **Your planner guessed the countries from their range; DuckDB from its own defaults.** Both
   arrived near the rows the join made, for different reasons.
 
+The order a planner chooses is worth time. DuckDB runs the chapter's query on fifty copies of the
+orders, a million rows, once in the order its optimiser chooses and once, with that rule turned
+off, in the order the query is written:
+
+```timed
+of: join_order
+```
+
+- **The written order is slower, for the same result.** Written, the orders join the customers
+  first, and every order makes a row before the countries outside Asia are thrown away. Chosen,
+  the customers meet the countries first, and only the orders of customers in Asia make a row.
+- **The difference is the rows the joins hand up.** The same count this chapter's planner
+  minimises, here paid in time.
+
 ## What this cannot tell you
 
 - **What DuckDB keeps about its own tables.** For a file it reads, DuckDB knows what the footer

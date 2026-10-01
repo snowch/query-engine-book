@@ -1,4 +1,5 @@
-// The page's Python, under Pyodide: a panel's report, or a chapter's problems and their graders.
+// The page's Python, under Pyodide: a panel's report, a case of a timed block, or a chapter's
+// problems and their graders.
 //
 // A report is query_lab.report.run, the function the build ran to draw the panel. An edit is the
 // reader's change to a quoted listing, run in place of the engine's code (query_lab.edits) before
@@ -21,6 +22,12 @@ sys.dont_write_bytecode = True
 for extra in ("${ROOT}/python", "${ROOT}/exercises"):
     if extra not in sys.path:
         sys.path.insert(0, extra)
+
+
+def run_timing(name, index):
+    from query_lab import timing
+
+    return json.dumps(timing.time_case(Path("${ROOT}"), name, index))
 
 
 def run_report(config_json):
@@ -167,6 +174,10 @@ onmessage = async ({ data }) => {
       await need(pyodide, ["duckdb", "pyarrow", "pytest"]);
       postMessage({ type: "status", text: "Running your edit…" });
       postMessage({ type: "result", json: pyodide.globals.get("run_edit")(data.file, data.listing, data.text, JSON.stringify(data.then)) });
+    } else if (data.kind === "timing") {
+      await need(pyodide, ["duckdb", "pyarrow"]);
+      postMessage({ type: "status", text: data.status || "Timing…" });
+      postMessage({ type: "result", json: pyodide.globals.get("run_timing")(data.of, data.index) });
     } else if (data.kind === "problems") {
       await need(pyodide, ["duckdb", "pyarrow", "pytest"]);
       postMessage({ type: "status", text: "Running the graders…" });

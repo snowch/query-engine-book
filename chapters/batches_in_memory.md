@@ -123,6 +123,21 @@ Compare the two gathers.
   the same. What differs is the bytes the processor had to fetch, which is why this chapter
   needs a model to see it.
 
+The model says the shuffled gather fetches many more lines. Your processor can say what that
+costs. The panel below gathers a column far larger than any cache, with pyarrow's own `take`, once
+in storage order and once shuffled, and times both in your browser:
+
+```timed
+of: gathers
+```
+
+- **The shuffled gather is slower, for the same values moved.** Both read every value once and
+  write the same column; only the order of the reads differs. The difference is the misses the
+  model counted, paid on your processor.
+- **The gap in time is smaller than the gap in lines.** A real processor has several levels of
+  cache and fetches ahead of a read in storage order, and a gather does more than wait for lines.
+  The model counts what the order changes; the time says how much of the work that is, here.
+
 ## Building it
 
 Your engine's scan built its arrays with pyarrow in [ch01](#the-plan-is-the-map). It now builds
@@ -235,8 +250,9 @@ DuckDB's:
 
 ## What this cannot tell you
 
-- **How long anything took.** The model counts lines, not time. A miss costs many times a hit on
-  a real machine, but how many depends on the machine; the book never prints a time.
+- **How long a gather takes on another machine.** The model counts lines, not time. The timing
+  above shows what a shuffled gather costs on yours; how much a miss costs against a hit depends
+  on the machine, which is why the page keeps no time.
 - **A real processor's caches.** The model has one level where a processor has several, lets any
   line sit anywhere where real caches restrict each line to a few places, and fetches nothing
   ahead of time. A real processor notices a read in storage order and fetches the next lines

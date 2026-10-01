@@ -15,6 +15,7 @@ import { mountEdits } from "./edit.js";
 import { colour } from "./highlight.js";
 import { EXPERIMENTS } from "./panels.js";
 import { runReport } from "./runner.js";
+import { mountTimed } from "./timed.js";
 import { mountWorkbench } from "./workbench.js";
 
 const store = {
@@ -152,6 +153,18 @@ for (const el of document.querySelectorAll(".workbench[data-chapter]")) {
     el.replaceChildren(message);
     el.dataset.ready = "error";
   });
+}
+
+for (const el of document.querySelectorAll(".timed[data-of]")) {
+  try {
+    mountTimed(el);
+  } catch (error) {
+    const message = document.createElement("p");
+    message.className = "lab-error";
+    message.textContent = `The timings could not be drawn: ${String(error.message || error)}`;
+    el.replaceChildren(message);
+    el.dataset.ready = "error";
+  }
 }
 
 for (const el of document.querySelectorAll(".lab[data-experiment]")) {

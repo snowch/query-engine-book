@@ -212,7 +212,9 @@ Your engine's bytes, beside DuckDB's:
 
 - **Which model is faster.** Pulling and pushing do the same work on the same batches; the
   counters cannot tell them apart where both read the same bytes. The difference in time lies in
-  the calls between operators, and the book does not time them.
+  the calls between operators, and the book does not time them: under Python's interpreter a call
+  costs far more than in compiled code, and the times would say more about Python than about the
+  two models.
 - **What a tee costs when its consumers are uneven.** Your tee pushes every batch to every
   consumer at once. If one consumer is slower, a real engine must hold batches for it, or slow the
   others down.

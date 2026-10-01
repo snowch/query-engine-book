@@ -9,9 +9,9 @@ the tests, and the page under Pyodide all run it the same way:
   on purpose, at a desk.
 - **The pinned version.** ``requirements.txt`` pins the DuckDB that Pyodide ships. A plan printed
   in the book is the plan that version makes.
-- **Counters, not times.** The profile's timings are kept in the raw JSON but never shown: they
-  differ on every run and every machine. :func:`query_lab.metrics.from_duckdb_profile` keeps
-  the counters.
+- **Counters in the page.** The profile's timings are kept in the raw JSON but never written into
+  a page: they differ on every run and every machine. :func:`query_lab.metrics.from_duckdb_profile`
+  keeps the counters; :mod:`query_lab.timing` times cases live, in the reader's browser.
 """
 
 from __future__ import annotations

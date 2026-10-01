@@ -138,9 +138,23 @@ And both ways of writing the query:
   every order, several times the bytes, and missed the cache many times as often, for the same
   result.
 
+Which side a join holds decides what it costs. DuckDB probes, with a million rows, build sides of
+more and more rows, here in your browser:
+
+```timed
+of: build_sides
+```
+
+- **The same probe costs more against a bigger build side.** Every case looks up a million keys
+  and finds each one. A small build side's table stays in the cache, and each lookup is a hit; a
+  large one's does not, and a lookup waits for memory.
+- **That is why an engine builds on the smaller side.** Built on the larger side, the same join
+  holds more, and every probe pays for it.
+
 ## What this cannot tell you
 
-- **What the misses cost.** As in ch07, the counts compare the ways; they are not times.
+- **What the misses cost on another machine.** As in ch07, the counts compare the ways, and the
+  timing shows what a bigger build side costs on yours.
 - **How DuckDB lays out what it holds.** DuckDB keeps build rows in its own row format, with
   strings stored apart, and chains a key's rows through pointers. The model gives every value
   eight bytes and one read.

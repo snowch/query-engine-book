@@ -155,10 +155,27 @@ Your scan beside DuckDB's, on the paged file:
 - **DuckDB does not report what its scan decoded.** Its bytes, counted outside it, are the
   evidence that it read the whole row group.
 
+What the scan skips, it never decodes. Time your scan of the early March orders three ways, the
+filter pushed into it each time: from the shuffled file, whose statistics rule out nothing; from
+the sorted file, whose row groups' bounds rule out most of it; and from the paged file, by page:
+
+```timed
+of: pruning
+```
+
+- **Sorting the file decides what the filter can save.** The same scan, the same
+  filter, the same rows out: the shuffled file makes it decode every row group, and the sorted
+  file only those whose dates might match.
+- **The page index takes the same idea a level down.** By page, the scan decodes the pages that
+  might hold the fortnight, and is quicker again, here, where a request costs nothing to wait
+  for.
+
 ## What this cannot tell you
 
-- **How long the requests took.** Reading by page made more, smaller requests. Whether that is
-  faster depends on how long each request waits, which the counters do not say. *Parquet, byte by
+- **How long the requests take from object storage.** Reading by page made more, smaller
+  requests. The timing above reads from memory, where a request waits for nothing; whether
+  reading by page is faster from storage depends on how long each request waits, which neither
+  the counters nor that timing say. *Parquet, byte by
   byte* models it, and coalesces nearby pages into one request to trade bytes for requests.
 - **Bloom filters.** A writer can also add a Bloom filter per column chunk, which can rule out one
   exact value that lies between the minimum and maximum. Your scan does not read them.

@@ -16,6 +16,10 @@ Three node shapes are this book's own:
   (``python -m query_lab figures``), so it draws with nothing to download. Without JavaScript it
   says it needs JavaScript. The renderer checks that the experiment, the query and the fixtures
   it names exist, and that the JSON is there.
+- A fenced block in the language ``timed`` names a timing in ``query_lab.timing``: cases the
+  page times in the reader's browser when asked, and shows with how long each took there. The
+  page carries the cases, never a time: the build's machine is not the reader's. The renderer
+  checks the timing exists and its cases were generated.
 - A fenced block in the language ``problems`` is a chapter's workbench, where a reader edits the
   chapter's problems and runs their tests in the page. The renderer checks that the chapter it
   names has problems.
@@ -53,6 +57,7 @@ for path in (ROOT / "external" / "parquet-book" / "python", ROOT / "python"):
         sys.path.insert(0, str(path))
 from query_lab.figures import QUERY_OF_FRAGMENT  # noqa: E402
 from query_lab.report import panel_name  # noqa: E402
+from query_lab.timing import TIMINGS, json_name  # noqa: E402
 
 REPO_URL = "https://github.com/snowch/query-engine-book/blob/main/"
 
@@ -143,6 +148,25 @@ def _lab(node: dict) -> str:
         f'<div class="lab" {attrs}>'
         f'<script type="application/json" class="lab-data">{_script_json(panel_data(config))}</script>'
         '<p class="lab-fallback">This panel needs JavaScript.</p></div>'
+    )
+
+
+def _timed(node: dict) -> str:
+    config = parse_key_values(str(node.get("value", "")), "timed")
+    name = config.get("of", "")
+    if set(config) != {"of"} or name not in TIMINGS:
+        raise LabBlockError(
+            f"a timed block names one timing, as `of: <name>`; the timings are {', '.join(TIMINGS)}"
+        )
+    path = ROOT / "chapters" / "_generated" / json_name(name)
+    if not path.is_file():
+        raise LabBlockError(
+            f"no cases for the timing {name}: run `make figures` (expected {path.relative_to(ROOT)})"
+        )
+    return (
+        f'<div class="timed" data-of="{html.escape(name)}">'
+        f'<script type="application/json" class="timed-data">{_script_json(json.loads(path.read_text()))}</script>'
+        '<p class="lab-fallback">These cases are timed in your browser, which needs JavaScript.</p></div>'
     )
 
 
@@ -321,6 +345,8 @@ def render(node: dict, footnotes: list | None = None, label: str = "") -> str:
             return _lab(node)
         if node.get("lang") == "problems":
             return _problems(node)
+        if node.get("lang") == "timed":
+            return _timed(node)
         if node.get("lang") == "run":
             return _run(node)
         return _code(node)

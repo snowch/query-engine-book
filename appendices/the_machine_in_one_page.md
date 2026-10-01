@@ -43,6 +43,7 @@ query must be cut into pieces for them to share it ([ch14](#parallelism-on-one-m
 - **Time.** Every model counts events: misses, mispredictions, instructions, requests, bytes. How
   long each takes differs from one machine to the next by more than the book's comparisons do, so
   a count says which design does less, and a time on your own machine says how much that is worth.
+  The chapters' timed blocks measure that, in your browser.
 - **Levels and prediction.** A real processor has several levels of cache, fetches lines before
   they are asked for, and runs instructions out of order while it waits. The models have one
   level, fetch nothing early, and run in order.

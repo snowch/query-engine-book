@@ -23,7 +23,7 @@ import duckdb
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from . import plans, report
+from . import plans, report, timing
 from .cache import LINE_BYTES, LINES
 from .cpu import LANES, Predictor, VectorUnit, select_with_branch, select_without_branch
 from .expressions import Counts, batches_of, evaluate, evaluate_row
@@ -1654,11 +1654,20 @@ def panel_json(config: dict[str, str]) -> str:
     return json.dumps(report.run(ROOT, config), indent=1) + "\n"
 
 
+def timing_json(name: str) -> str:
+    """A timed block's cases, as the page shows them before anything is timed. The times are
+    measured in the reader's browser, never here: a time written at build time would differ at
+    every build, and be the build machine's, not the reader's."""
+    return json.dumps(timing.describe(ROOT, name), indent=1) + "\n"
+
+
 def outputs() -> dict[str, Callable[[], str]]:
-    """Every generated file, by name: the fragments, then the panels' JSON."""
+    """Every generated file, by name: the fragments, the panels' JSON, then the timed blocks'."""
     out: dict[str, Callable[[], str]] = {f"{f.name}.md": f.make for f in FIGURES}
     for config in PANELS:
         out[report.panel_name(config)] = lambda config=config: panel_json(config)
+    for name in timing.TIMINGS:
+        out[timing.json_name(name)] = lambda name=name: timing_json(name)
     return out
 
 
