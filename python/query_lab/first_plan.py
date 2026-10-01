@@ -8,22 +8,38 @@ import pyarrow.compute as pc
 from query_lab.display import preview
 from query_lab.operators import Filter, Project, Scan
 
+ORDERS = Path("fixtures") / "orders-sorted.parquet"
+
 
 def unit_price(batch: pa.RecordBatch) -> pa.Array:
-    """``amount / quantity``, divided as DuckDB divides: both sides as doubles."""
+    """amount / quantity, divided as DuckDB divides: both sides as doubles."""
     return pc.divide(batch["amount"], pc.cast(batch["quantity"], pa.float64()))
 
 
 def returned_unit_price(root: Path) -> Project:
-    """The plan, bottom up: read, keep the returned orders, keep the dear ones, compute."""
-    orders = root / "fixtures" / "orders-sorted.parquet"
-    scan = Scan(orders, ["order_id", "customer_id", "status", "amount", "quantity"])
+    """The plan, built bottom up, as the rows travel through it."""
+    # Read the five columns the query uses, a row group at a time.
+    scan = Scan(root / ORDERS, ["order_id", "customer_id", "status", "amount", "quantity"])
+
+    # Keep the returned orders, then those whose unit price is over a hundred.
     returned = Filter(scan, "status = 'returned'", lambda b: pc.equal(b["status"], "returned"))
     pricey = Filter(returned, "amount / quantity > 100", lambda b: pc.greater(unit_price(b), 100))
-    keep = {"order_id": lambda b: b["order_id"], "customer_id": lambda b: b["customer_id"]}
-    return Project(pricey, {**keep, "unit_price": unit_price})
+
+    # Hand up three columns, the last of them computed.
+    return Project(
+        pricey,
+        {
+            "order_id": lambda b: b["order_id"],
+            "customer_id": lambda b: b["customer_id"],
+            "unit_price": unit_price,
+        },
+    )
 
 
 if __name__ == "__main__":
+    print(f"Reading {ORDERS}\n")
     plan = returned_unit_price(Path("."))
-    print(preview(plan.run()), plan.metrics, sep="\n\n")
+    result = plan.run()
+    print(preview(result))
+    print()
+    print(plan.metrics)

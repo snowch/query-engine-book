@@ -5,6 +5,7 @@
 // reported, test by test, grouped by problem; it decides nothing itself. The reader's text is kept
 // in the browser's storage under a key named for this book, since other books share the origin.
 
+import { colour } from "./highlight.js";
 import { runProblems } from "./runner.js";
 
 const BOOK = location.pathname.replace(/[^/]*$/, "");
@@ -82,6 +83,7 @@ export async function mountWorkbench(root) {
   bar.append(run, reset, status);
   const out = el("div", "wb-results");
   root.append(head, editor, bar, out);
+  const redraw = colour(editor, "python");
   root.dataset.ready = "true";
 
   editor.addEventListener("input", () => {
@@ -99,6 +101,7 @@ export async function mountWorkbench(root) {
   });
   reset.addEventListener("click", () => {
     editor.value = stubs;
+    redraw();
     store.drop(key);
     out.replaceChildren();
     status.textContent = "Reset to the stubs the book ships.";

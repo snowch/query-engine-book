@@ -6,6 +6,7 @@ import importlib.util
 import json
 import math
 import struct
+import subprocess
 import zlib
 from pathlib import Path
 
@@ -110,3 +111,26 @@ def test_the_workers_python_holds_no_backtick():
     source = (ROOT / "web" / "lab" / "python-worker.js").read_text()
     python = source.split("const RUN = `", 1)[1].split("\n`;", 1)[0]
     assert "`" not in python
+
+
+def test_an_editor_colours_code_as_the_book_does():
+    """web/lab/highlight.js colours an editor as tools/highlight.py coloured the listing it
+    replaced, on every file of the engine and every query the book quotes."""
+    from tools.highlight import highlight
+
+    files = [*sorted((ROOT / "python" / "query_lab").glob("*.py")), *sorted((ROOT / "queries").glob("*.sql"))]
+    jobs = [[str(f), "python" if f.suffix == ".py" else "sql"] for f in files]
+    script = (
+        f'import {{ highlight }} from "{(ROOT / "web" / "lab" / "highlight.js").as_uri()}";'
+        'import { readFileSync } from "node:fs";'
+        "const jobs = JSON.parse(process.argv[1]);"
+        'process.stdout.write(JSON.stringify(jobs.map(([f, l]) => highlight(readFileSync(f, "utf8"), l))));'
+    )
+    out = subprocess.run(
+        ["node", "--input-type=module", "-e", script, json.dumps(jobs)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    for (file, lang), coloured in zip(jobs, json.loads(out.stdout), strict=True):
+        assert coloured == highlight(Path(file).read_text(), lang), file

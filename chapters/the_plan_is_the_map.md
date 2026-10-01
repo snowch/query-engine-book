@@ -192,8 +192,8 @@ DuckDB's. Here it is as a whole script, the way you would write it in a notebook
 imports Arrow's Python library, pyarrow, as `pa`, and its compute functions, the kernels an
 operator runs on a whole column at once, as `pc`; `Scan`, `Filter` and `Project` are the engine's
 operators. The scan reads the five columns the query uses, two filters take the two predicates in
-turn, and a projection computes the unit price. Run as a script, it runs the plan and prints the
-first rows and what each operator counted:
+turn, and a projection computes the unit price. Run as a script, it says which file it reads,
+runs the plan, and prints the first rows and what each operator counted:
 
 ```{literalinclude} ../python/query_lab/first_plan.py
 :language: python

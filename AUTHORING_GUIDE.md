@@ -72,8 +72,9 @@ what it uses, builds what the chapter builds, and prints what the reader should 
 `if __name__ == "__main__":`. Quote the whole file, and the page runs exactly the text the reader
 sees, as Python runs a file, and shows what it prints, as a notebook shows a cell's output: no
 hidden caller, no verdict to decode. A listing of part of the engine can name the script too:
-the script then runs with the reader's edit in place. Keep a script under thirty lines, so it
-shows whole. Otherwise name a panel's settings as in its ```` ```lab ```` block, or
+the script then runs with the reader's edit in place. A script the page runs whole never folds,
+since it is read whole; group its steps with a blank line and a comment each, so it reads as the
+plan does. Otherwise name a panel's settings as in its ```` ```lab ```` block, or
 `tests:` a file in `python/tests/` with an optional `select:` (a pytest `-k` expression). Then say, in a sentence,
 one edit worth trying and what it does, and check that it does. Choose listings that are whole
 definitions (a function, a method, a class), since an edit runs in place of what the listing

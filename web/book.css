@@ -246,8 +246,13 @@ figure.quoted pre { margin-top: 0; border-top-left-radius: 0; border-top-right-r
               padding: .35rem 1rem; }
 .source-bar .source-label { flex: none; }
 .source-bar code { background: none; padding: 0; font-size: 12px; overflow-wrap: anywhere; }
-.source-bar a { color: var(--muted); text-decoration: none; min-width: 0; margin-left: auto; }
-.source-bar a:hover { color: var(--accent); }
+/* The file a listing comes from, linked to it on GitHub: coloured and underlined as the page's
+   other links are, with an arrow that says it leaves the book. */
+.source-bar a { color: var(--accent); min-width: 0; margin-left: auto; text-decoration: underline;
+                text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+                text-underline-offset: 3px; }
+.source-bar a:hover { text-decoration-color: var(--accent); }
+.source-bar a::after { content: " \2197"; font-size: 11px; }
 /* On a phone the bar's buttons leave the path too little room, and it broke a letter to a line:
    there the bar wraps, the buttons stay on the first line, and the path takes a line of its own. */
 .source-bar { flex-wrap: wrap; row-gap: .3rem; }
@@ -306,8 +311,9 @@ html.expand-open #main .expanded > .expand { position: fixed; top: .6rem; right:
 html.expand-open #main .expanded.wide-block { padding-top: 2.8rem; }
 html.expand-open #main .expanded > :is(pre, .runnable) { flex: 1 1 auto; min-height: 0; margin: 0; }
 html.expand-open #main .expanded > .runnable { display: flex; flex-direction: column; }
-html.expand-open #main .expanded > .runnable > :is(pre, .code-area) { flex: 1 1 auto; min-height: 0;
+html.expand-open #main .expanded > .runnable > :is(pre, .code-area, .code-edit) { flex: 1 1 auto; min-height: 0;
                                                                        margin: 0; resize: none; }
+html.expand-open #main .expanded :is(.code-edit) > textarea { height: 100%; resize: none; }
 /* A table is as wide as its content and the box scrolls: left a scroll box of its own, the
    table would keep a swipe that started on it, and on a phone its last columns could not be
    reached. */

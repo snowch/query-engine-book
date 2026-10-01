@@ -10,6 +10,7 @@
 // it computes nothing itself. An edit is kept in the browser's storage under a key named for this
 // book, since other books share the origin, and never touches the numbers the chapter prints.
 
+import { colour } from "./highlight.js";
 import { EXPERIMENTS } from "./panels.js";
 import { runEdit, runReport } from "./runner.js";
 
@@ -96,7 +97,8 @@ function mountEdit(figure, then) {
   let result = null;
 
   function close() {
-    editor.remove();
+    // The editor sits in a box with the layer that colours it: both go.
+    editor.closest(".code-edit").remove();
     figure.querySelector(".edit-bar").remove();
     result.remove();
     editor = result = null;
@@ -129,6 +131,7 @@ function mountEdit(figure, then) {
         : `Ctrl+Enter runs it in place of the engine's code, then ${then.tests ? "the engine's tests" : "the panel's report"}. Your edit stays in this browser.`);
     tools.append(run, reset, hint);
     pre.after(editor, tools);
+    const redraw = colour(editor, query ? "sql" : "python");
     result = el("div", "lab run-result");
     const status = el("p", "lab-status");
     status.setAttribute("aria-live", "polite");
@@ -152,6 +155,7 @@ function mountEdit(figure, then) {
     });
     reset.addEventListener("click", () => {
       editor.value = listing;
+      redraw();
       store.drop(key);
       body.replaceChildren();
       status.classList.remove("lab-error");
@@ -238,7 +242,13 @@ function fold(figure) {
 /** Make every quoted query, and every engine listing a `run` block follows, editable, and fold
  * every long listing. */
 export function mountEdits() {
-  for (const figure of document.querySelectorAll("#main figure.quoted")) fold(figure);
+  for (const figure of document.querySelectorAll("#main figure.quoted")) {
+    // A script the page runs whole is read whole, as a notebook cell is: it never folds.
+    const next = figure.nextElementSibling;
+    const script = next && next.matches("script.run-then") && JSON.parse(next.textContent).script === figure.dataset.file;
+    if (script) figure.dataset.script = "true";
+    else fold(figure);
+  }
   for (const figure of document.querySelectorAll("#main figure.quoted[data-file]")) {
     const next = figure.nextElementSibling;
     const then = next && next.matches("script.run-then") ? JSON.parse(next.textContent) : null;

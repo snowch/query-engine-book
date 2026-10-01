@@ -238,3 +238,14 @@ figure.quoted[data-folded="true"] > pre {
                cursor: pointer; }
 .fold-toggle:hover { border-color: var(--accent); }
 figure.quoted[data-editing="true"] > .fold-toggle { display: none; }
+
+/* An editor in colour: the colours drawn in a layer behind a textarea whose own text is
+   transparent, laid out alike (web/lab/highlight.js copies the textarea's font and padding). */
+.code-edit { position: relative; background: var(--code); }
+.code-edit > pre.code-layer { position: absolute; inset: 0; margin: 0; box-sizing: border-box; overflow: hidden;
+                              white-space: pre; pointer-events: none; color: var(--ink); background: none;
+                              border-radius: 0; }
+/* Important, as each editor's own rule sets its text's colour and background more specifically. */
+.code-edit > textarea { position: relative; background: transparent !important; color: transparent !important;
+                        caret-color: var(--ink); }
+.code-edit > textarea::selection { color: transparent; background: color-mix(in srgb, var(--accent) 25%, transparent); }
