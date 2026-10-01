@@ -84,10 +84,11 @@ try {
     const page = await openPage(browser, directory(site));
     await page.goto(`${ORIGIN}/${file}`);
     await page.waitForLoadState("load");
-    // A listing over thirty lines is folded, and its button shows the rest.
+    // A listing over thirty lines is folded, and its button shows the rest; a script the page runs
+    // whole is read whole, and never folds.
     const folds = await page.$$eval("#main figure.quoted", (fs) => fs.map((f) => {
       const lines = f.querySelector(":scope > pre").textContent.replace(/\n$/, "").split("\n").length;
-      return [lines > 30, f.dataset.folded === "true", !!f.querySelector(":scope > .fold-toggle")];
+      return [lines > 30 && f.dataset.script !== "true", f.dataset.folded === "true", !!f.querySelector(":scope > .fold-toggle")];
     }));
     if (folds.some(([long, folded, button]) => long !== folded || long !== button)) {
       failures += 1;

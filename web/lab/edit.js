@@ -242,7 +242,13 @@ function fold(figure) {
 /** Make every quoted query, and every engine listing a `run` block follows, editable, and fold
  * every long listing. */
 export function mountEdits() {
-  for (const figure of document.querySelectorAll("#main figure.quoted")) fold(figure);
+  for (const figure of document.querySelectorAll("#main figure.quoted")) {
+    // A script the page runs whole is read whole, as a notebook cell is: it never folds.
+    const next = figure.nextElementSibling;
+    const script = next && next.matches("script.run-then") && JSON.parse(next.textContent).script === figure.dataset.file;
+    if (script) figure.dataset.script = "true";
+    else fold(figure);
+  }
   for (const figure of document.querySelectorAll("#main figure.quoted[data-file]")) {
     const next = figure.nextElementSibling;
     const then = next && next.matches("script.run-then") ? JSON.parse(next.textContent) : null;
