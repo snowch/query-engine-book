@@ -9,7 +9,8 @@
 // The edit is kept in the browser's storage, and reopens its editor on a reload. A block that
 // shows a plan must draw its rows and counters as a desk computes them.
 //
-// A listing over thirty lines is folded, with a button that shows the rest.
+// A listing over thirty lines is folded, with a button that shows the rest. Expanded to the
+// window, a script's editor fills it until it is run, and then shares it with what it printed.
 //
 // A quoted query, the first on each page: an edited query must draw what a desk's report prints
 // for the same text, and mark every figure and panel computed for the book's query as the book's,
@@ -30,7 +31,7 @@ function check(ok, message) {
 }
 
 async function run(page, figure) {
-  const result = await figure.evaluateHandle((f) => f.nextElementSibling);
+  const result = await figure.evaluateHandle((f) => f.querySelector(":scope > .run-result"));
   await (await figure.$(".edit-bar .lab-run")).click();
   await page.waitForFunction((r) => r.dataset.ready === "true" || r.dataset.ready === "error", result,
     { timeout: 600_000, polling: 250 });
@@ -41,7 +42,7 @@ async function run(page, figure) {
     // What a script printed, as the page shows it, and which script the block runs.
     output: r.querySelector("pre.cell-output")?.textContent ?? null,
     script: (() => {
-      const s = r.nextElementSibling;
+      const s = r.parentElement.nextElementSibling;
       return s && s.matches("script.run-then") ? JSON.parse(s.textContent).script || null : null;
     })(),
   }));
@@ -154,7 +155,25 @@ try {
           check(restored.ready === "true" && right(restored), `${label}, after a broken edit and a reset: ${restored.status}`);
           await (await figure.$(".edit-open")).click();
           check(!(await figure.$("textarea.code-area")), `${label}: closing the editor left it open`);
-          const also = shipped.script ? `, prints what ${shipped.script} prints at a desk` : "";
+          // Run with the listing expanded to the window, the output is in the window too.
+          if (shipped.script && await figure.$(".source-bar .expand")) {
+            await (await figure.$(".edit-open")).click();
+            await figure.evaluate((f) => f.querySelector(".source-bar .expand").click());
+            // Nothing run yet, the editor fills the window: no empty output box takes a share of it.
+            const filled = await figure.evaluate((f) => {
+              const bar = f.querySelector(":scope > .edit-bar").getBoundingClientRect();
+              const shown = getComputedStyle(f.querySelector(":scope > .run-result")).display !== "none";
+              return !shown && window.innerHeight - bar.bottom < 24;
+            });
+            check(filled, `${label}: expanded before a run, the editor did not fill the window`);
+            const expanded = await run(page, figure);
+            const inside = await figure.evaluate((f) =>
+              f.classList.contains("expanded") && !!f.querySelector(":scope > .run-result pre.cell-output"));
+            check(expanded.ready === "true" && inside, `${label}: run while expanded, its output was not in the window`);
+            await page.keyboard.press("Escape");
+            await (await figure.$(".edit-open")).click();
+          }
+          const also = shipped.script ? `, prints what ${shipped.script} prints at a desk, expanded or not` : "";
           console.log(`  ${label}: as quoted it gives the build's answer${also}; a broken edit says where, and is undone`);
         }
         checked += 1;

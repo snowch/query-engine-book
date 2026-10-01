@@ -137,7 +137,9 @@ function mountEdit(figure, then) {
     status.setAttribute("aria-live", "polite");
     const body = el("div", "lab-body");
     result.append(status, body);
-    figure.after(result);
+    // The output belongs to the listing, so it goes where the listing goes: when the listing is
+    // expanded to the whole window, its output is in the window too.
+    figure.append(result);
     figure.dataset.editing = "true";
     open.textContent = "Close the editor";
 
@@ -202,6 +204,8 @@ function mountEdit(figure, then) {
           }
         }
         result.dataset.ready = "true";
+        // The output can land below the window, an expanded listing's above all: bring it into view.
+        result.scrollIntoView({ block: "nearest" });
       } catch (error) {
         status.textContent = query
           ? `DuckDB could not run your query: ${lastLine(error)}`
