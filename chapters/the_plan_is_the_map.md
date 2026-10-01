@@ -17,8 +17,8 @@ its own answer:
 | The question | What answers it |
 |---|---|
 | What does the query mean? | A **logical plan**: the steps the SQL asks for, such as *read the orders*, *keep the returned ones*, *compute a unit price*, with nothing yet decided about how. [ch11](#from-sql-to-a-logical-plan) builds one. |
-| How will the engine run it? | The **physical plan**: the operators the engine chose to do those steps. `EXPLAIN` prints it. |
-| What did running it do? | The **profile**: the same operators, each with what it counted as it ran. |
+| How will the engine run it? | The **physical plan**: the operators the engine chose to do those steps. `EXPLAIN` prints it. This chapter writes one by hand, [ch11](#from-sql-to-a-logical-plan) has a planner write it, and [ch13](#statistics-cost-and-join-order) chooses between plans by cost. |
+| What did running it do? | The **profile**: the same operators, each with what it counted as it ran. DuckDB writes one when you run a query with profiling on, and this chapter's operators count as they run and print one. |
 
 **The plan is the map, and the profile is the journey.** The plan says where the data is meant to
 go; the profile says how much of it went through each part of the map. This chapter reads both for
