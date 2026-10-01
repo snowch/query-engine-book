@@ -177,7 +177,9 @@ function mountEdit(figure, then) {
     reset.type = "button";
     const hint = el("span", "lab-hint", query
       ? "Ctrl+Enter runs it under DuckDB in your browser. Your edit stays in this browser."
-      : `Ctrl+Enter runs it in place of the engine's code, then ${then.tests ? "the engine's tests" : "the panel's report"}. Your edit stays in this browser.`);
+      : then.show
+        ? "Ctrl+Enter runs it in place of the engine's code and shows what the plan returns. Your edit stays in this browser."
+        : `Ctrl+Enter runs it in place of the engine's code, then ${then.tests ? "the engine's tests" : "the panel's report"}. Your edit stays in this browser.`);
     tools.append(run, reset, hint);
     pre.after(editor, tools);
     result = el("div", "lab run-result");
@@ -228,7 +230,13 @@ function mountEdit(figure, then) {
         } else {
           const answer = JSON.parse(await runEdit(file, listing, text, then, (t) => { status.textContent = t; }));
           if (answer.error) throw new Error(answer.error);
-          if (answer.report) {
+          if (answer.shown && !answer.tests) {
+            // A plan shown like a notebook cell's output: the rows and the counters are the feedback.
+            shownResult(body, answer.shown);
+            status.textContent = answer.shown.error
+              ? "Your plan raised an error when it ran."
+              : edited ? "Your edit, run in your browser." : "The book's code, run in your browser.";
+          } else if (answer.report) {
             EXPERIMENTS[then.report.experiment](body, answer.report, { store: revealed, key });
             const same = JSON.stringify(answer.report) === JSON.stringify(then.build);
             result.dataset.agrees = String(same);

@@ -153,7 +153,9 @@ class RunBlockError(LabBlockError):
 def parse_run_block(value: str) -> dict:
     """A ``run`` block says what to run on the reader's edit of the listing above it: a panel's
     report, as a ``lab`` block names one (and the build must have its JSON, which the page
-    compares the edit's answer with), or ``tests``, a file in ``python/tests/``, with an optional
+    compares the edit's answer with); ``show``, a query in ``queries/`` whose hand-written plan
+    runs on the edit, so the reader sees the rows it returns and what each operator counted, as a
+    notebook cell shows its output; or ``tests``, a file in ``python/tests/``, with an optional
     ``select``, a pytest ``-k`` expression, and an optional ``show``, a query in ``queries/`` whose
     hand-written plan runs after the tests, so the reader sees what it returns and counts."""
     config = parse_key_values(value, "run")
@@ -169,12 +171,23 @@ def parse_run_block(value: str) -> dict:
         parse_lab_block(value)
         panel_data(config)
         return config
-    raise RunBlockError(f"a run block names an experiment or tests; got {config}")
+    if "show" in config:
+        if set(config) - {"show"}:
+            raise RunBlockError(f"a run block that shows a plan takes only show; got {config}")
+        if not (ROOT / "queries" / config["show"]).is_file():
+            raise RunBlockError(f"run block shows queries/{config['show']}, which does not exist")
+        return config
+    raise RunBlockError(f"a run block names an experiment, tests or a plan to show; got {config}")
 
 
 def _run(node: dict) -> str:
     config = parse_run_block(str(node.get("value", "")))
-    then = {"tests": config} if "tests" in config else {"report": config, "build": panel_data(config)}
+    if "tests" in config:
+        then = {"tests": config}
+    elif "show" in config:
+        then = {"show": config["show"]}
+    else:
+        then = {"report": config, "build": panel_data(config)}
     return f'<script type="application/json" class="run-then">{_script_json(then)}</script>'
 
 

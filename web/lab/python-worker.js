@@ -85,7 +85,7 @@ def _last_lines(error):
 
 def run_edit(file, listing, text, then_json):
     """Run the reader's edit of a quoted listing in place of the engine's code, then what the
-    chapter's run block names: a panel's report, or some of the engine's tests."""
+    chapter's run block names: a plan to show, a panel's report, or some of the engine's tests."""
     import pytest
     from query_lab import report
     from query_lab.edits import edited, shown
@@ -93,6 +93,11 @@ def run_edit(file, listing, text, then_json):
     then = json.loads(then_json)
     try:
         with edited(Path("${ROOT}"), file, listing, text):
+            if "show" in then:
+                try:
+                    return json.dumps({"shown": shown(Path("${ROOT}"), then["show"])})
+                except Exception as error:
+                    return json.dumps({"shown": {"error": _last_lines(error)}})
             if "report" in then:
                 result = report.run(Path("${ROOT}"), then["report"])
                 return json.dumps({"report": result}, separators=(",", ":"))

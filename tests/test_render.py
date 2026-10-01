@@ -7,7 +7,7 @@ import json
 import pytest
 
 from tools.highlight import highlight
-from tools.render import LabBlockError, UnknownNodeError, render, render_page
+from tools.render import LabBlockError, RunBlockError, UnknownNodeError, parse_run_block, render, render_page
 
 
 def test_an_unknown_node_raises_rather_than_vanishing():
@@ -99,3 +99,18 @@ def test_highlighting_colours_sql_and_escapes_it():
 def test_code_shows_one_blank_line_at_most():
     out = render({"type": "code", "lang": "", "value": "def a():\n    pass\n\n\ndef b():\n    pass"})
     assert "pass\n\ndef b" in out and "\n\n\n" not in out
+
+
+def test_a_run_block_can_show_a_plan_with_nothing_else():
+    """Run as a notebook cell runs: the plan's rows and counters are the output, with no tests."""
+    assert parse_run_block("show: returned_unit_price.sql") == {"show": "returned_unit_price.sql"}
+    with pytest.raises(RunBlockError, match="does not exist"):
+        parse_run_block("show: no_such_query.sql")
+    with pytest.raises(RunBlockError, match="takes only show"):
+        parse_run_block("show: returned_unit_price.sql\nselect: projection")
+    then = json.loads(
+        render({"type": "code", "lang": "run", "value": "show: returned_unit_price.sql"})
+        .split(">", 1)[1]
+        .rsplit("<", 1)[0]
+    )
+    assert then == {"show": "returned_unit_price.sql"}
