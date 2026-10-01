@@ -314,8 +314,9 @@ html.expand-open #main .expanded > .runnable { display: flex; flex-direction: co
 html.expand-open #main .expanded > .runnable > :is(pre, .code-area, .code-edit) { flex: 1 1 auto; min-height: 0;
                                                                        margin: 0; resize: none; }
 html.expand-open #main .expanded :is(.code-edit) > textarea { height: 100%; resize: none; }
-/* A listing being edited shares the window with its output: the editor takes what is left and
-   scrolls within itself, and the output takes up to half the window and scrolls within itself. */
+/* A listing being edited fills the window until it is run. Then it shares the window with its
+   output: the output is as tall as what it printed, up to half the window, scrolling within
+   itself beyond that, and the editor takes the rest. */
 html.expand-open #main .expanded > .code-edit { flex: 1 1 auto; min-height: 8rem; }
 html.expand-open #main .expanded > .edit-bar { flex: none; }
 html.expand-open #main .expanded > .run-result { flex: 0 0 auto; max-height: 50%; overflow: auto; margin: .6rem 0 0; }
