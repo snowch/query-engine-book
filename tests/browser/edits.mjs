@@ -30,7 +30,7 @@ function check(ok, message) {
 }
 
 async function run(page, figure) {
-  const result = await figure.evaluateHandle((f) => f.nextElementSibling);
+  const result = await figure.evaluateHandle((f) => f.querySelector(":scope > .run-result"));
   await (await figure.$(".edit-bar .lab-run")).click();
   await page.waitForFunction((r) => r.dataset.ready === "true" || r.dataset.ready === "error", result,
     { timeout: 600_000, polling: 250 });
@@ -41,7 +41,7 @@ async function run(page, figure) {
     // What a script printed, as the page shows it, and which script the block runs.
     output: r.querySelector("pre.cell-output")?.textContent ?? null,
     script: (() => {
-      const s = r.nextElementSibling;
+      const s = r.parentElement.nextElementSibling;
       return s && s.matches("script.run-then") ? JSON.parse(s.textContent).script || null : null;
     })(),
   }));
@@ -154,7 +154,18 @@ try {
           check(restored.ready === "true" && right(restored), `${label}, after a broken edit and a reset: ${restored.status}`);
           await (await figure.$(".edit-open")).click();
           check(!(await figure.$("textarea.code-area")), `${label}: closing the editor left it open`);
-          const also = shipped.script ? `, prints what ${shipped.script} prints at a desk` : "";
+          // Run with the listing expanded to the window, the output is in the window too.
+          if (shipped.script && await figure.$(".source-bar .expand")) {
+            await (await figure.$(".edit-open")).click();
+            await figure.evaluate((f) => f.querySelector(".source-bar .expand").click());
+            const expanded = await run(page, figure);
+            const inside = await figure.evaluate((f) =>
+              f.classList.contains("expanded") && !!f.querySelector(":scope > .run-result pre.cell-output"));
+            check(expanded.ready === "true" && inside, `${label}: run while expanded, its output was not in the window`);
+            await page.keyboard.press("Escape");
+            await (await figure.$(".edit-open")).click();
+          }
+          const also = shipped.script ? `, prints what ${shipped.script} prints at a desk, expanded or not` : "";
           console.log(`  ${label}: as quoted it gives the build's answer${also}; a broken edit says where, and is undone`);
         }
         checked += 1;

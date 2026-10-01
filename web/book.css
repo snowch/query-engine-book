@@ -314,6 +314,11 @@ html.expand-open #main .expanded > .runnable { display: flex; flex-direction: co
 html.expand-open #main .expanded > .runnable > :is(pre, .code-area, .code-edit) { flex: 1 1 auto; min-height: 0;
                                                                        margin: 0; resize: none; }
 html.expand-open #main .expanded :is(.code-edit) > textarea { height: 100%; resize: none; }
+/* A listing being edited shares the window with its output: the editor takes what is left and
+   scrolls within itself, and the output takes up to half the window and scrolls within itself. */
+html.expand-open #main .expanded > .code-edit { flex: 1 1 auto; min-height: 8rem; }
+html.expand-open #main .expanded > .edit-bar { flex: none; }
+html.expand-open #main .expanded > .run-result { flex: 0 0 auto; max-height: 50%; overflow: auto; margin: .6rem 0 0; }
 /* A table is as wide as its content and the box scrolls: left a scroll box of its own, the
    table would keep a swipe that started on it, and on a phone its last columns could not be
    reached. */
