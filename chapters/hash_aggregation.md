@@ -172,10 +172,24 @@ And your engine's two tables, on the same customer ids:
 - **DuckDB made the same choice from the same statistics.** It chose the perfect aggregate
   because the file's statistics gave the ids' range, and the range was small.
 
+The cliff the model counted is one you can time. DuckDB groups a million rows by a hashed key
+into more and more groups, here in your browser:
+
+```timed
+of: groups
+```
+
+- **The same rows cost more as the table grows.** Every case reads the same million rows and
+  adds up the same values. What changes is the table: a few thousand groups fit in the cache,
+  and a million do not, so most lookups wait for memory.
+- **Past the cache, every lookup costs more.** The same rows take many times as long, because
+  each lookup is a miss rather than a hit, and a miss costs many times as much. That is the cost
+  the model's misses stand for.
+
 ## What this cannot tell you
 
-- **What a miss costs.** The cache model counts misses. A real one costs on the order of a hundred
-  cycles, a hit a few, and the counts say nothing about either.
+- **What a miss costs on another machine.** The cache model counts misses. A real one costs on
+  the order of a hundred cycles, a hit a few; the timing above shows what they add up to on yours.
 - **What a real table holds.** DuckDB's slots point into a separate area that holds each group's
   key and aggregates, so a lookup reads a second place; a string's bytes live in a third. The
   model reads one slot and nothing else.

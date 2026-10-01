@@ -70,6 +70,19 @@ again in your browser.
 - **Together they save both.** Each rule saves a different thing, and the rules do not get in
   each other's way.
 
+Time the same four plans, run by your engine in your browser:
+
+```timed
+of: rules
+```
+
+- **Time follows the bytes here, more than the rows.** Your engine spends most of a plan's time
+  decoding in its scans, as [ch01](#the-plan-is-the-map)'s profile showed, so pruning the columns
+  saves the most, and moving the filters, which leaves the scans as they were, saves little.
+- **Both rules make the quickest plan.** In an engine whose joins cost more than its scans, the
+  rows the filters keep from the join would be worth more; the counters say what each rule saves,
+  and the time what that is worth in this engine.
+
 ## Building it
 
 ### Conditions, as far down as they go

@@ -1,8 +1,9 @@
 """The counters every operator reports: one structure, the same for every operator in the book.
 
 COUNTERS.md is the specification; this module is its implementation, and the tests hold the two
-together. Every experiment in the book compares counters rather than times, because counters are
-the same on every machine and in the browser, and a time is not. A counter is an exact integer
+together. Every number a page carries about a run is a counter, because counters are the same on
+every machine and in the browser, and a time is not: times are measured live, in the reader's
+browser, by :mod:`query_lab.timing`. A counter is an exact integer
 the operator counts as it runs, never an estimate and never a sample.
 
 An operator owns one :class:`Metrics`. A plan is a tree of operators, so its metrics are a tree

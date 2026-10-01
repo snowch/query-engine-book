@@ -61,3 +61,12 @@ export function runProblems(chapter, source, onStatus = () => {}) {
 export function runEdit(file, listing, text, then, onStatus = () => {}) {
   return run({ kind: "edit", file, listing, text, then }, onStatus, EDIT_LIMIT_MS);
 }
+
+/**
+ * Time case `index` of the timing `of` (query_lab.timing), in this browser. Resolves with JSON
+ * text: {seconds, runs, profile, where}. The worker runs one thing at a time, so nothing else on
+ * the page runs while a case is timed.
+ */
+export function runTiming(of, index, status, onStatus = () => {}) {
+  return run({ kind: "timing", of, index, status }, onStatus);
+}

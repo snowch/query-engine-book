@@ -1,9 +1,11 @@
 # COUNTERS.md: what every operator reports
 
-Every experiment in this book compares counters, not times. A counter is an exact integer an
-operator counts as it runs. It is the same on every machine, at the book's build and in the
-reader's browser, so a number printed in the book can be regenerated and checked. A time cannot,
-so the book never prints one.
+Every experiment in this book compares counters. A counter is an exact integer an operator counts
+as it runs. It is the same on every machine, at the book's build and in the reader's browser, so a
+number printed in the book can be regenerated and checked. A time cannot, so no time is written
+into a page. Where a time teaches something, a chapter times cases live in the reader's browser
+(`python/query_lab/timing.py`), shows them there and then, and compares them with each other;
+the counters stay what the prose reasons with.
 
 This file is the specification. `python/query_lab/metrics.py` implements it, and
 `python/tests/test_metrics.py` holds the two together. Settle a change here first, then in code,

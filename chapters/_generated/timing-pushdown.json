@@ -1,0 +1,19 @@
+{
+ "of": "pushdown",
+ "title": "Pushing work into the scan",
+ "data": "The scan of queries/early_march.sql, by the book's engine, on fixtures/orders-sorted.parquet.",
+ "cases": [
+  {
+   "label": "Nothing pushed",
+   "detail": "Filter(Scan(every column))"
+  },
+  {
+   "label": "The columns pushed",
+   "detail": "Filter(Scan(four columns))"
+  },
+  {
+   "label": "The columns and the filter pushed",
+   "detail": "Scan(four columns, the filter)"
+  }
+ ]
+}

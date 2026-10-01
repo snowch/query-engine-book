@@ -287,6 +287,19 @@ def test_every_experiment_has_a_mount_and_a_report():
         assert e in REPORTS, f"query_lab.report has no {e}"
 
 
+def test_every_timing_is_timed_by_one_chapter():
+    """A timing nobody times is dead code, and two chapters timing one would say the same twice."""
+    from query_lab.timing import TIMINGS
+
+    used = [
+        body.split(":", 1)[1].strip()
+        for c in CHAPTERS
+        for lang, body in fences((ROOT / c.path).read_text())
+        if lang == "timed"
+    ]
+    assert sorted(used) == sorted(TIMINGS)
+
+
 @pytest.mark.parametrize("chapter", CHAPTERS, ids=lambda c: c.slug)
 def test_a_chapters_fixtures_exist(chapter):
     for fixture in chapter.fixtures:

@@ -247,6 +247,25 @@ filter is the one the scan never hands up.
 jobs and hand up the same rows; DuckDB's does one of the jobs inside its scan, where yours gives it
 an operator of its own, and pays for it in rows moved.
 
+Counters say how much work each operator did. A time says how long it took, and for the same rows
+the two engines' times are far apart. Time both, here in your browser:
+
+```timed
+of: two_engines
+```
+
+- **The same rows, a very different time.** DuckDB runs the query many times faster than your
+  engine, though the two counted the same rows at every step they share. Your engine is Python,
+  and decodes the Parquet file in Python; DuckDB is C++, compiled here to WebAssembly. The gap
+  measures the language and the implementation as well as the plan.
+- **A profile can say where the time went.** Each case shows each operator's own time, its
+  children's left out, which is what a profiler reports. In your engine the scan takes nearly all
+  of it: decoding the file costs far more than testing or computing anything. DuckDB's profile
+  times its operators too, and `EXPLAIN ANALYZE` prints them in its plan's boxes.
+- **Press it again, and the times move.** The counters never do. That is why the book reasons
+  with counters, and times a case only to show what its counters cost: a counter measures the
+  design, and a time measures the design, the language and the machine at once.
+
 So the next question is not how fast a query runs. It is **how much work the engine can avoid doing
 in the first place**: which columns, row groups and rows it need never read or hand up. That is
 [Part II](#part-reading-less)'s question, from [ch03](#projection-and-filter-pushdown). First,
@@ -254,13 +273,10 @@ in the first place**: which columns, row groups and rows it need never read or h
 
 ## What this cannot tell you
 
-- **How long anything took.** The counters say how much work each operator did, not how fast.
-  In the page, both engines run inside your browser: yours as Python under Pyodide, DuckDB as its
-  C++ compiled to WebAssembly. Each is slower there than on a server, by an amount that depends
-  on your browser and your machine, and your engine decodes Parquet in Python besides, many times
-  slower than DuckDB's C++ anywhere. A time would measure all of that, not the design. The
-  counters come out the same in your browser as when the book was built. The chapters that are
-  about time use small simulators; the book never prints a time.
+- **How long anything takes anywhere but here.** The times above are your browser's, now. Both
+  engines run slower in a browser than on a server, by an amount that depends on your browser and
+  your machine, so the page keeps no time, and compares cases timed together. The counters come
+  out the same in your browser as when the book was built.
 - **What DuckDB's scan decoded.** DuckDB reports the rows in the files its scan opened, not the
   rows it decoded. [ch03](#projection-and-filter-pushdown) counts that with your own scan.
 - **Anything about statistics.** Your scan, as this chapter uses it, reads every row group,

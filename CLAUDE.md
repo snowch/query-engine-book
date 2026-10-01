@@ -44,7 +44,7 @@ package once both books are stable; until then, a fix to shared tooling is worth
 
 | Path | What it is |
 |---|---|
-| `python/query_lab/` | The engine. `operators` (scan, filter, project, pulling Arrow batches), `plans` (a hand-written plan per query, until Part IV's planner), `metrics` (the counters), `reference` (DuckDB), `report` (what panels draw), `figures` (every generated fragment). |
+| `python/query_lab/` | The engine. `operators` (scan, filter, project, pulling Arrow batches), `plans` (a hand-written plan per query, until Part IV's planner), `metrics` (the counters), `reference` (DuckDB), `report` (what panels draw), `timing` (the cases a page times live), `figures` (every generated fragment). |
 | `exercises/` | The problems: `<slug>.py` stubs, and `tests/test_<slug>.py` graders, skipped unless run with `--problems`. The reader runs them in the chapter's workbench, in the page. |
 | `external/parquet-book/` | Git submodule, pinned: the Parquet book. Its `python/parquet_lab` is the engine's scan layer. Never copy it into this repository. |
 | `queries/` | Every query a chapter runs, one per file. Pages quote them; figures and tests run them. |
@@ -84,8 +84,14 @@ bring the branch level with `main`.
 
 ## The invariants
 
-1. **Counters, not time.** Every number the book prints about a run is a counter from
-   COUNTERS.md: the same on every machine and in the browser. The book never prints a time.
+1. **Counters in the page; times only live.** Every number a page carries about a run is a
+   counter from COUNTERS.md: the same on every machine and in the browser. A time is never
+   written into a page, a figure or a panel's JSON: it would be the build machine's, and differ
+   at every build. A chapter times cases with a ```` ```timed ```` block (`query_lab.timing`),
+   which runs them in the reader's browser when the reader asks, shows the times there and then,
+   and says that they vary and are slower than at a desk. The prose compares timed cases with
+   each other, never quotes a time, and `python/tests/test_timing.py` checks each comparison at
+   a desk.
 2. **The reader needs only a browser.** Everything a page asks the reader to run, runs in the
    page: a panel, or a chapter's problems workbench. No page gives a shell command or sends the
    reader to a desk, except one section of the *Running the lab* appendix, *On your own
@@ -130,6 +136,14 @@ run it in figures and tests through `query_lab.reference.read_query`.
 
 **A figure.** Add a `Figure` to `python/query_lab/figures.py` that runs DuckDB or the engine and
 returns markdown ending with its conditions line, run `make figures`, and `{include}` it.
+
+**A timing.** Where the time a design saves teaches more than its counters alone: a top-k
+against a full sort, a batch at a time against a row at a time. Add a function returning a
+`Timing` to `python/query_lab/timing.py` and its name to `TIMINGS`, with the comparisons the prose
+will make in `faster`; run `make figures` for its cases; and put a ```` ```timed ```` block,
+`of: <name>`, in the chapter. Size the cases so each takes tens of milliseconds or more in a
+browser, and none more than a few seconds. `tests/browser/timings.mjs` times each block in
+Chromium.
 
 **A panel.** Only where a picture beats a table. Add a function to `python/query_lab/report.py`
 that returns the JSON to draw, and its name to `EXPERIMENTS` there and in `tools/outline.py`; a

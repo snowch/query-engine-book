@@ -12,8 +12,8 @@ How much faster does a query finish with more cores, and what stops it going fas
 Every run so far used one thread: DuckDB in this page has one, and the book builds its figures
 with one too, so that both agree. A machine with sixteen cores could, in principle, finish a query
 sixteen times sooner. This chapter asks what a query must be split into for cores to
-share it, and what part of it no number of cores can share. It never times a thread. It counts
-the work each would do.
+share it, and what part of it no number of cores can share. It times nothing: your browser
+runs one thread, so there is no second core to time. It counts the work each would do.
 
 ## Observe
 

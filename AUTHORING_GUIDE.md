@@ -117,6 +117,23 @@ must be typed as digits takes `% number-ok: <reason>` on the line before its par
 
 Refer to a query's constants by their role ("the query's threshold"), not their value.
 
+### Never type a time
+
+No time is written into a page. Where the time a design saves is worth seeing, add a timing to
+`python/query_lab/timing.py` and a block to the chapter:
+
+````markdown
+```timed
+of: top_k
+```
+````
+
+The page shows the cases, and times them in the reader's browser when asked, with a caveat that
+the times vary and run slower than at a desk. In the prose, compare the cases in words (slower,
+far quicker, about the same), and put every comparison you make in the timing's `faster`, so
+`python/tests/test_timing.py` holds it true at a desk. Claim only what holds by a wide margin, in
+a browser and at a desk; say what the time adds to the counters, and never let it replace them.
+
 ### Never paste code into prose
 
 Quote Python from `python/` and SQL from `queries/`:

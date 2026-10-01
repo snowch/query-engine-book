@@ -1,0 +1,19 @@
+{
+ "of": "pruning",
+ "title": "What the statistics let the scan skip",
+ "data": "The early March orders, by the book's engine, the filter pushed into the scan each time.",
+ "cases": [
+  {
+   "label": "Shuffled",
+   "detail": "orders-shuffled.parquet"
+  },
+  {
+   "label": "Sorted",
+   "detail": "orders-sorted.parquet"
+  },
+  {
+   "label": "Sorted, by page",
+   "detail": "orders-paged.parquet, its page index"
+  }
+ ]
+}

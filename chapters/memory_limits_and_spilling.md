@@ -117,11 +117,26 @@ DuckDB reports neither what it spilled nor the memory it used, in the pinned ver
 comparison is the result: your external sort hands up DuckDB's rows, in DuckDB's order, within
 every limit the tests try, and DuckDB's own sort finishes within a limit only when it may spill.
 
+What a spill costs is time as well as bytes. DuckDB sorts a million rows with all the memory it
+wants, and then within a small limit, here in your browser, where its temporary files are kept in
+memory too:
+
+```timed
+of: spilling
+```
+
+- **Within a small limit, the same sort takes longer.** The rows, the order and the result are
+  the same. What changes is that DuckDB cannot hold them all, so it writes sorted runs out and
+  reads them back to merge them.
+- **It slows down rather than fails.** That is what a place to spill buys. Even here, where the
+  "disk" is memory, writing every row out and reading it back costs time; on a real disk, or in
+  object storage, it costs far more.
+
 ## What this cannot tell you
 
-- **What the disk costs.** The counts are bytes written and read. On a laptop's disk or in object
-  storage, writing a byte costs far more than holding it, which is the whole case against
-  spilling.
+- **What a real disk costs.** The counts are bytes written and read, and the timing above spills
+  to memory. On a laptop's disk or in object storage, writing a byte costs far more than holding
+  it, which is the whole case against spilling.
 - **How much memory DuckDB used.** It reports the limit it was given and whether it ran out, not
   its peak. The limits in the table are where the pinned version succeeds on this data.
 - **What DuckDB spills.** DuckDB can spill its hash aggregates and joins too, by partitioning

@@ -82,6 +82,26 @@ the same kernels again in your browser.
   test at thresholds from nearly every row to none. A test that keeps almost everything or
   almost nothing is predicted well with a branch, because it nearly always goes the same way.
 
+The model counts wrong guesses. Your processor pays for them in time. The panel below keeps the
+values over fifty from a million, stored once in order and once shuffled: first with pyarrow's
+filter, then with DuckDB. pyarrow's filter takes a run of kept or dropped values a machine word at
+a time, and decides value by value, with a branch, only where the two mix. DuckDB's comparison
+kernels have no branch on the data. The test is written `v + 0 > 50` so that DuckDB tests every
+value; a bare `v > 50` would let it skip the sorted table's row groups by their bounds, as
+[ch04](#statistics-and-pruning)'s scan does, and the timing would be of that.
+
+```timed
+of: branches
+```
+
+- **pyarrow is several times slower on the shuffled values.** The same values, the same test, the
+  same values kept: only the order differs. Sorted, the kept values are one run, taken a word at a
+  time. Shuffled, they mix everywhere, and every value is a decision the processor guesses wrong
+  about half the time.
+- **DuckDB takes about the same time on both.** Its kernel writes every position and moves on by
+  the result, as your kernel without a branch does, so the order of the values cannot fool the
+  predictor. Press the button again: the gap between its two moves from run to run, and is noise.
+
 ## Building it
 
 ### The tree
@@ -146,6 +166,19 @@ sizes:
 - **Past a few thousand rows, larger batches save almost nothing more.** The decisions are
   already few.
 
+Time the same evaluations, a row at a time and in batches of three sizes:
+
+```timed
+of: kernels
+```
+
+- **Time follows the decisions.** A row at a time is the slowest by far, and each larger batch is
+  faster, for the same rows kept and the same prices computed.
+- **In Python a decision is dear.** Each is a function call of the interpreter's, so the gap
+  between a row and a batch at a time is wider here than in a compiled engine, where a decision
+  costs a few cycles. The counters give the ratio of decisions; the time says what each one costs
+  on this interpreter.
+
 ### The two kernels
 
 The predictor the panel ran:
@@ -208,9 +241,9 @@ Your plan beside DuckDB's:
 
 ## What this cannot tell you
 
-- **What a misprediction costs in time.** The model counts wrong guesses, not the cycles each
-  one wastes, which depend on the processor. A modern processor loses on the order of a dozen or
-  more cycles to each.
+- **What a misprediction costs on another processor.** The model counts wrong guesses, not the
+  cycles each one wastes, which depend on the processor. A modern processor loses on the order of
+  a dozen or more cycles to each. The timing above shows what they cost on yours.
 - **How a real predictor guesses.** Real predictors remember the history of many branches
   together and would learn some patterns the two-bit counter cannot, such as a branch that
   alternates. Random data fools them all.

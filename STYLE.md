@@ -97,8 +97,9 @@ slice of it holds a narrow range of dates* is a claim.
 ## 17. Numbers are generated
 
 Never type a measured number, even to make a sentence clearer. Point at the table or the panel
-that shows it. See AUTHORING_GUIDE.md. And never print a time from the browser: counters are the
-same everywhere, times are not.
+that shows it. See AUTHORING_GUIDE.md. Never type a time either: a ```` ```timed ```` block
+measures times in the reader's browser, and the prose compares its cases in words (slower,
+several times quicker), which a desk test holds true.
 
 ## Before you finish: two passes
 

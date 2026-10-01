@@ -1,0 +1,19 @@
+{
+ "of": "compiling",
+ "title": "Three ways to run one pipeline",
+ "data": "ch01's pipeline, by the book's engine, over fixtures/orders-sorted.parquet.",
+ "cases": [
+  {
+   "label": "Interpreted, a row at a time",
+   "detail": "ch06's evaluate_row"
+  },
+  {
+   "label": "Interpreted, a batch at a time",
+   "detail": "ch06's evaluate, a kernel a node"
+  },
+  {
+   "label": "Compiled into one loop of Python",
+   "detail": "generate, then compile"
+  }
+ ]
+}

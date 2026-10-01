@@ -138,6 +138,19 @@ Your top-k beside DuckDB's:
   top-k saves comparisons and memory, not reading. An index on the amount, or a file sorted by
   it, would save the reading too.
 
+The comparisons and the memory a top-k saves are time. DuckDB sorts a million rows, then keeps
+the first ten of the same order, here in your browser:
+
+```timed
+of: top_k
+```
+
+- **Keeping ten is far quicker than sorting everything.** Both read every row and compare each
+  one at least once. The sort then orders all of them and writes them out; the top-k keeps ten,
+  and throws the rest away as they arrive.
+- **The time says what the counters stood for.** Fewer comparisons, and a heap of ten rows in
+  place of a million to move: the counts of this chapter, paid on your processor.
+
 ## What this cannot tell you
 
 - **What a comparison costs.** Comparing two numbers is cheap; comparing two long strings is not,

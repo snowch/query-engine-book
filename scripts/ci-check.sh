@@ -47,7 +47,7 @@ python3 scripts/check-built-links.py _build/html
 echo "== the book's tests, the engine's, and desk-browser parity under Node =="
 python3 -m pytest -q
 
-echo "== the DuckDB probe, the panels, the workbenches and the site's chrome, in a headless browser =="
+echo "== the DuckDB probe, the panels, the workbenches, the timings and the site's chrome, in a headless browser =="
 # Needs Playwright and a Chromium. CI installs both; locally the check runs if they are present.
 # The panels check draws every panel from the build's JSON, then runs its report under Pyodide
 # and requires the same answer, drawn the same way.
@@ -58,6 +58,8 @@ if node -e "require.resolve('playwright')" >/dev/null 2>&1 \
   node tests/browser/workbench.mjs _build/html
   # Every listing of the engine a chapter opens to editing, and a query on every page.
   node tests/browser/edits.mjs _build/html
+  # Every timed block, timed in the browser: cases and no time before, a time for each after.
+  node tests/browser/timings.mjs _build/html
   # Served under /query-engine-book/ on an origin other books share, as GitHub Pages serves it.
   node tests/browser/site.mjs _build/html
 elif [ -n "${CI:-}" ]; then

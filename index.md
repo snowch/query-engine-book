@@ -61,9 +61,11 @@ fixture changes, the build recomputes the numbers and fails if a committed table
 tree, so the book cannot drift from the code it describes. The bar above each block names the
 file.
 
-**Counters, not time.** An engine's work is counted in rows, batches, bytes and requests, which
-are the same on every machine and in your browser. Times differ from run to run, so the book
-never prints one.
+**Counters first, then time.** An engine's work is counted in rows, batches, bytes and requests,
+which are the same on every machine and in your browser, so the book reasons with them. Where a
+design saves time, a chapter lets you time it, in your browser, when you press the button. Times
+differ from run to run and machine to machine, so the page keeps none, and compares cases timed
+together.
 
 ## Where this starts
 

@@ -1,0 +1,23 @@
+{
+ "of": "rules",
+ "title": "Four plans, timed",
+ "data": "queries/enterprise_orders.sql, planned and run by the book's engine on the fixtures.",
+ "cases": [
+  {
+   "label": "The plain plan",
+   "detail": "no rules"
+  },
+  {
+   "label": "Push the filters down",
+   "detail": "push_filters"
+  },
+  {
+   "label": "Prune the columns",
+   "detail": "prune_columns"
+  },
+  {
+   "label": "Both rules",
+   "detail": "push_filters, then prune_columns"
+  }
+ ]
+}
