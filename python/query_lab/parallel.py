@@ -69,8 +69,8 @@ def returned_orders(morsel: Operator) -> Operator:
     """ch01's query as a pipeline: two filters and a projection, on one morsel."""
     import pyarrow.compute as pc
 
+    from .first_plan import unit_price
     from .operators import Filter, Project
-    from .plans import unit_price
 
     returned = Filter(morsel, "status = 'returned'", lambda b: pc.equal(b["status"], "returned"))
     pricey = Filter(returned, "amount / quantity > 100", lambda b: pc.greater(unit_price(b), 100))

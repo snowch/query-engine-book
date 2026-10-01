@@ -21,35 +21,13 @@ import pyarrow.parquet as pq
 from .aggregate import Aggregate, HashAggregate, HashTable, PerfectTable
 from .cache import Cache
 from .expressions import Call, Column, Literal, evaluate
+from .first_plan import returned_unit_price, unit_price
 from .join import HashJoin
 from .memory import fixed_width_array, gather
 from .operators import Comparison, Filter, Operator, Project, Scan, TableScan
 from .sort import Sort, TopK
 from .spill import ExternalSort
 from .storage import ComputingStore, StorageScan
-
-
-def returned_unit_price(root: Path) -> Operator:
-    """queries/returned_unit_price.sql, operator by operator: read, keep, keep, compute."""
-    scan = Scan(
-        root / "fixtures" / "orders-sorted.parquet",
-        ["order_id", "customer_id", "status", "amount", "quantity"],
-    )
-    returned = Filter(scan, "status = 'returned'", lambda b: pc.equal(b["status"], "returned"))
-    pricey = Filter(returned, "amount / quantity > 100", lambda b: pc.greater(unit_price(b), 100))
-    return Project(
-        pricey,
-        {
-            "order_id": lambda b: b["order_id"],
-            "customer_id": lambda b: b["customer_id"],
-            "unit_price": unit_price,
-        },
-    )
-
-
-def unit_price(batch: pa.RecordBatch) -> pa.Array:
-    """``amount / quantity``, divided as DuckDB divides: both sides as doubles."""
-    return pc.divide(batch["amount"], pc.cast(batch["quantity"], pa.float64()))
 
 
 def in_date_order(table: pa.Table) -> list[int]:

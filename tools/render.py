@@ -153,39 +153,36 @@ class RunBlockError(LabBlockError):
 def parse_run_block(value: str) -> dict:
     """A ``run`` block says what to run on the reader's edit of the listing above it: a panel's
     report, as a ``lab`` block names one (and the build must have its JSON, which the page
-    compares the edit's answer with); ``show``, a query in ``queries/`` whose hand-written plan
-    runs on the edit, so the reader sees the rows it returns and what each operator counted, as a
-    notebook cell shows its output; or ``tests``, a file in ``python/tests/``, with an optional
-    ``select``, a pytest ``-k`` expression, and an optional ``show``, a query in ``queries/`` whose
-    hand-written plan runs after the tests, so the reader sees what it returns and counts."""
+    compares the edit's answer with); ``script``, a file of the engine run as a script, whose
+    printed output the page shows as a notebook shows a cell's; or ``tests``, a file in ``python/tests/``, with an optional
+    ``select``, a pytest ``-k`` expression."""
     config = parse_key_values(value, "run")
     if "tests" in config:
-        if set(config) - {"tests", "select", "show"}:
-            raise RunBlockError(f"a run block with tests takes only tests, select and show; got {config}")
+        if set(config) - {"tests", "select"}:
+            raise RunBlockError(f"a run block with tests takes only tests and select; got {config}")
         if not (ROOT / "python" / "tests" / config["tests"]).is_file():
             raise RunBlockError(f"run block names python/tests/{config['tests']}, which does not exist")
-        if "show" in config and not (ROOT / "queries" / config["show"]).is_file():
-            raise RunBlockError(f"run block shows queries/{config['show']}, which does not exist")
         return config
     if "experiment" in config:
         parse_lab_block(value)
         panel_data(config)
         return config
-    if "show" in config:
-        if set(config) - {"show"}:
-            raise RunBlockError(f"a run block that shows a plan takes only show; got {config}")
-        if not (ROOT / "queries" / config["show"]).is_file():
-            raise RunBlockError(f"run block shows queries/{config['show']}, which does not exist")
+    if "script" in config:
+        if set(config) - {"script"}:
+            raise RunBlockError(f"a run block that runs a script takes only script; got {config}")
+        path = ROOT / config["script"]
+        if not path.is_file() or 'if __name__ == "__main__":' not in path.read_text():
+            raise RunBlockError(f"run block runs {config['script']}, which is not a script in the repository")
         return config
-    raise RunBlockError(f"a run block names an experiment, tests or a plan to show; got {config}")
+    raise RunBlockError(f"a run block names an experiment, tests or a script; got {config}")
 
 
 def _run(node: dict) -> str:
     config = parse_run_block(str(node.get("value", "")))
     if "tests" in config:
         then = {"tests": config}
-    elif "show" in config:
-        then = {"show": config["show"]}
+    elif "script" in config:
+        then = {"script": config["script"]}
     else:
         then = {"report": config, "build": panel_data(config)}
     return f'<script type="application/json" class="run-then">{_script_json(then)}</script>'

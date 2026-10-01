@@ -144,12 +144,12 @@ how many batches flow; only the filter changes how many rows.
 ```
 
 ```run
-show: returned_unit_price.sql
+script: python/query_lab/first_plan.py
 ```
 
-Run ch01's plan on your edit, and you see its rows and counters. Make the filter hand up every
-batch unfiltered, say: every filter's rows out become its rows in, and the plan returns every
-order.
+Run it, and the page runs ch01's script, `first_plan.py`, with your `Filter` and `Project` in place
+of the engine's, and shows what it prints. Make the filter hand up every batch unfiltered, say:
+every filter's rows out become its rows in, and the plan returns every order.
 
 ### Filters in the scan
 

@@ -8,9 +8,8 @@ from pathlib import Path
 import pytest
 
 from query_lab import cpu, memory, plans, report
-from query_lab.edits import SHOWN_ROWS, EditError, edited, enclosing_class, module_of, shown
+from query_lab.edits import EditError, edited, enclosing_class, module_of
 from query_lab.operators import Scan
-from query_lab.reference import connect, read_query
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -97,28 +96,8 @@ def test_an_edited_plan_is_the_one_its_registry_runs_until_the_edit_ends():
     book = listing(plans.returned_unit_price)
     edit = book.replace("pricey = Filter(returned,", "pricey = Filter(scan,")
     assert edit != book
-    with edited(ROOT, "python/query_lab/plans.py", book, edit):
+    with edited(ROOT, "python/query_lab/first_plan.py", book, edit):
         assert plans.PLANS["returned_unit_price.sql"] is plans.returned_unit_price
         skipped = plans.plan_for(ROOT, "returned_unit_price.sql").run().num_rows
-    assert plans.PLANS["returned_unit_price.sql"].__code__.co_filename.endswith("plans.py")
+    assert plans.PLANS["returned_unit_price.sql"].__code__.co_filename.endswith("first_plan.py")
     assert plans.plan_for(ROOT, "returned_unit_price.sql").run().num_rows < skipped
-
-
-def test_a_shown_plan_gives_duckdbs_rows_and_its_own_counters():
-    got = shown(ROOT, "returned_unit_price.sql")
-    theirs = connect().execute(read_query(ROOT / "queries" / "returned_unit_price.sql")).fetchall()
-    assert got["total"] == len(theirs)
-    assert [tuple(r) for r in got["rows"]] == theirs[:SHOWN_ROWS]
-    assert [op["operator"] for op in got["operators"]] == ["Project", "Filter", "Filter", "Scan"]
-    assert [op["depth"] for op in got["operators"]] == [0, 1, 2, 3]
-    assert got["operators"][0]["rows_out"] == got["total"]
-
-
-def test_a_shown_plan_runs_the_edit_in_place():
-    source = listing(plans.returned_unit_price)
-    text = source.replace("Filter(returned,", "Filter(scan,", 1)
-    with edited(ROOT, "python/query_lab/plans.py", source, text):
-        skipped = shown(ROOT, "returned_unit_price.sql")
-    kept = shown(ROOT, "returned_unit_price.sql")
-    assert skipped["total"] > kept["total"]
-    assert skipped["operators"][1]["rows_in"] == skipped["operators"][2]["rows_out"]

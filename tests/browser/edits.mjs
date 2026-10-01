@@ -4,8 +4,7 @@
 //
 // A listing of the engine that a `run` block follows: run as the book quotes it, under Pyodide,
 // it must give the build's answer (a panel's report, compared with the build's JSON) or pass the
-// engine's tests the block names, or draw the rows and counters of the plan it shows as a desk
-// computes them. An edit that does not parse must say so, with the line of the
+// engine's tests the block names, or print what the script it runs prints at a desk. An edit that does not parse must say so, with the line of the
 // edit it failed on, and a run after it must give the build's answer again: the edit was undone.
 // The edit is kept in the browser's storage, and reopens its editor on a reload. A block that
 // shows a plan must draw its rows and counters as a desk computes them.
@@ -39,25 +38,20 @@ async function run(page, figure) {
     ready: r.dataset.ready, agrees: r.dataset.agrees, passed: r.dataset.passed, total: r.dataset.total,
     status: r.querySelector(".lab-status").textContent,
     operators: [...r.querySelectorAll(".plan-op")].map((op) => op.dataset.operator),
-    // What the page drew of the plan a run block shows, and which plan the block names.
-    shown: r.querySelector(".edit-shown")?.dataset.shown ?? null,
-    show: (() => {
+    // What a script printed, as the page shows it, and which script the block runs.
+    output: r.querySelector("pre.cell-output")?.textContent ?? null,
+    script: (() => {
       const s = r.nextElementSibling;
-      if (!s || !s.matches("script.run-then")) return null;
-      const then = JSON.parse(s.textContent);
-      return then.show || (then.tests || {}).show || null;
+      return s && s.matches("script.run-then") ? JSON.parse(s.textContent).script || null : null;
     })(),
   }));
 }
 
-/** What a plan returns and counts at a desk, as a run block shows it in the page. */
-function deskShown(query) {
-  const code = "import json, sys; from pathlib import Path; from query_lab.edits import shown; "
-    + "print(json.dumps(shown(Path('.'), sys.argv[1])))";
-  const out = execFileSync("python3", ["-c", code, query], {
+/** What a script prints when Python runs it at a desk, from the book's root. */
+function deskOutput(script) {
+  return execFileSync("python3", [script], {
     env: { ...process.env, PYTHONPATH: "python:external/parquet-book/python" },
-  });
-  return JSON.stringify(JSON.parse(out.toString()));
+  }).toString();
 }
 
 function desk(query, sql) {
@@ -139,18 +133,14 @@ try {
         } else {
           const shipped = await run(page, figure);
           check(shipped.ready === "true", `${label}, as the book quotes it: ${shipped.status}`);
-          // Right as quoted: every test passes, the panel gives the build's answer, or the plan a block
-          // shows is drawn as a desk computes it.
+          // Right as quoted: every test passes, the panel gives the build's answer, or the script
+          // prints what it prints at a desk.
           const right = (r) => {
             if (r.total !== undefined) return r.passed === r.total && Number(r.total) > 0;
             if (r.agrees !== undefined) return r.agrees === "true";
-            return r.shown !== null && JSON.stringify(JSON.parse(r.shown)) === deskShown(r.show);
+            return r.output !== null && r.output === deskOutput(r.script);
           };
           check(right(shipped), `${label}: ${shipped.status}`);
-          if (shipped.show) {
-            check(shipped.shown && JSON.stringify(JSON.parse(shipped.shown)) === deskShown(shipped.show),
-              `${label}: the plan it shows differs from the desk's: ${shipped.shown}`);
-          }
           await editor.fill(`${listing}\n(`);
           const broken = await run(page, figure);
           check(broken.ready === "error" && /(Syntax|Indentation)Error: .*\(line \d+ of your edit\)$/.test(broken.status), `${label}, broken: ${broken.status}`);
@@ -163,7 +153,7 @@ try {
           check(restored.ready === "true" && right(restored), `${label}, after a broken edit and a reset: ${restored.status}`);
           await (await figure.$(".edit-open")).click();
           check(!(await figure.$("textarea.code-area")), `${label}: closing the editor left it open`);
-          const also = shipped.show ? `, shows ${shipped.show}'s plan as a desk runs it` : "";
+          const also = shipped.script ? `, prints what ${shipped.script} prints at a desk` : "";
           console.log(`  ${label}: as quoted it gives the build's answer${also}; a broken edit says where, and is undone`);
         }
         checked += 1;
