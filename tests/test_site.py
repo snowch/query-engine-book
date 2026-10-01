@@ -102,3 +102,11 @@ def test_every_page_names_the_licences_the_book_declares():
         assert name in cover and file in cover, f"the cover does not name {name}, or its file"
     # And how it was written, in the same words in both places.
     assert site.WRITTEN_WITH in foot and site.WRITTEN_WITH in cover
+
+
+def test_the_workers_python_holds_no_backtick():
+    """The worker's Python sits in a JavaScript template string: a backtick in it, as in a
+    docstring's ``code``, ends the string early, and every run on every page fails."""
+    source = (ROOT / "web" / "lab" / "python-worker.js").read_text()
+    python = source.split("const RUN = `", 1)[1].split("\n`;", 1)[0]
+    assert "`" not in python

@@ -83,21 +83,36 @@ def _last_lines(error):
     return f"{type(error).__name__}: {error}{where}"
 
 
+def run_script(source, label):
+    """Run the source as Python runs a script, named "__main__", and return what it printed, and
+    the error it stopped on, if it did, as a notebook shows a cell's."""
+    code = compile(source, label, "exec")
+    out = io.StringIO()
+    error = None
+    with redirect_stdout(out):
+        try:
+            exec(code, {"__name__": "__main__", "__file__": label})
+        except Exception as raised:
+            error = _last_lines(raised)
+    return {"output": out.getvalue(), "error": error}
+
+
 def run_edit(file, listing, text, then_json):
     """Run the reader's edit of a quoted listing in place of the engine's code, then what the
-    chapter's run block names: a plan to show, a panel's report, or some of the engine's tests."""
+    chapter's run block names: a script, a panel's report, or some of the engine's tests."""
     import pytest
     from query_lab import report
-    from query_lab.edits import edited, shown
+    from query_lab.edits import edited
 
     then = json.loads(then_json)
     try:
+        # A listing that is the whole script runs as the reader wrote it, and nothing else does.
+        if then.get("script") == file:
+            return json.dumps(run_script(text, "<your edit>"))
         with edited(Path("${ROOT}"), file, listing, text):
-            if "show" in then:
-                try:
-                    return json.dumps({"shown": shown(Path("${ROOT}"), then["show"])})
-                except Exception as error:
-                    return json.dumps({"shown": {"error": _last_lines(error)}})
+            if "script" in then:
+                source = (Path("${ROOT}") / then["script"]).read_text()
+                return json.dumps(run_script(source, then["script"]))
             if "report" in then:
                 result = report.run(Path("${ROOT}"), then["report"])
                 return json.dumps({"report": result}, separators=(",", ":"))
@@ -111,14 +126,7 @@ def run_edit(file, listing, text, then_json):
                 args += ["-k", tests["select"]]
             with redirect_stdout(out), redirect_stderr(out):
                 code = int(pytest.main(args, plugins=[collect]))
-            answer = {"tests": collect.tests, "exit": code, "output": out.getvalue()}
-            # What the plan returns on the edit, for the reader to see, as well as the tests.
-            if tests.get("show"):
-                try:
-                    answer["shown"] = shown(Path("${ROOT}"), tests["show"])
-                except Exception as error:
-                    answer["shown"] = {"error": _last_lines(error)}
-            return json.dumps(answer)
+            return json.dumps({"tests": collect.tests, "exit": code, "output": out.getvalue()})
     except Exception as error:
         return json.dumps({"error": _last_lines(error)})
 `;

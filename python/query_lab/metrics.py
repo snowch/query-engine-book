@@ -98,6 +98,22 @@ class Metrics:
             if m.batches_out == 0 and m.rows_out:
                 raise MetricsError(f"{m.operator}: rows came out in no batches")
 
+    def __str__(self) -> str:
+        """The tree as a table, one operator a line, each indented under its parent, with the
+        counters a reader looks at first: rows in and out, batches out and bytes read."""
+        names = [("  " * depth + m.operator, m) for m, depth in self._depths(0)]
+        width = max(len(n) for n, _ in names)
+        lines = [" " * width + "".join(h.rjust(12) for h in ("rows in", "rows out", "batches", "bytes read"))]
+        for name, m in names:
+            counts = (m.rows_in, m.rows_out, m.batches_out, m.bytes_read)
+            lines.append(name.ljust(width) + "".join(f"{c:,}".rjust(12) for c in counts))
+        return "\n".join(lines)
+
+    def _depths(self, depth: int) -> Iterator[tuple[Metrics, int]]:
+        yield self, depth
+        for child in self.children:
+            yield from child._depths(depth + 1)
+
     def to_json(self) -> dict:
         """The tree as JSON, counters in COUNTERS order, for figures, the page and the tests."""
         out: dict = {"operator": self.operator, "detail": self.detail}

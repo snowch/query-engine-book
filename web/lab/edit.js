@@ -56,66 +56,11 @@ function testResults(root, report) {
   return passed;
 }
 
-/** A value of the plan's result as the page shows it: a long fraction cut to a few places. */
-function cell(value) {
-  if (value === null) return "NULL";
-  if (typeof value === "number" && !Number.isInteger(value)) return value.toLocaleString("en-GB", { maximumFractionDigits: 3 });
-  return String(value);
-}
-
-function table(head, rows, className) {
-  const t = el("table", className);
-  const tr = el("tr");
-  for (const h of head) tr.append(el("th", "", h));
-  t.append(el("thead"));
-  t.tHead.append(tr);
-  const body = el("tbody");
-  for (const row of rows) {
-    const r = el("tr");
-    for (const v of row) {
-      const td = el("td");
-      if (v instanceof Node) td.append(v);
-      else td.textContent = v;
-      r.append(td);
-    }
-    body.append(r);
-  }
-  t.append(body);
-  return t;
-}
-
-/** What the plan returned and counted on the reader's edit: its first rows, and each operator's
- * counters, top down. Python computed every number; this only draws them. */
-function shownResult(root, shown) {
-  const box = el("div", "edit-shown");
-  if (shown.error) {
-    box.append(el("p", "lab-error", `The plan could not run: ${shown.error}`));
-    root.append(box);
-    return;
-  }
-  const rows = shown.total.toLocaleString("en-GB");
-  box.append(el("p", "edit-shown-title", shown.rows.length < shown.total
-    ? `The plan returned ${rows} rows. The first ${shown.rows.length}:`
-    : `The plan returned ${rows} rows:`));
-  const wrap = el("div", "table-wrap");
-  wrap.append(table(shown.columns, shown.rows.map((r) => r.map(cell)), "edit-rows"));
-  box.append(wrap);
-  box.append(el("p", "edit-shown-title", "What each operator counted, from the top of the plan down:"));
-  const counted = el("div", "table-wrap");
-  counted.append(table(
-    ["Operator", "Rows in", "Rows out", "Batches out", "Bytes read"],
-    shown.operators.map((op) => {
-      const name = el("span", "edit-op");
-      name.style.paddingLeft = `${op.depth}em`;
-      name.append(el("strong", "", op.operator), el("code", "", op.detail));
-      return [name, op.rows_in.toLocaleString("en-GB"), op.rows_out.toLocaleString("en-GB"),
-        op.batches_out.toLocaleString("en-GB"), op.bytes_read.toLocaleString("en-GB")];
-    }),
-    "edit-counters",
-  ));
-  box.append(counted);
-  box.dataset.shown = JSON.stringify(shown);
-  root.append(box);
+/** What a script printed, as a notebook shows a cell's output, and the error it stopped on. */
+function scriptOutput(root, answer) {
+  const out = el("pre", "cell-output", answer.output);
+  root.append(out);
+  if (answer.error) root.append(el("p", "cell-error lab-error", answer.error));
 }
 
 /**
@@ -177,8 +122,10 @@ function mountEdit(figure, then) {
     reset.type = "button";
     const hint = el("span", "lab-hint", query
       ? "Ctrl+Enter runs it under DuckDB in your browser. Your edit stays in this browser."
-      : then.show
-        ? "Ctrl+Enter runs it in place of the engine's code and shows what the plan returns. Your edit stays in this browser."
+      : then.script
+        ? (then.script === figure.dataset.file
+          ? "Ctrl+Enter runs it as a script, and shows what it prints. Your edit stays in this browser."
+          : `Ctrl+Enter runs ${then.script.split("/").pop()} with your edit in place, and shows what it prints. Your edit stays in this browser.`)
         : `Ctrl+Enter runs it in place of the engine's code, then ${then.tests ? "the engine's tests" : "the panel's report"}. Your edit stays in this browser.`);
     tools.append(run, reset, hint);
     pre.after(editor, tools);
@@ -230,12 +177,12 @@ function mountEdit(figure, then) {
         } else {
           const answer = JSON.parse(await runEdit(file, listing, text, then, (t) => { status.textContent = t; }));
           if (answer.error) throw new Error(answer.error);
-          if (answer.shown && !answer.tests) {
-            // A plan shown like a notebook cell's output: the rows and the counters are the feedback.
-            shownResult(body, answer.shown);
-            status.textContent = answer.shown.error
-              ? "Your plan raised an error when it ran."
-              : edited ? "Your edit, run in your browser." : "The book's code, run in your browser.";
+          if (answer.output !== undefined && !answer.tests) {
+            // The output is the feedback: what the script printed, as a notebook shows it.
+            scriptOutput(body, answer);
+            status.textContent = answer.error
+              ? "It stopped on an error:"
+              : edited ? "Your edit, run in your browser:" : "The book's code, run in your browser:";
           } else if (answer.report) {
             EXPERIMENTS[then.report.experiment](body, answer.report, { store: revealed, key });
             const same = JSON.stringify(answer.report) === JSON.stringify(then.build);
@@ -245,7 +192,6 @@ function mountEdit(figure, then) {
               : "Your edit changed the answer: this is what your code counted, and the panel above is the book's.";
           } else {
             const passed = testResults(body, answer);
-            if (answer.shown) shownResult(body, answer.shown);
             result.dataset.passed = String(passed);
             result.dataset.total = String(answer.tests.length);
             status.textContent = `${passed} of ${answer.tests.length} of the engine's tests pass on ${edited ? "your edit" : "the book's code"}.`;

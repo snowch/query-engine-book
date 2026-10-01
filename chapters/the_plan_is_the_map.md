@@ -188,35 +188,27 @@ receives.
 ### The plan
 
 The engine has no planner yet, so you write the plan by hand, bottom up, the way `EXPLAIN` drew
-DuckDB's. The plan's module imports Arrow's Python library, pyarrow, as `pa`, and its compute
-functions, the kernels an operator runs on a whole column at once, as `pc`:
+DuckDB's. Here it is as a whole script, the way you would write it in a notebook or a file. It
+imports Arrow's Python library, pyarrow, as `pa`, and its compute functions, the kernels an
+operator runs on a whole column at once, as `pc`; `Scan`, `Filter` and `Project` are the engine's
+operators. The scan reads the five columns the query uses, two filters take the two predicates in
+turn, and a projection computes the unit price. Run as a script, it runs the plan and prints the
+first rows and what each operator counted:
 
-```{literalinclude} ../python/query_lab/plans.py
+```{literalinclude} ../python/query_lab/first_plan.py
 :language: python
-:start-at: import pyarrow as pa
-:end-before: import pyarrow.parquet as pq
-```
-
-`Scan`, `Filter` and `Project` are the engine's operators, from `query_lab.operators`. The scan
-reads the five columns the query uses. Two filters take the two predicates in turn, and a
-projection computes the unit price:
-
-```{literalinclude} ../python/query_lab/plans.py
-:language: python
-:start-at: def returned_unit_price(
-:end-before: def in_date_order(
 ```
 
 ```run
-show: returned_unit_price.sql
+script: python/query_lab/first_plan.py
 ```
 
-Press **Edit and run** on a listing like this one to change it and run it in your browser, as you
-would a notebook cell: the plan runs, and you see the first rows it returned and what each
-operator counted. Skip the filter on the status, say, by handing the price filter `scan` in place
-of `returned`: more rows come back, and the price filter takes in every row of the file. Edit, run,
-look, and edit again. The book's own code comes back when you close the editor, and nothing you
-change moves a number the chapter prints.
+Press **Edit and run** to change it and run it in your browser, as you would a notebook cell: the
+page runs what you see, as Python would run the file, and shows what it prints. Skip the filter on
+the status, say, by handing the price filter `scan` in place of `returned`: more rows come back,
+and the price filter takes in every row of the file. Edit, run, look, and edit again. The book's
+own code comes back when you close the editor, and nothing you change moves a number the chapter
+prints.
 
 Called with no `filters`, as this plan calls it, the scan reads every row group and hands up
 every row. It tests no predicate, where DuckDB's did. That difference is the first thing the

@@ -101,16 +101,12 @@ def test_code_shows_one_blank_line_at_most():
     assert "pass\n\ndef b" in out and "\n\n\n" not in out
 
 
-def test_a_run_block_can_show_a_plan_with_nothing_else():
-    """Run as a notebook cell runs: the plan's rows and counters are the output, with no tests."""
-    assert parse_run_block("show: returned_unit_price.sql") == {"show": "returned_unit_price.sql"}
-    with pytest.raises(RunBlockError, match="does not exist"):
-        parse_run_block("show: no_such_query.sql")
-    with pytest.raises(RunBlockError, match="takes only show"):
-        parse_run_block("show: returned_unit_price.sql\nselect: projection")
-    then = json.loads(
-        render({"type": "code", "lang": "run", "value": "show: returned_unit_price.sql"})
-        .split(">", 1)[1]
-        .rsplit("<", 1)[0]
-    )
-    assert then == {"show": "returned_unit_price.sql"}
+def test_a_run_block_can_run_a_script_and_nothing_else():
+    """Run as a notebook cell runs: what the script prints is the output, with nothing behind it."""
+    assert parse_run_block("script: python/query_lab/first_plan.py") == {
+        "script": "python/query_lab/first_plan.py"
+    }
+    with pytest.raises(RunBlockError, match="not a script"):
+        parse_run_block("script: python/query_lab/operators.py")
+    with pytest.raises(RunBlockError, match="takes only script"):
+        parse_run_block("script: python/query_lab/first_plan.py\nselect: projection")
