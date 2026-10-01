@@ -208,17 +208,15 @@ projection computes the unit price:
 ```
 
 ```run
-tests: test_operators.py
-select: returned_unit_price or projection or nothing_is_read
 show: returned_unit_price.sql
 ```
 
-Press **Edit and run** on a listing like this one to change it and run it in your browser. It runs
-the engine's tests on your code, then the plan itself, and shows the first rows it returned and
-what each operator counted. Skip the filter on the status, say, by handing the price filter `scan`
-in place of `returned`: more rows come back, the price filter takes in every row of the file, and
-the tests say the rows no longer match DuckDB's. The book's own code comes back when you close the
-editor, and nothing you change moves a number the chapter prints.
+Press **Edit and run** on a listing like this one to change it and run it in your browser, as you
+would a notebook cell: the plan runs, and you see the first rows it returned and what each
+operator counted. Skip the filter on the status, say, by handing the price filter `scan` in place
+of `returned`: more rows come back, and the price filter takes in every row of the file. Edit, run,
+look, and edit again. The book's own code comes back when you close the editor, and nothing you
+change moves a number the chapter prints.
 
 Called with no `filters`, as this plan calls it, the scan reads every row group and hands up
 every row. It tests no predicate, where DuckDB's did. That difference is the first thing the

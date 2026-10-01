@@ -139,8 +139,10 @@ it never computes a count. `tests/browser/panels.mjs` checks each panel against 
 reruns it under Pyodide; add a reader for any new drawing to it.
 
 **An editable listing.** Follow the `{literalinclude}` of the engine with a ```` ```run ````
-block naming a panel's settings or `tests:` in `python/tests/` (with `show:` a query, the page
-also runs its plan and shows the rows and counters), and say in the prose one edit to try. `tests/browser/edits.mjs` runs each as quoted (the build's answer, or every test passing) and
+block naming what to run on the reader's edit: `show:` a query, whose plan runs and shows its rows
+and each operator's counters as a notebook cell shows its output (prefer it wherever the edit
+changes a plan); a panel's settings; or `tests:` in `python/tests/`. Say in the prose one edit to
+try. `tests/browser/edits.mjs` runs each as quoted (the build's answer, or every test passing) and
 broken. Quoted queries are editable without one.
 
 **A counter.** Change COUNTERS.md first, then `metrics.py`, then every chapter that prints it.

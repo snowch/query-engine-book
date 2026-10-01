@@ -4,7 +4,8 @@
 //
 // A listing of the engine that a `run` block follows: run as the book quotes it, under Pyodide,
 // it must give the build's answer (a panel's report, compared with the build's JSON) or pass the
-// engine's tests the block names. An edit that does not parse must say so, with the line of the
+// engine's tests the block names, or draw the rows and counters of the plan it shows as a desk
+// computes them. An edit that does not parse must say so, with the line of the
 // edit it failed on, and a run after it must give the build's answer again: the edit was undone.
 // The edit is kept in the browser's storage, and reopens its editor on a reload. A block that
 // shows a plan must draw its rows and counters as a desk computes them.
@@ -42,7 +43,9 @@ async function run(page, figure) {
     shown: r.querySelector(".edit-shown")?.dataset.shown ?? null,
     show: (() => {
       const s = r.nextElementSibling;
-      return s && s.matches("script.run-then") ? (JSON.parse(s.textContent).tests || {}).show || null : null;
+      if (!s || !s.matches("script.run-then")) return null;
+      const then = JSON.parse(s.textContent);
+      return then.show || (then.tests || {}).show || null;
     })(),
   }));
 }
@@ -136,7 +139,13 @@ try {
         } else {
           const shipped = await run(page, figure);
           check(shipped.ready === "true", `${label}, as the book quotes it: ${shipped.status}`);
-          const right = (r) => (r.total !== undefined ? r.passed === r.total && Number(r.total) > 0 : r.agrees === "true");
+          // Right as quoted: every test passes, the panel gives the build's answer, or the plan a block
+          // shows is drawn as a desk computes it.
+          const right = (r) => {
+            if (r.total !== undefined) return r.passed === r.total && Number(r.total) > 0;
+            if (r.agrees !== undefined) return r.agrees === "true";
+            return r.shown !== null && JSON.stringify(JSON.parse(r.shown)) === deskShown(r.show);
+          };
           check(right(shipped), `${label}: ${shipped.status}`);
           if (shipped.show) {
             check(shipped.shown && JSON.stringify(JSON.parse(shipped.shown)) === deskShown(shipped.show),

@@ -67,10 +67,11 @@ command: the reader runs nothing but the page.
 
 Open the listing that decides the measurement to editing, so the reader can change it and watch
 the counts move: follow its `{literalinclude}` with a ```` ```run ```` block naming what to run on
-the edit, a panel's settings as in its ```` ```lab ```` block, or `tests:` a file in
-`python/tests/` with an optional `select:` (a pytest `-k` expression) and an optional `show:`, a
-query whose hand-written plan then runs on the edit, so the reader sees the rows it returns and
-what each operator counted, not only which tests pass. Then say, in a sentence,
+the edit. Prefer `show:` a query wherever the edit changes a plan: its hand-written plan runs on
+the edit, and the page shows the rows it returns and what each operator counted, as a notebook
+cell shows its output. The output is the feedback; the reader edits, runs, looks and edits again,
+with no verdict to decode. Otherwise name a panel's settings as in its ```` ```lab ```` block, or
+`tests:` a file in `python/tests/` with an optional `select:` (a pytest `-k` expression). Then say, in a sentence,
 one edit worth trying and what it does, and check that it does. Choose listings that are whole
 definitions (a function, a method, a class), since an edit runs in place of what the listing
 defines. Every quoted query is editable already.
