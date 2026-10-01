@@ -12,6 +12,7 @@
 // JavaScript here draws JSON and compares it; it never computes a count of its own.
 
 import { mountEdits } from "./edit.js";
+import { colour } from "./highlight.js";
 import { EXPERIMENTS } from "./panels.js";
 import { runReport } from "./runner.js";
 import { mountWorkbench } from "./workbench.js";
@@ -84,6 +85,8 @@ function mount(el) {
     });
     el.dataset.edited = String(editor.value !== build.source);
     el.append(details);
+    const redraw = colour(editor, "sql");
+    details.querySelector(".lab-reset").addEventListener("click", redraw);
   }
   el.append(foot);
 

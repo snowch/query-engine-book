@@ -240,7 +240,8 @@ def _source_bar(include: dict) -> str:
         label = "From the implementation"
     return (
         f'<div class="source-bar"><span class="source-label">{label}</span>'
-        f'<a href="{REPO_URL}{html.escape(clean)}"><code>{html.escape(clean)}</code></a></div>'
+        f'<a class="source-link" href="{REPO_URL}{html.escape(clean)}" title="Open this file on GitHub">'
+        f"<code>{html.escape(clean)}</code></a></div>"
     )
 
 
