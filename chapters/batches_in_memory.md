@@ -5,6 +5,15 @@ title: Batches in memory
 (batches-in-memory)=
 # Batches in memory
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Explain why identical rows can cost different amounts of memory traffic.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 What does a batch of rows look like in memory, and why does the order you touch it in matter?
@@ -140,6 +149,13 @@ of: gathers
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-batches-in-memory).
+:::
+
 Your engine's scan built its arrays with pyarrow in [ch01](#the-plan-is-the-map). It now builds
 them itself, buffer by buffer, so every byte ch01 counted as memory is one this chapter wrote.
 
@@ -229,6 +245,7 @@ same values, buffer for buffer; that a gather gives the rows a take gives; that 
 each line once when a column is read in order; and that the order your engine finds is the one
 DuckDB's `file_row_number` shows.
 
+(compare-batches-in-memory)=
 ## Compare
 
 Your engine returns DuckDB's result, row for row, column for column. Here are its buffers beside
@@ -295,6 +312,11 @@ DuckDB's:
 - **Two engines that share Arrow agree on the buffers.** Your engine and DuckDB built buffers of
   the same sizes, and differ only in whether a column with no nulls keeps its bitmap.
 :::
+
+```checkpoint
+question: Two gathers return the same values. Why can the scattered gather fetch more bytes?
+answer: Memory arrives in cache lines. Nearby reads reuse a fetched line; scattered reads may evict it before another value on it is needed. Equal result rows do not imply equal bytes fetched.
+```
 
 ## Problems
 

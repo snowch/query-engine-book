@@ -5,6 +5,15 @@ title: Partitioning and shuffle
 (partitioning-and-shuffle)=
 # Partitioning and shuffle
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Choose between moving both inputs by key and copying a small input to each node.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 When a table is spread over many machines, what must move between them to answer a query, and
@@ -69,6 +78,13 @@ again in your browser.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-partitioning-and-shuffle).
+:::
+
 ### Where a key belongs
 
 Every node computes the same hash of a key, ch07's, and so agrees on where the key belongs:
@@ -121,6 +137,7 @@ whole:
 :start-at: def join_by_shuffle(
 ```
 
+(compare-partitioning-and-shuffle)=
 ## Compare
 
 DuckDB runs on one machine and never shuffles, so there is no count of its to compare. The
@@ -162,6 +179,11 @@ same way, for the same reason.
 - **A broadcast copies a small table everywhere.** Cheap for few nodes and a small table; a
   shuffle wins as either grows.
 :::
+
+```checkpoint
+question: Why can broadcasting the smaller input still become expensive as the node count grows?
+answer: Each node needs a copy. The total bytes sent therefore grow with the number of recipients. Compare that cost with moving both inputs by key, rather than choosing broadcast from the input’s size alone.
+```
 
 ## Problems
 

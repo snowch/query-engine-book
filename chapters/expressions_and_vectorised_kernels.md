@@ -5,6 +5,15 @@ title: Expressions and vectorised kernels
 (expressions-and-vectorised-kernels)=
 # Expressions and vectorised kernels
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Relate branch predictability and temporary buffers to the work an expression performs.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 What does it cost to compute an expression for every row, and why do engines work a batch at a
@@ -103,6 +112,13 @@ of: branches
   predictor. Press the button again: the gap between its two moves from run to run, and is noise.
 
 ## Building it
+
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-expressions-and-vectorised-kernels).
+:::
 
 ### The tree
 
@@ -220,6 +236,7 @@ The book's tests evaluate many random trees both ways and require the same value
 counters to the model's rules: `k` nodes over `r` rows make `k` times `r` dispatches a row at a
 time, and the kernel without a branch mispredicts at most twice.
 
+(compare-expressions-and-vectorised-kernels)=
 ## Compare
 
 Your plan beside DuckDB's:
@@ -285,6 +302,11 @@ Your plan beside DuckDB's:
   test on sorted data, or written without a branch, is almost never guessed wrong.
 - **The counts are a model.** They show which way costs more and why, not how many nanoseconds.
 :::
+
+```checkpoint
+question: Two conditions keep similar numbers of rows. Must they have similar branch costs?
+answer: No. A long run of the same outcome is easier for the model to predict than changing outcomes. The number kept does not describe their order, and the model’s mispredictions are not a measured processor time.
+```
 
 ## Problems
 

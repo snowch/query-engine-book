@@ -5,6 +5,15 @@ title: Joins
 (joins)=
 # Joins
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Identify which side a join holds and predict how that choice changes memory use.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 Which side of a join does an engine hold, and what does holding it cost?
@@ -81,6 +90,13 @@ runs the same joins again in your browser.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-joins).
+:::
+
 ### Build, then probe
 
 The join reads its whole build side before it asks the probe side for a row. Then, for each
@@ -118,6 +134,7 @@ the customers in the chapter's query, and the orders in the same query written t
 The book's tests join from either side, with a filter on the build side, and with the orders
 joined to themselves, and compare every row with DuckDB's.
 
+(compare-joins)=
 ## Compare
 
 Your join beside DuckDB's:
@@ -189,6 +206,11 @@ of: build_sides
   nearly every match is a miss.
 - **A join's output can dwarf its inputs.** Every matching pair is a row.
 :::
+
+```checkpoint
+question: If a join returns few rows, does that prove its memory use was small?
+answer: No. A hash join holds its build side before it can probe for matches. Few matches can still require a large build table. Check the build side and its held bytes, as well as the output.
+```
 
 ## Problems
 

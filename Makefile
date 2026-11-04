@@ -69,6 +69,7 @@ browser-test: all  ## Drive the DuckDB probe, every panel and workbench, and the
 	node tests/browser/panels.mjs _build/html
 	node tests/browser/workbench.mjs _build/html
 	node tests/browser/site.mjs _build/html
+	node tests/browser/reading.mjs _build/html
 
 .PHONY: check
 check:  ## Everything CI runs

@@ -5,6 +5,15 @@ title: Memory limits and spilling
 (memory-limits-and-spilling)=
 # Memory limits and spilling
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Explain how a memory limit turns held rows into temporary reads and writes.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 What does an engine do when an operator needs more memory than it is allowed?
@@ -75,6 +84,13 @@ again in your browser.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-memory-limits-and-spilling).
+:::
+
 ### Runs, then merges
 
 The sort fills its memory, sorts, and spills; then merges, a pass at a time, until one pass is
@@ -111,6 +127,7 @@ The book's tests sort within many limits and fan-ins and require DuckDB's order 
 check that every byte written is read back, that each pass but the last writes every row, and
 that a larger fan-in never spills more.
 
+(compare-memory-limits-and-spilling)=
 ## Compare
 
 DuckDB reports neither what it spilled nor the memory it used, in the pinned version, so the
@@ -167,6 +184,11 @@ of: spilling
 - **The merge's fan-in decides how many times.** Each pass but the last writes every row again.
 - **A top-k needs no disk.** It holds k rows whatever the input.
 :::
+
+```checkpoint
+question: Why can reducing a sort’s memory limit increase the bytes written more than once?
+answer: A smaller limit creates more runs. If they cannot all be merged together, intermediate passes write their results again. The merge’s fan-in determines how many such passes are needed.
+```
 
 ## Problems
 

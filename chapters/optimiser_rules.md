@@ -5,6 +5,15 @@ title: Optimiser rules
 (optimiser-rules)=
 # Optimiser rules
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Explain when moving a filter or dropping a column preserves the answer and reduces work.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 Which rewrites of a plan save work whatever the data, and what does each one save?
@@ -85,6 +94,13 @@ of: rules
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-optimiser-rules).
+:::
+
 ### Conditions, as far down as they go
 
 A condition joined by `AND` holds only where each of its parts holds, so each part can be tested
@@ -152,6 +168,7 @@ Your planner's plan for the enterprise orders, after all three rules:
 ```{include} _generated/enterprise-orders-rewritten.md
 ```
 
+(compare-optimiser-rules)=
 ## Compare
 
 Every plan the book wrote by hand, beside the plan your rules make from the text alone:
@@ -203,6 +220,11 @@ Every plan the book wrote by hand, beside the plan your rules make from the text
 - **Three rules rebuild every plan the book wrote by hand.** Choosing between plans that give the
   same rows by different amounts of work needs more than rules.
 :::
+
+```checkpoint
+question: Can a projection discard a column that is absent from the final answer but used by a later filter?
+answer: No. The column is still required to decide which rows survive. A safe rewrite tracks the columns required by each remaining operator, not only those printed in the result.
+```
 
 ## Problems
 

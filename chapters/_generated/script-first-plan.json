@@ -1,0 +1,4 @@
+{
+ "source_sha256": "f840de639a957919782f78631ca6849b9656993ffe9371bbb61a6c11ed59296e",
+ "stdout": "Reading fixtures/orders-sorted.parquet\n\n729 rows; the first 5:\norder_id  customer_id  unit_price\n      30          110     226.189\n      39           13     140.901\n      61           21     108.010\n      87            9     113.740\n      97           49     207.980\n\n               rows in    rows out     batches  bytes read\nProject            729         729          10           0\n  Filter         1,183         729          10           0\n    Filter      20,000       1,183          10           0\n      Scan      20,000      20,000          10     302,983\n"
+}

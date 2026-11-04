@@ -1,5 +1,13 @@
 # Queries, operator by operator
 
+The book supports three routes: read, explore and build. Reading code and running examples are
+optional. Every chapter supplies a learning goal, generated evidence visible without JavaScript,
+and a conceptual understanding check with a revealable explanation. Keep query intent and the
+interpretation of results in the prose. Hide code and interactive controls in native disclosures;
+never hide essential results there. Readers skipping Building it continue at Compare, then read
+the limitations and design guidance. Timings remain live only; stored evidence contains counters.
+
+
 *Build a query engine to learn what a query costs.*
 
 **Read it online: [snowch.github.io/query-engine-book](https://snowch.github.io/query-engine-book/)**

@@ -5,6 +5,15 @@ title: Projection and filter pushdown
 (projection-and-filter-pushdown)=
 # Projection and filter pushdown
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Separate choosing fewer columns from skipping rows, and explain how row order affects the bytes read.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 How much of a file can a scan avoid reading, once it knows the columns and the predicate?
@@ -97,6 +106,13 @@ Compare the two files.
   sorted file.
 
 ## Building it
+
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-projection-and-filter-pushdown).
+:::
 
 [ch01](#the-plan-is-the-map) put the engine's operators together without opening them. This
 chapter opens them, starting with the shape every operator in the book shares:
@@ -209,6 +225,7 @@ The book's tests run each pushed comparison against both files and compare the r
 DuckDB's. They check every row group the scan skipped, row by row, to make sure it held no
 match, since a wrong skip loses rows where a wrong read only costs bytes.
 
+(compare-projection-and-filter-pushdown)=
 ## Compare
 
 Your scan beside DuckDB's:
@@ -305,6 +322,11 @@ of: pushdown
 - **A profile's rows in is not rows read.** DuckDB reported every row as scanned while it read
   the bytes your scan read, which is a small part of the file.
 :::
+
+```checkpoint
+question: A date filter returns the same rows from sorted and shuffled files. Why can the scan read different amounts?
+answer: Sorting puts nearby dates together, so a row group’s minimum and maximum can rule it out. Shuffling spreads dates across groups. The filter still returns the same rows, but more groups must be read.
+```
 
 ## Problems
 

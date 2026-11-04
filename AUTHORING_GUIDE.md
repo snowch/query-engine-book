@@ -1,5 +1,13 @@
 # Authoring Guide
 
+The book supports three routes: read, explore and build. Reading code and running examples are
+optional. Every chapter supplies a learning goal, generated evidence visible without JavaScript,
+and a conceptual understanding check with a revealable explanation. Keep query intent and the
+interpretation of results in the prose. Hide code and interactive controls in native disclosures;
+never hide essential results there. Readers skipping Building it continue at Compare, then read
+the limitations and design guidance. Timings remain live only; stored evidence contains counters.
+
+
 How to write a chapter of *Queries, operator by operator* without breaking the things that make
 it worth reading: an engine that really runs, numbers the build computes, a reference engine
 that checks both, and problems that cannot lie about whether you solved them.

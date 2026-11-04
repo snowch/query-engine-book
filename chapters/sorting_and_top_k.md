@@ -5,6 +5,15 @@ title: Sorting and top-k
 (sorting-and-top-k)=
 # Sorting and top-k
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Distinguish ordering every row from retaining only the best rows.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 What does putting rows in order cost, and how much of it does a `LIMIT` save?
@@ -80,6 +89,13 @@ again in your browser.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-sorting-and-top-k).
+:::
+
 ### The top-k
 
 Each row is compared with the worst row kept, the heap's first. It is kept only if it beats that
@@ -125,6 +141,7 @@ to more than the rows, and require DuckDB's rows in DuckDB's order each time. Th
 sort of rows already in order compares each row once, and that a top-k never holds more than k
 rows.
 
+(compare-sorting-and-top-k)=
 ## Compare
 
 Your top-k beside DuckDB's:
@@ -187,6 +204,11 @@ of: top_k
   with the worst of them.
 - **DuckDB narrows its sort keys first.** Every byte in a sort is moved many times.
 :::
+
+```checkpoint
+question: Does asking for only the largest few rows mean the engine can stop reading an unordered input early?
+answer: No. A later row could belong in the answer. A top-k can retain fewer candidates and do less sorting work, but it still has to inspect the input unless another property proves it can stop.
+```
 
 ## Problems
 
