@@ -8,8 +8,8 @@ title: Preface
 ## What this book is
 
 This book is for data engineers who run queries every day and want to know what a query costs.
-You learn it by building the thing that pays for it: a small query engine, one operator at a
-time, in Python on Apache Arrow. By the end you can look at a design choice (a sort order, a
+You learn it by following a small query engine, one operator at a time, and the work it counts.
+You can also build it in Python on Apache Arrow. By the end you can look at a design choice (a sort order, a
 partitioning scheme, a join, a memory limit) and predict how it changes the bytes read, the
 rows moved, the memory used and the data shuffled, in any engine.
 
@@ -27,12 +27,25 @@ ways, one part each:
 - **[Part VI, Other ways to run a plan](#part-other-ways-to-run-a-plan):** once the plan is
   chosen, what changes when the engine runs it another way?
 
-You need a browser and nothing else: everything the book asks you to run, runs in the page. If
-you would rather run it on your own machine, [Running the lab](#running-the-lab) says how. You
-should be able to read Python. The book is self-contained: each idea about hardware or file
+You can read the whole argument without reading code, installing software or running an example.
+Plans, worked results and comparisons are already on the page, including when JavaScript is
+disabled. Reading Python is useful only for the optional implementation route. Experiments run
+in your browser; [Running the lab](#running-the-lab) also explains the optional local setup. The book is self-contained: each idea about hardware or file
 formats is introduced where it is first needed, with a deliberately small model. Two companion
 books go deeper and are optional: *Parquet, byte by byte*, whose Parquet reader this engine reads
 its files with, and a book on computer systems.
+
+## Choose your route
+
+| Route | What to read or open | What you get |
+|---|---|---|
+| Read | Explanations, worked results, Compare, limitations and design guidance | Understand what a query costs without code or execution |
+| Explore | Optional prediction panels, query editors and live timings | Test how changing an input changes the work |
+| Build | Optional Python listings and practice workbenches | Implement the engine and check your changes |
+
+Start with the chapter’s learning goal. Try its understanding check before revealing the
+explanation. You can skip **Building it** and continue at **Compare**; keep the limitations and
+design sections, which explain what the evidence does and does not support.
 
 ## How a chapter works
 
@@ -41,14 +54,14 @@ ten sections, so you always know where you are:
 
 1. **The question** it answers, and why the previous chapter left it open.
 2. **Observe**: the query run in DuckDB, the reference engine, with its plan and its profile.
-3. **Predict, then measure**: you commit to a prediction, then run the experiment that tests it.
-4. **Building it**: the operator's code, quoted from the working tree.
+3. **Predict, then measure**: make a prediction, then read the worked result; optionally rerun or change it.
+4. **Building it**: optional implementation, with code quoted from the working tree.
 5. **Compare**: your engine's results and counters beside DuckDB's.
 6. **What this cannot tell you**: the limits of the experiment, the model and the code.
 7. **What this means for your design**: the choices in your own systems that change.
 8. **Key takeaways**.
-9. **Problems**: kernels for you to write, graded by tests and simulators, and one slow query to
-   diagnose.
+9. **Problems**: optional kernels to write, graded by tests and simulators, and one slow query to
+   diagnose. The understanding check needs no code.
 10. **Where to go next**: papers, engine source code, and the companion books.
 
 ## Three rules the book keeps

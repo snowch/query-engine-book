@@ -5,6 +5,15 @@ title: Skew
 (skew)=
 # Skew
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Diagnose a heavy key and explain the extra work needed to spread it.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 What happens when a few keys hold most of the rows, and how can an engine share them out anyway?
@@ -63,6 +72,13 @@ again in your browser.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-skew).
+:::
+
 ### Heavy keys
 
 The engine counts each key's rows in one pass before the join, and calls heavy any key with more
@@ -111,6 +127,7 @@ The salted join sends both sides, each by its own rule, then runs ch08's hash jo
 :end-before: def busiest(
 ```
 
+(compare-skew)=
 ## Compare
 
 DuckDB runs on one machine and does not salt; its sketch is the part to compare. `approx_top_k`
@@ -149,6 +166,11 @@ that salting lightens the busiest node when there are many.
   copied to each.
 - **Heavy keys can be found cheaply.** A sketch with a few counters names them in one pass.
 :::
+
+```checkpoint
+question: Why can a good hash leave one node much busier than the others?
+answer: A hash spreads distinct keys. All rows with the same key still go to the same node. Salting can spread that key, but matching rows on the other side must be copied so the answer remains correct.
+```
 
 ## Problems
 

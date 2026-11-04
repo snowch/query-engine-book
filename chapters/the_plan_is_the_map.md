@@ -5,6 +5,15 @@ title: The plan is the map
 (the-plan-is-the-map)=
 # The plan is the map
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Distinguish a plan from a profile, and trace where rows are kept or discarded.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 What does an engine do with your query, and where can you see what each step costs?
@@ -164,6 +173,13 @@ operators report the same counters, and they must agree with these.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-the-plan-is-the-map).
+:::
+
 Your engine runs the same plan, from the same kinds of operator. They are ready-made parts: you
 put them together here, and each one's own code is the subject of the chapter that measures it,
 starting with [ch03](#projection-and-filter-pushdown). What you need to know about them is how
@@ -216,6 +232,7 @@ comparison below shows, and [ch03](#projection-and-filter-pushdown) closes it. T
 this plan every time the book is built. They check that its counters obey COUNTERS.md's rules,
 and compare its result with DuckDB's, row for row.
 
+(compare-the-plan-is-the-map)=
 ## Compare
 
 Your engine returns DuckDB's rows, in DuckDB's order. The table puts each of your operators
@@ -334,6 +351,11 @@ Then:
 - **The scan decides how much everything above it does.** DuckDB's scan tested one predicate and
   handed up a small share of the file; yours handed up all of it.
 :::
+
+```checkpoint
+question: A plan predicts few rows, but its profile reports many. Which should you use to describe what happened?
+answer: Use the profile for the work that actually happened. The estimate describes what the planner expected before execution; the mismatch is evidence to investigate, not a different result.
+```
 
 ## Problems
 

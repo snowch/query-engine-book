@@ -51,7 +51,8 @@ export async function launch() {
  * `options` go to the browser context: `{ javaScriptEnabled: false }`, say.
  */
 export async function openPage(browser, serve, options = {}) {
-  const context = await browser.newContext(options);
+  const { reading = false, ...contextOptions } = options;
+  const context = await browser.newContext(contextOptions);
   await context.route(`${ORIGIN}/**`, (route) => {
     // A directory's URL is its index page, as a web server would answer it, and typed as one.
     const raw = decodeURIComponent(new URL(route.request().url()).pathname).slice(1);
@@ -67,6 +68,17 @@ export async function openPage(browser, serve, options = {}) {
   page.on("console", (m) => console.error(`page: ${m.text()}`));
   page.on("pageerror", (e) => console.error(`page error: ${e.message}`));
   page.on("requestfailed", (r) => console.error(`request failed: ${r.url()} ${r.failure()?.errorText}`));
+  // Existing suites exercise the optional tools. Reading tests opt into the untouched page.
+  if (!reading) {
+    for (const method of ["goto", "reload"]) {
+      const navigate = page[method].bind(page);
+      page[method] = async (...args) => {
+        const response = await navigate(...args);
+        await page.locator("details.optional").evaluateAll((nodes) => nodes.forEach((d) => { d.open = true; }));
+        return response;
+      };
+    }
+  }
   return page;
 }
 

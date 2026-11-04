@@ -415,8 +415,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const px = (name) => parseFloat(getComputedStyle(root).getPropertyValue(name)) || 0;
   const phone = matchMedia("(max-width: 40rem)");
   // Panels, the workbench and a run's output look after their own widths.
-  const OWN = ".lab, .workbench, .run-result, .results";
-  const PROMOTE = "pre, .runnable, .wide-block, .table-wrap, .generated, .tab-set, figure.quoted";
+  const OWN = ".worked-result, .lab, .workbench, .run-result, .results";
+  const PROMOTE = ".code-disclosure, pre, .runnable, .wide-block, .table-wrap, .generated, .tab-set, figure.quoted";
 
   let scrolled = 0;
   const label = (button, open) => {
@@ -580,6 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const schedule = () => {
     if (!pending) { pending = true; requestAnimationFrame(layout); }
   };
+  document.addEventListener("toggle", schedule, true);
   layout();
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(schedule);
   // The column changes width with the window and when a rail opens or closes.
@@ -645,7 +646,7 @@ def page_html(
     builds = ""
     if chapter is not None:
         # A chapter that explains and builds nothing says what it shows instead.
-        what = "What you see" if chapter.explainer else "What you build"
+        what = "What you see" if chapter.explainer else "Optional build"
         builds = f'<p class="builds"><strong>{what}:</strong> {html.escape(chapter.builds)}</p>'
 
     def link(q, cls, word):

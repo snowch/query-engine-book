@@ -5,6 +5,15 @@ title: Stages and distributed execution
 (stages-and-distributed-execution)=
 # Stages and distributed execution
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Relate where intermediate rows are kept to the work repeated after a failure.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 How does a distributed engine run a whole plan across many machines, and what does it do when one
@@ -73,6 +82,13 @@ again in your browser.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-stages-and-distributed-execution).
+:::
+
 ### The stages
 
 The engine runs each stage over every node, then shuffles its output for the next. The first reads
@@ -107,6 +123,7 @@ Suppose the node's disk survives it, as with a shuffle service that keeps its fi
 the second case to return `1`, and run the panel's report on your edit: keeping rows on the node
 becomes as safe as shared storage, as long as the disk outlives the node.
 
+(compare-stages-and-distributed-execution)=
 ## Compare
 
 DuckDB runs on one machine, and its plan has no stages. The engines that do run stages differ in
@@ -155,6 +172,11 @@ The book's tests check that the stages give DuckDB's rows on one node, four and 
 - **Keeping them costs writing them.** Speed when nothing fails and safety when something does
   pull in opposite directions.
 :::
+
+```checkpoint
+question: Why might a design write intermediate rows even when writing makes a successful run do more work?
+answer: Keeping intermediate rows can limit recovery to the failed task or stage. The extra writes buy a smaller recovery boundary. The useful trade-off depends on failures as well as the cost of an uninterrupted run.
+```
 
 ## Problems
 

@@ -9,12 +9,12 @@ A node type the renderer does not know **raises**. It is never skipped: a render
 drops what it does not recognise loses content, and the only symptom is a paragraph nobody
 notices is missing.
 
-Three node shapes are this book's own:
+Custom node shapes support the book’s experiments and reading checks:
 
 - A fenced block in the language ``lab`` is an experiment: a panel. It becomes a mount point
   that ``web/lab/lab.js`` draws, carrying the panel's JSON as the build computed it
-  (``python -m query_lab figures``), so it draws with nothing to download. Without JavaScript it
-  says it needs JavaScript. The renderer checks that the experiment, the query and the fixtures
+  (``python -m query_lab figures``). A static worked result precedes the optional panel, so
+  the evidence is readable without JavaScript. The renderer checks that the experiment, the query and the fixtures
   it names exist, and that the JSON is there.
 - A fenced block in the language ``timed`` names a timing in ``query_lab.timing``: cases the
   page times in the reader's browser when asked, and shows with how long each took there. The
@@ -46,6 +46,7 @@ from pathlib import Path
 
 from tools.highlight import highlight
 from tools.outline import BY_ANCHOR, EXPERIMENTS
+from tools.reading import worked_result
 
 ROOT = Path(__file__).resolve().parent.parent
 # The panels' file names are the engine's to decide (query_lab.report.panel_name): the figures
@@ -145,9 +146,11 @@ def _lab(node: dict) -> str:
     config = parse_lab_block(str(node.get("value", "")))
     attrs = " ".join(f'data-{html.escape(k)}="{html.escape(v)}"' for k, v in config.items())
     return (
-        f'<div class="lab" {attrs}>'
+        worked_result(panel_data(config))
+        + '<details class="optional experiment-disclosure"><summary>Optional: predict, change and run the experiment</summary>'
+        + f'<div class="lab" {attrs}>'
         f'<script type="application/json" class="lab-data">{_script_json(panel_data(config))}</script>'
-        '<p class="lab-fallback">This panel needs JavaScript.</p></div>'
+        '<p class="lab-fallback">This panel needs JavaScript.</p></div></details>'
     )
 
 
@@ -164,9 +167,11 @@ def _timed(node: dict) -> str:
             f"no cases for the timing {name}: run `make figures` (expected {path.relative_to(ROOT)})"
         )
     return (
+        '<details class="optional timing-disclosure"><summary>Optional: measure timings in your browser</summary>'
+        "<p>Compare these cases on your own machine. No stored timing is needed to follow the chapter.</p>"
         f'<div class="timed" data-of="{html.escape(name)}">'
         f'<script type="application/json" class="timed-data">{_script_json(json.loads(path.read_text()))}</script>'
-        '<p class="lab-fallback">These cases are timed in your browser, which needs JavaScript.</p></div>'
+        '<p class="lab-fallback">These cases are timed in your browser, which needs JavaScript.</p></div></details>'
     )
 
 
@@ -225,8 +230,9 @@ def parse_problems_block(value: str) -> str:
 def _problems(node: dict) -> str:
     slug = parse_problems_block(str(node.get("value", "")))
     return (
+        '<details class="optional practice-disclosure"><summary>Optional: write code and run the practice tests</summary>'
         f'<div class="workbench" data-chapter="{html.escape(slug)}">'
-        '<p class="lab-fallback">This workbench needs JavaScript.</p></div>'
+        '<p class="lab-fallback">This workbench needs JavaScript.</p></div></details>'
     )
 
 
@@ -341,6 +347,16 @@ def render(node: dict, footnotes: list | None = None, label: str = "") -> str:
     if kind == "comment":
         return ""
     if kind == "code":
+        if node.get("lang") == "checkpoint":
+            config = parse_key_values(str(node.get("value", "")), "checkpoint")
+            if set(config) != {"question", "answer"} or not all(config.values()):
+                raise LabBlockError("a checkpoint needs a question and an answer")
+            return (
+                '<aside class="checkpoint"><p class="result-kicker">Check your understanding</p>'
+                f"<p>{html.escape(config['question'])}</p>"
+                "<details><summary>Reveal the explanation</summary>"
+                f"<p>{html.escape(config['answer'])}</p></details></aside>"
+            )
         if node.get("lang") == "lab":
             return _lab(node)
         if node.get("lang") == "problems":
@@ -464,6 +480,37 @@ def render_page(mdast: dict) -> str:
     """The body of a page, with its footnotes collected at the end."""
     footnotes: list = []
     body = render(mdast, footnotes)
+
+    # Wrap the completed listing AND its adjacent run marker. MyST puts these in separate
+    # transparent blocks; the editor deliberately finds the marker as the figure's next sibling.
+    def optional(match):
+        listing = match.group(0)
+        path = match.group(1)
+        label = "SQL" if path.startswith("queries/") else "Python"
+        result = ""
+        marker = re.search(r'<script type="application/json" class="run-then">(.*?)</script>', listing, re.S)
+        script = json.loads(marker.group(1)).get("script") if marker else None
+        if script:
+            name = f"script-{Path(script).stem.replace('_', '-')}.json"
+            saved = json.loads((ROOT / "chapters/_generated" / name).read_text())
+            result = (
+                '<section class="worked-result script-result" data-query="returned_unit_price.sql"><p class="result-kicker">Example output · no execution needed</p>'
+                "<p>The unmodified example prints these rows and operator counters.</p>"
+                f"<pre>{html.escape(saved['stdout'])}</pre></section>"
+            )
+        return (
+            result
+            + f'<details class="optional code-disclosure"><summary>Optional: read or edit the {label} · {html.escape(Path(path).name)}</summary>'
+            + listing
+            + "</details>"
+        )
+
+    body = re.sub(
+        r'<figure class="quoted(?: walkthrough)?" data-file="([^"]+)">.*?</figure>(?:<script type="application/json" class="run-then">.*?</script>)?',
+        optional,
+        body,
+        flags=re.S,
+    )
     if footnotes:
         items = "".join(
             f'<li id="fn-{html.escape(str(f.get("enumerator") or f.get("label")))}">'

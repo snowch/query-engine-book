@@ -5,6 +5,15 @@ title: Parallelism on one machine
 (parallelism-on-one-machine)=
 # Parallelism on one machine
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Distinguish total work from the work on the path that determines completion.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 How much faster does a query finish with more cores, and what stops it going faster still?
@@ -67,6 +76,13 @@ workers again in your browser.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-parallelism-on-one-machine).
+:::
+
 ### A morsel
 
 A morsel is one row group of the file, read and handed to a pipeline as its only batch:
@@ -110,6 +126,7 @@ worker's table:
 The book's tests check that the morsels together hand up DuckDB's rows, that one worker has
 nothing to combine, and that more workers combine more.
 
+(compare-parallelism-on-one-machine)=
 ## Compare
 
 DuckDB's counters were the same with one thread and four; its plan did not change. Your
@@ -157,6 +174,11 @@ simulation says what the four threads did with it:
 - **What waits for every worker limits the speedup.** Combining partial results is one worker's
   work, and grows with the workers.
 :::
+
+```checkpoint
+question: If workers have unequal amounts to do, will adding workers divide completion work evenly?
+answer: No. Completion depends on the busiest worker and any serial part of the plan. More workers help only where the work can be divided; total work and work until done are different measures.
+```
 
 ## Problems
 

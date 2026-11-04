@@ -5,19 +5,21 @@ title: Running the lab
 (running-the-lab)=
 # Running the lab
 
-Everything the book asks you to run, runs in this page, in your browser. There is nothing to
-install.
+Reading the book requires no code or execution. Worked results, plans and comparisons are
+already visible on each page, even without JavaScript. This appendix describes the optional
+experiments and implementation route; there is nothing to install to use them in your browser.
 
 ## Panels
 
-A panel draws what the engine computed when the book was built, so it appears at once with
-nothing to download. Its **Run it in your browser** button runs the same code again in your
+Open **Optional: predict, change and run the experiment** beneath a worked result.
+The panel draws the same generated evidence and lets you test your own predictions. Its **Run it in your browser** button runs the same code again in your
 browser, under Pyodide, and says whether your browser got the same answer as the build. A panel
 that shows a query lets you edit the query and run your own.
 
 ## Edit and run
 
-Every query the book quotes has an **Edit and run** button. Your version runs under DuckDB in the
+Open an **Optional: read or edit** section to see its code. Every quoted query has an
+**Edit and run** button. Your version runs under DuckDB in the
 page and draws its plan and its first rows, and the page's figures and panels computed for the
 book's query say so until you reset it. Some listings of the engine have the button too: your
 edit runs in place of the engine's own code, then the chapter's panel or the engine's tests run
@@ -27,7 +29,7 @@ code** starts again.
 
 ## Timings
 
-Some chapters time a few cases: a top-k against a full sort, say. Nothing is timed until you
+Open **Optional: measure timings in your browser** to compare cases: a top-k against a full sort, say. Nothing is timed until you
 press **Time it in your browser**; then each case runs, several times if it is quick, and shows
 how long it took and how it compares with the fastest. A time is your machine's, now: it moves
 from run to run, and Python and DuckDB run slower in a browser than at a desk, so compare the
@@ -35,7 +37,8 @@ cases with each other. Nothing else on the page runs while the cases are timed.
 
 ## Problems
 
-Each chapter's problems open with a workbench. Write your answers in it and press **Run the
+Each chapter's understanding check needs no code. For coding practice, open
+**Optional: write code and run the practice tests** under Problems. Write your answers and press **Run the
 graders**: they are the book's own tests, run by pytest in your browser, and they report each
 check as it passed or failed. Your answers stay in this browser, and **Reset to the stubs**
 starts again.
@@ -44,7 +47,7 @@ starts again.
 
 The first run downloads Python, DuckDB and, for the problems, pyarrow and pytest. That is a large
 download, and your browser keeps it afterwards, so later runs start quickly. Each download
-happens only when something first needs it: reading the book downloads nothing.
+happens only when something first needs it: reading the book does not download the Python runtime.
 
 ## Versions
 

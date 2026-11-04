@@ -5,6 +5,15 @@ title: Where work happens
 (where-work-happens)=
 # Where work happens
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Explain how table metadata moves a skipping decision before a file is opened.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 When a table is many files, what decides which of them are opened, and where are the rows tested?
@@ -86,6 +95,13 @@ again in your browser.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-where-work-happens).
+:::
+
 ### A file's bounds, before it is opened
 
 The table metadata stores each file's bounds as a Parquet file's statistics store them: the
@@ -166,6 +182,7 @@ what it read from its disks. The two are reported side by side and never added. 
 - **The order of the rows stops mattering to the network.** Both files send about the same bytes,
   because both hold the same matching rows. It still matters to the storage's disks.
 
+(compare-where-work-happens)=
 ## Compare
 
 Your table scans beside DuckDB's, on the same table:
@@ -228,6 +245,11 @@ Your table scans beside DuckDB's, on the same table:
   result travels; tested in the engine, everything the scan read does.
 - **Moving work does not remove it.** The storage reads what the engine would have read.
 :::
+
+```checkpoint
+question: If a scan skips a file after reading its footer, has it avoided every request to that file?
+answer: No. It already paid to open the file and learn its statistics. Table metadata can make that decision before the open, provided the metadata is valid for the files being read.
+```
 
 ## Problems
 

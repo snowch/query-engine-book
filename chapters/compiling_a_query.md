@@ -5,6 +5,15 @@ title: Compiling a query
 (compiling-a-query)=
 # Compiling a query
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Identify the temporary work removed by fusion, and the cost that compilation adds.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 What does an engine save by turning a query into code before it runs it, and what does it give up?
@@ -93,6 +102,13 @@ of: compiling
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-compiling-a-query).
+:::
+
 ### An expression as Python
 
 The compiler writes each node of a tree as the Python for it, applied to one row's values: a
@@ -146,6 +162,7 @@ Python compiles the source into a function once, and the function runs once a ba
 The book's tests run four of the book's queries all three ways, and require DuckDB's rows from
 each; they check the generated code is one loop, and computes a shared value once.
 
+(compare-compiling-a-query)=
 ## Compare
 
 - **DuckDB interprets, a vector at a time.** Its filter and its projection each evaluate their own
@@ -206,6 +223,11 @@ each; they check the generated code is one loop, and computes a shared value onc
 - **Compiling costs once a query, interpreting once a batch.** Which is cheaper depends on how
   many batches a query runs over.
 :::
+
+```checkpoint
+question: Must compiling a query be worthwhile if it writes fewer temporary bytes?
+answer: No. Compilation itself takes work. A short or rarely repeated query may not repay that cost. The byte counters explain one saving; live timings and the workload determine whether it pays overall.
+```
 
 ## Problems
 

@@ -5,6 +5,15 @@ title: Pushing instead of pulling
 (pushing-instead-of-pulling)=
 # Pushing instead of pulling
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Explain how reversing control changes stopping and sharing without changing the query’s answer.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 What changes when the scan drives the query, pushing rows up the plan, instead of the top asking
@@ -96,6 +105,13 @@ pipelines again in your browser.
   consumer, and each takes in every returned order, from one read of the file.
 
 ## Building it
+
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-pushing-instead-of-pulling).
+:::
 
 ### A step
 
@@ -189,6 +205,7 @@ The book's tests check that both queries give DuckDB's answers, pushed and pulle
 consumer of the tee takes in every row the scan hands up, and that pulled consumers read one scan's
 bytes each.
 
+(compare-pushing-instead-of-pulling)=
 ## Compare
 
 Your engine's bytes, beside DuckDB's:
@@ -251,6 +268,11 @@ Your engine's bytes, beside DuckDB's:
 - **A pushed plan is cut into pipelines at its breakers.** Each breaker is a sink for one
   pipeline and the source of the next.
 :::
+
+```checkpoint
+question: A pushed sink has enough rows. What must happen to avoid reading the rest of the input?
+answer: The sink must signal that it is done, and the signal must reach a source that honours it. Returning the right rows is not enough: without that control message the source can keep doing unnecessary work.
+```
 
 ## Problems
 

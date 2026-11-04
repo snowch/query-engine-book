@@ -7,10 +7,10 @@ numbering: false
 (cover)=
 *Build a query engine to learn what a query costs.*
 
-A hands-on book for data engineers who run queries every day and want to know what they cost.
-You build a small query engine in Python on Apache Arrow, one operator at a time, and hold every
-operator to DuckDB: the rows it moves, the bytes it reads, the memory it holds. Before each
-measurement you predict it. Every number in the book is computed by an engine when the book is
+A book for data engineers who run queries every day and want to know what they cost.
+Follow a small query engine in Python on Apache Arrow, one operator at a time, and hold every
+operator to DuckDB: the rows it moves, the bytes it reads, the memory it holds. Read the explanations and worked results without writing or running code.
+Open the optional experiments to test a prediction, or the code to build the engine. Every number in the book is computed by an engine when the book is
 built, and every panel can run again in your browser. [Start with the Preface](#preface) to see
 how a chapter works and what you need.
 

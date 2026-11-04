@@ -62,6 +62,7 @@ if node -e "require.resolve('playwright')" >/dev/null 2>&1 \
   node tests/browser/timings.mjs _build/html
   # Served under /query-engine-book/ on an origin other books share, as GitHub Pages serves it.
   node tests/browser/site.mjs _build/html
+  node tests/browser/reading.mjs _build/html
 elif [ -n "${CI:-}" ]; then
   echo "ERROR: Playwright is not installed, and CI must not skip the browser check." >&2
   exit 1

@@ -5,6 +5,15 @@ title: From SQL to a logical plan
 (from-sql-to-a-logical-plan)=
 # From SQL to a logical plan
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Separate parsing, binding and planning, and recognise a correct but expensive plan.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 How does an engine turn the text of a query into a plan it can run, and what does the plainest
@@ -85,6 +94,13 @@ again in your browser.
   The planner's first duty is the answer, and everything after this chapter is about cost.
 
 ## Building it
+
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-from-sql-to-a-logical-plan).
+:::
 
 ### Tokens
 
@@ -186,6 +202,7 @@ rows for each. The three that read many files, or pass `read_parquet` options, a
 message that says why, and so are the few in later chapters that ask one question inside another,
 which this parser does not read.
 
+(compare-from-sql-to-a-logical-plan)=
 ## Compare
 
 Your plain plan beside DuckDB's, run:
@@ -246,6 +263,11 @@ Your plain plan beside DuckDB's, run:
 - **The plain plan is right, and expensive.** It gives DuckDB's rows and reads the whole of every
   file, whatever the query asks.
 :::
+
+```checkpoint
+question: A plan returns DuckDB’s rows. Does that show it reads no unnecessary data?
+answer: No. Correctness checks the answer. The plain plan can read every column and row before discarding what it does not need. Counters reveal that extra work even when the answer is correct.
+```
 
 ## Problems
 

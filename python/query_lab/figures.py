@@ -1661,9 +1661,27 @@ def timing_json(name: str) -> str:
     return json.dumps(timing.describe(ROOT, name), indent=1) + "\n"
 
 
+def script_first_plan() -> str:
+    """Capture the executable example without adding machine-dependent timings."""
+    import hashlib
+    import subprocess
+    import sys
+
+    path = ROOT / "python/query_lab/first_plan.py"
+    result = subprocess.run([sys.executable, str(path)], cwd=ROOT, text=True, capture_output=True, check=True)
+    return (
+        json.dumps(
+            {"source_sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "stdout": result.stdout},
+            indent=1,
+        )
+        + "\n"
+    )
+
+
 def outputs() -> dict[str, Callable[[], str]]:
     """Every generated file, by name: the fragments, the panels' JSON, then the timed blocks'."""
     out: dict[str, Callable[[], str]] = {f"{f.name}.md": f.make for f in FIGURES}
+    out["script-first-plan.json"] = script_first_plan
     for config in PANELS:
         out[report.panel_name(config)] = lambda config=config: panel_json(config)
     for name in timing.TIMINGS:

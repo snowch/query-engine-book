@@ -5,6 +5,15 @@ title: Statistics, cost and join order
 (statistics-cost-and-join-order)=
 # Statistics, cost and join order
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Connect estimates to join order, and identify how a mistaken assumption can select an expensive plan.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 How does a planner choose between plans that give the same rows, when it cannot run them to
@@ -78,6 +87,13 @@ again in your browser.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-statistics-cost-and-join-order).
+:::
+
 ### What the footer says
 
 A Parquet footer holds, for each column of each row group, the smallest and largest value and
@@ -140,6 +156,7 @@ for every set of inputs from the cheapest plans for its parts, smallest sets fir
 
 Each join it builds holds the input guessed smaller, so the rule chooses ch08's build side too.
 
+(compare-statistics-cost-and-join-order)=
 ## Compare
 
 Each join of the chosen plan, your planner's estimate and DuckDB's beside the rows each made:
@@ -204,6 +221,11 @@ of: join_order
 - **An estimate need only be good enough to order plans.** When it is not, the plan is wrong for
   reasons the query's text never shows.
 :::
+
+```checkpoint
+question: Why can a planner choose a poor join order even when each input’s row count is known?
+answer: It must also estimate which rows match and survive filters. Assumptions about independence or value distributions can be wrong. Those errors change estimated intermediate sizes and can reverse the ranking of plans.
+```
 
 ## Problems
 

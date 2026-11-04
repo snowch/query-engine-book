@@ -5,6 +5,15 @@ title: Hash aggregation
 (hash-aggregation)=
 # Hash aggregation
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Explain why the number and range of groups change memory use and cache misses.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 How does an engine find a row's group, and what does the number of groups cost?
@@ -90,6 +99,13 @@ runs the same lookups again in your browser.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-hash-aggregation).
+:::
+
 ### Finding a group
 
 A lookup hashes the key, starts at the slot its hash's low bits name, and probes until it finds
@@ -152,6 +168,7 @@ count, sum, minimum, maximum and average with DuckDB's. They check that the tabl
 more than three quarters of its slots, and that a perfect table finds the same groups with one
 probe a row.
 
+(compare-hash-aggregation)=
 ## Compare
 
 Your plan beside DuckDB's:
@@ -225,6 +242,11 @@ of: groups
   DuckDB takes the range from the file's statistics.
 - **A planner guesses the groups when it cannot count them.** DuckDB guessed half its input.
 :::
+
+```checkpoint
+question: Why can grouping by customer cost more than grouping by status on the same input?
+answer: More groups require a larger table. Lookups probe that table, and a table that no longer fits in the cache needs more fetched lines. Input rows alone do not describe this cost.
+```
 
 ## Problems
 

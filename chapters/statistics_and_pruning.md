@@ -5,6 +5,15 @@ title: Statistics and pruning
 (statistics-and-pruning)=
 # Statistics and pruning
 
+:::{div}
+:class: reading-guide
+
+**What you will learn:** Choose the level at which statistics can skip data, and weigh fewer bytes against more requests.
+
+**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
+**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
+:::
+
 ## The question
 
 How finely can a scan skip, and what does skipping finely cost?
@@ -79,6 +88,13 @@ again in your browser.
 
 ## Building it
 
+:::{div}
+:class: optional-section
+
+**Optional implementation.** Read this section if you want to build the engine. To continue with
+its behaviour and evidence, [go to Compare](#compare-statistics-and-pruning).
+:::
+
 ### A page's bounds
 
 A comparison already knew how to test a row group's statistics. Testing a page is the same
@@ -139,6 +155,7 @@ The book's tests run the scan by page with several predicates and compare its ro
 They check every row of the file that matches, to make sure it lay in a page the scan kept, and
 check that on a file without a page index the scan reads exactly what chapter 3's did.
 
+(compare-statistics-and-pruning)=
 ## Compare
 
 Your scan beside DuckDB's, on the paged file:
@@ -213,6 +230,11 @@ of: pruning
   kept rows map to different pages in each.
 - **Finer skipping costs requests.** Fewer bytes came in more pieces.
 :::
+
+```checkpoint
+question: Can a page index reduce bytes read while increasing requests?
+answer: Yes. Finer statistics let the scan fetch smaller pieces, but those pieces may need separate requests. A design must account for both bytes and requests, not assume that fewer bytes always finish sooner.
+```
 
 ## Problems
 
