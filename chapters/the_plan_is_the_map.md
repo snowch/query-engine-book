@@ -105,16 +105,14 @@ section sets the profile beside the plan.
 
 ## Predict, then measure
 
-In the chapters that follow, you predict what an operator will do before you measure it. Here
-the prediction is the planner's: `EXPLAIN` printed an estimate for each operator before the
-query ran, and running the query measures what each operator did. The panel sets the two side by
-side, operator by operator. DuckDB calls the scan `PARQUET_SCAN` in the plan and
-`TABLE_SCAN` in the profile: two names for the same operator, not two operators.
+DuckDB calls the same scan `PARQUET_SCAN` in the plan and `TABLE_SCAN` in the profile.
+Use the plan above to predict what each change will do before you read the worked results.
 
-Above the plan are two changes to try: a higher price threshold, and shipped orders in place of
-returned ones. Before you press either, look at the plan and decide which of its operators each
-change reaches, and whether it will move their estimates, their measurements, or both. Each
-change redraws the plan at once, from a run the book made when it was built.
+1. Raise the unit price threshold. Which operators will pass on fewer rows?
+2. Ask for shipped orders in place of returned ones. Which operators' row counts will change?
+
+Check your predictions in **Actual rows out** for each operator. Then compare **Estimated rows
+out** across the cases to see whether DuckDB's planner anticipated those changes.
 
 ```lab
 experiment: plan
@@ -122,10 +120,9 @@ query: returned_unit_price.sql
 variants: pricier_returns.sql, shipped_unit_price.sql
 ```
 
-The panel draws what DuckDB measured when the book was built. Its button runs the same report
-again in your browser, and says whether your browser's DuckDB gave the same answer.
-
-Now press them, and check your answers.
+The book computed all three results when it was built. Open **Explore the saved plans** to
+switch between them. **Run the book's query in your browser** recomputes the original query
+and checks it against the saved result.
 
 - **A change reaches only the operator that runs the test it alters, and those above it.** The
   price test runs in the `FILTER`, so a higher threshold leaves the scan's rows as they were and

@@ -76,8 +76,7 @@ project:
         - file: appendices/the_machine_in_one_page.md
         - file: appendices/glossary.md
 
-# MyST needs a site block to write its parse (_build/site/content). It never renders with this
-# theme: scripts/build-site.py renders the site, and scripts/parse-book.sh tolerates the theme
-# download failing where there is no network.
+# MyST needs a site template to write its parse (_build/site/content).
+# scripts/build-site.py renders the site independently from that parse.
 site:
-  template: book-theme
+  template: ./tools/myst-parse

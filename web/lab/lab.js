@@ -12,17 +12,12 @@
 // JavaScript here draws JSON and compares it; it never computes a count of its own.
 
 import { mountEdits } from "./edit.js";
+import { bindDraft, bookPath, store } from "./drafts.js";
 import { colour } from "./highlight.js";
 import { EXPERIMENTS } from "./panels.js";
 import { runReport } from "./runner.js";
 import { mountTimed } from "./timed.js";
 import { mountWorkbench } from "./workbench.js";
-
-const store = {
-  get(key) { try { return localStorage.getItem(key); } catch { return null; } },
-  set(key, value) { try { localStorage.setItem(key, value); } catch {} },
-  drop(key) { try { localStorage.removeItem(key); } catch {} },
-};
 
 /** The last line of a Python error: the exception and its message, without the traceback. */
 function lastLine(error) {
@@ -38,9 +33,9 @@ function mount(el) {
   const build = JSON.parse(built);
   // Named for this book: other books share the origin, and its storage.
   const settings = Object.keys(config).filter((k) => k !== "experiment").sort().map((k) => config[k]);
-  const key = `lab:${location.pathname.replace(/[^/]*$/, "")}:${config.experiment}:${settings.join(":")}`;
+  const key = `lab:${bookPath}:${config.experiment}:${settings.join(":")}`;
 
-  const body = document.createElement("div");
+  let body = document.createElement("div");
   body.className = "lab-body";
   const foot = document.createElement("div");
   foot.className = "lab-foot";
@@ -51,90 +46,104 @@ function mount(el) {
   const status = document.createElement("p");
   status.className = "lab-status";
   status.setAttribute("aria-live", "polite");
-  foot.append(run, status);
+  const notice = document.createElement("p");
+  notice.className = "run-notice";
+  notice.setAttribute("role", "status");
+  const message = (text, error = false) => {
+    notice.textContent = text;
+    notice.classList.toggle("lab-error", error);
+  };
+  foot.append(run, status, notice);
   el.querySelector(".lab-fallback")?.remove();
   el.append(body);
 
   // The editor, for a panel whose report ran a query: the query as the build ran it, or the
   // reader's last edit of it.
   let editor = null;
+  let reset = null;
+  let recover = null;
   if (typeof build.source === "string") {
     const details = document.createElement("details");
     details.className = "lab-editor";
     details.innerHTML = `<summary>Edit the query</summary>
       <textarea class="code-area" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="The query"></textarea>
       <div class="lab-editor-bar"><button type="button" class="lab-reset">Reset to the book's query</button>
+      <button type="button" class="lab-recover">Recover saved draft</button>
       <span class="lab-hint">Ctrl+Enter runs it. Your edit stays in this browser.</span></div>`;
     editor = details.querySelector("textarea");
+    reset = details.querySelector(".lab-reset");
+    recover = details.querySelector(".lab-recover");
     const saved = store.get(key);
     editor.value = saved ?? build.source;
     editor.rows = Math.min(14, editor.value.split("\n").length + 1);
     details.open = saved !== null && saved !== build.source;
-    editor.addEventListener("input", () => {
-      if (editor.value === build.source) store.drop(key);
-      else store.set(key, editor.value);
-      el.dataset.edited = String(editor.value !== build.source);
-    });
     editor.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run.click(); }
     });
-    details.querySelector(".lab-reset").addEventListener("click", () => {
-      editor.value = build.source;
-      if (store.get(key) !== null) store.drop(key);
-      el.dataset.edited = "false";
-      show(built, "build");
-    });
-    el.dataset.edited = String(editor.value !== build.source);
     el.append(details);
     const redraw = colour(editor, "sql");
-    details.querySelector(".lab-reset").addEventListener("click", redraw);
+    const markDraft = (switched) => {
+      const edited = editor.value !== build.source;
+      el.dataset.edited = String(edited);
+      run.textContent = edited ? "Run your query in your browser" : "Run the book's query in your browser";
+      if (switched) {
+        show(build, "build");
+        el.dataset.ready = "true";
+      }
+    };
+    bindDraft(editor, { key, original: build.source, reset, recover, redraw, onChange: markDraft, onMessage: message });
+    markDraft(false);
   }
   el.append(foot);
 
-  function show(json, source) {
-    const data = JSON.parse(json);
-    body.replaceChildren();
-    draw(body, data, { store, key });
+  function show(data, source) {
+    const next = document.createElement("div");
+    next.className = "lab-body";
+    draw(next, data, { store, key });
+    body.replaceWith(next);
+    body = next;
     el.dataset.source = source;
     delete el.dataset.agrees;
-    status.classList.remove("lab-error");
     status.textContent = source === "build"
       ? `Computed by ${data.engine} when the book was built.`
       : "";
   }
-  show(built, "build");
+  show(build, "build");
   el.dataset.ready = "true";
 
   run.addEventListener("click", async () => {
-    const edited = editor !== null && editor.value !== build.source;
+    const sql = editor?.value;
+    const edited = sql !== undefined && sql !== build.source;
     run.disabled = true;
+    if (reset) reset.disabled = recover.disabled = true;
     el.dataset.ready = "running";
+    message("Running in your browser…");
     try {
-      const json = await runReport(edited ? { ...config, sql: editor.value } : config,
-        (text) => { status.textContent = text; });
-      show(json, "browser");
-      const engine = JSON.parse(json).engine;
+      const json = await runReport(edited ? { ...config, sql } : config, message);
+      const data = JSON.parse(json);
+      show(data, "browser");
       if (edited) {
-        status.textContent = `Your query, run in your browser by ${engine} under Pyodide.`;
+        status.textContent = `Your query, run in your browser by ${data.engine} under Pyodide.`;
       } else {
         // Compared as parsed and re-serialised, so escaping inside the page's script element
         // cannot make two equal answers look different.
-        const same = JSON.stringify(JSON.parse(json)) === JSON.stringify(build);
+        const same = JSON.stringify(data) === JSON.stringify(build);
         el.dataset.agrees = String(same);
         status.textContent = same
-          ? `Recomputed in your browser by ${engine} under Pyodide: the same answer as the build.`
-          : "Recomputed in your browser: this differs from the build's answer. Please report it.";
-        status.classList.toggle("lab-error", !same);
+          ? `Recomputed in your browser by ${data.engine} under Pyodide. The counts match the worked result.`
+          : "Recomputed in your browser. The counts differ from the worked result. Please report the difference.";
       }
+      message("");
       el.dataset.ready = "true";
     } catch (error) {
-      status.textContent = edited
+      const failure = edited
         ? `DuckDB could not run your query: ${lastLine(error)}`
         : `The panel could not run in your browser: ${lastLine(error)}`;
-      status.classList.add("lab-error");
+      message(`${failure}. The previous result is shown above.`, true);
       el.dataset.ready = "error";
     } finally {
       run.disabled = false;
+      if (reset) reset.disabled = recover.disabled = false;
     }
   });
 }

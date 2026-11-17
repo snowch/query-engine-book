@@ -14,7 +14,7 @@
 // A panel that does not ask (the plan, in ch01) draws every number at once, and each of its
 // variants' buttons redraws it from that variant's report. Then, for every panel:
 //
-// 3. "Run it in your browser" reruns the report under Pyodide; the page must say the answer is
+// 3. Running in the browser reruns the report under Pyodide; the page must say the answer is
 //    the build's and draw the same numbers.
 // 4. An edited query draws what `python -m query_lab report … --sql` prints at a desk for the same
 //    text; a broken one reports DuckDB's error; reset restores the book's query.
@@ -299,7 +299,9 @@ async function checkPanel(page, file, index) {
       throw new Error(`${label}: ${buttons.length} buttons for ${choices.length - 1} variants`);
     }
     for (let i = choices.length - 1; i >= 0 && buttons.length; i--) {
-      await (await el.$$(".plan-variant"))[i].click();
+      await (await el.$$(".plan-variant"))[i].press("Enter");
+      const focused = await page.evaluate(() => document.activeElement.dataset.query);
+      if (focused !== choices[i].query) throw new Error(`${label}: switching variants lost focus`);
       same(`${label}, showing ${choices[i].query}`, await read(el), panel.revealed(choices[i]));
     }
     console.log(`  ${label}: draws every number at once, and each variant at a press`);
@@ -336,10 +338,12 @@ async function checkPanel(page, file, index) {
 
     await editor.fill("SELECT nothing FROM nowhere");
     await runAndWait(page, el);
-    const broken = await el.$eval(".lab-status", (s) => s.textContent);
-    if (!broken.startsWith("DuckDB could not run your query") || (await drawn(el)).length === 0) {
+    const broken = await el.$eval(".run-notice", (s) => s.textContent);
+    if (!broken.startsWith("DuckDB could not run your query")) {
       throw new Error(`${label}, broken query: ${broken}`);
     }
+    same(`${label}, after the failed query`, await drawn(el), shown(expected(theirs.root)));
+    same(`${label}, previous result label`, await el.$eval(".lab-status", (s) => s.textContent), edited);
     await (await el.$(".lab-reset")).click();
     same(`${label}, after reset`, await read(el), panel.revealed(data, guesses));
     if (await editor.inputValue() !== data.source) throw new Error(`${label}: reset did not restore the query`);

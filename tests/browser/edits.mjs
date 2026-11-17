@@ -38,6 +38,7 @@ async function run(page, figure) {
   return result.evaluate((r) => ({
     ready: r.dataset.ready, agrees: r.dataset.agrees, passed: r.dataset.passed, total: r.dataset.total,
     status: r.querySelector(".lab-status").textContent,
+    notice: r.querySelector(".run-notice").textContent,
     operators: [...r.querySelectorAll(".plan-op")].map((op) => op.dataset.operator),
     // What a script printed, as the page shows it, and which script the block runs.
     output: r.querySelector("pre.cell-output")?.textContent ?? null,
@@ -116,6 +117,11 @@ try {
         await (await figure.$(".edit-open")).click();
         const editor = await figure.$("textarea.code-area");
         const listing = await editor.inputValue();
+        if (file === "the-plan-is-the-map.html" && index === firstQuery) {
+          await editor.press("Tab");
+          check(await figure.$eval(".lab-run", (button) => document.activeElement === button), "Tab did not leave the editor");
+          check(await editor.inputValue() === listing, "Tab modified the listing");
+        }
         if (kind === "query") {
           await editor.fill(EDITED);
           const got = await run(page, figure);
@@ -124,13 +130,22 @@ try {
           check(JSON.stringify(got.operators) === JSON.stringify(want), `${label}: drew ${got.operators}, the desk ${want}`);
           // Every figure and panel computed for the book's query now says so, and reset clears it.
           const tagged = await page.$$eval(`#main [data-query="${name.slice("queries/".length)}"]`,
-            (els) => els.map((e) => e.dataset.stale === "true" && !!e.querySelector(":scope > .stale-note")));
+            (els) => els.filter((e) => !e.matches("button")).map((e) => e.dataset.stale === "true" && !!e.querySelector(":scope > .stale-note")));
           check(tagged.every(Boolean), `${label}: ${tagged.filter((t) => !t).length} of the book's figures were not marked`);
           await editor.fill("SELECT nothing FROM nowhere");
           const broken = await run(page, figure);
-          check(broken.ready === "error" && broken.status.startsWith("DuckDB could not run your query"), `${label}, broken: ${broken.status}`);
+          check(broken.ready === "error" && broken.notice.startsWith("DuckDB could not run your query"), `${label}, broken: ${broken.notice}`);
+          check(broken.status === got.status && JSON.stringify(broken.operators) === JSON.stringify(got.operators),
+            `${label}: the failed query replaced the successful result`);
           await (await figure.$(".edit-reset")).click();
           check(await page.$$eval("#main [data-stale]", (els) => els.length) === 0, `${label}: reset left figures marked`);
+          if (file === "the-plan-is-the-map.html") {
+            figure = await open(page, file, index);
+            await (await figure.$(".edit-open")).click();
+            await (await figure.$(".edit-recover")).click();
+            check(await figure.$eval("textarea.code-area", (t) => t.value) === "SELECT nothing FROM nowhere",
+              `${label}: the reset draft could not be recovered after a reload`);
+          }
           console.log(`  ${label}: an edited query draws the desk's plan, marks the book's figures, and a broken one DuckDB's error`);
         } else {
           const shipped = await run(page, figure);
@@ -145,7 +160,9 @@ try {
           check(right(shipped), `${label}: ${shipped.status}`);
           await editor.fill(`${listing}\n(`);
           const broken = await run(page, figure);
-          check(broken.ready === "error" && /(Syntax|Indentation)Error: .*\(line \d+ of your edit\)$/.test(broken.status), `${label}, broken: ${broken.status}`);
+          check(broken.ready === "error" && /(Syntax|Indentation)Error: .*\(line \d+ of your edit\)$/.test(broken.notice), `${label}, broken: ${broken.notice}`);
+          check(broken.status === shipped.status && broken.output === shipped.output,
+            `${label}: the failed edit replaced the successful result`);
           // Kept, and reopened on a reload.
           figure = await open(page, file, index);
           check(await figure.getAttribute("data-editing") === "true", `${label}: a kept edit did not reopen its editor`);
