@@ -93,7 +93,6 @@ def _plan(data: dict) -> str:
 
     walk(data["root"])
     out = f'<section data-query="{esc(data["query"])}"><p><strong>{esc(data["label"])}</strong></p>'
-    out += "<p>Read the tree from its deepest input towards the result. Estimates precede execution; actual rows come from the profile.</p>"
     out += table(["Operator", "Rows in", "Estimated rows out", "Actual rows out"], rows)
     out += f"<p>Result rows: <strong>{number(data['result_rows'])}</strong>.</p>"
     out += "<details><summary>See the first result rows</summary>"
@@ -132,6 +131,10 @@ def worked_result(data: dict) -> str:
         if data.get("chart"):
             out += chart(data["chart"])
     elif kind == "plan":
+        out += (
+            "<p>Read each plan from its deepest input towards the result. "
+            "DuckDB estimates rows before execution and counts actual rows as it runs.</p>"
+        )
         out += _plan(data)
     elif kind == "gather":
         out += f"<p>Read the {esc(data['column'])} column in each access order. The model has {number(data['cache']['lines'])} cache lines of {number(data['cache']['line_bytes'])} bytes each.</p>"

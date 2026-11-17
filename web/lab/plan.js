@@ -53,15 +53,13 @@ function operator(node, max) {
     card.append(dl);
   }
   const bars = el("div", "plan-bars");
-  bars.append(
-    bar("Estimated", node.estimated_rows_out, max, "estimated"),
-    bar("Measured", node.rows_out, max, "measured"),
-  );
+  const measured = bar("Actual rows out", node.rows_out, max, "measured");
+  measured.querySelector(".plan-bar-value").dataset.field = "rows_out";
+  bars.append(bar("Estimated rows out", node.estimated_rows_out, max, "estimated"), measured);
   card.append(bars);
   const flow = el("div", "plan-op-flow");
-  flow.innerHTML = `<span>rows in</span> <b data-field="rows_in"></b> <span>rows out</span> <b data-field="rows_out"></b>`;
+  flow.innerHTML = '<span>rows in</span> <b data-field="rows_in"></b>';
   flow.querySelector('[data-field="rows_in"]').textContent = fmt(node.rows_in);
-  flow.querySelector('[data-field="rows_out"]').textContent = fmt(node.rows_out);
   card.append(flow);
   box.append(card);
   if (node.children.length) {
@@ -124,20 +122,18 @@ export function mountPlan(root, data, ctx, chosen = 0) {
   root.append(head);
 
   if (choices.length > 1) {
-    // The question comes before the buttons: the reader decides where a change will land first.
-    root.append(el("p", "plan-variants-ask",
-      "Before you press a change, look at the plan: which operators will it reach, and will their "
-      + "estimates move, their measurements, or both?"));
     const picker = el("div", "plan-variants");
-    picker.append(el("span", "plan-variants-label", "Try a change:"));
+    picker.append(el("span", "plan-variants-label", "Saved plans"));
     choices.forEach((choice, i) => {
       const b = el("button", "plan-variant", i === 0 ? "The book's query" : choice.label);
       b.type = "button";
       b.dataset.query = choice.query;
       b.setAttribute("aria-pressed", String(i === chosen));
       b.addEventListener("click", () => {
+        if (i === chosen) return;
         root.replaceChildren();
         mountPlan(root, data, ctx, i);
+        root.querySelector(".plan-variant[aria-pressed=true]").focus();
       });
       picker.append(b);
     });

@@ -145,11 +145,17 @@ def _script_json(data: dict) -> str:
 def _lab(node: dict) -> str:
     config = parse_lab_block(str(node.get("value", "")))
     attrs = " ".join(f'data-{html.escape(k)}="{html.escape(v)}"' for k, v in config.items())
+    data = panel_data(config)
+    summary = (
+        "Explore the saved plans"
+        if config["experiment"] == "plan" and config.get("variants")
+        else ("Optional: predict, change and run the experiment")
+    )
     return (
-        worked_result(panel_data(config))
-        + '<details class="optional experiment-disclosure"><summary>Optional: predict, change and run the experiment</summary>'
+        worked_result(data)
+        + f'<details class="optional experiment-disclosure"><summary>{summary}</summary>'
         + f'<div class="lab" {attrs}>'
-        f'<script type="application/json" class="lab-data">{_script_json(panel_data(config))}</script>'
+        f'<script type="application/json" class="lab-data">{_script_json(data)}</script>'
         '<p class="lab-fallback">This panel needs JavaScript.</p></div></details>'
     )
 

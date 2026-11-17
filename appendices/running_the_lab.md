@@ -11,21 +11,27 @@ experiments and implementation route; there is nothing to install to use them in
 
 ## Panels
 
-Open **Optional: predict, change and run the experiment** beneath a worked result.
-The panel draws the same generated evidence and lets you test your own predictions. Its **Run it in your browser** button runs the same code again in your
-browser, under Pyodide, and says whether your browser got the same answer as the build. A panel
-that shows a query lets you edit the query and run your own.
+Open **Explore the saved plans** to switch between plans the book computed when it was built.
+Click **Run the book's query in your browser** to recompute the original query.
+
+For other panels, open **Optional: predict, change and run the experiment** beneath the worked
+result. **Run it in your browser** recomputes the original experiment. The panel says whether
+the new counts match the worked result.
+
+If the panel offers **Edit the query**, change it there and click **Run your query in your
+browser**. Use **Reset to the book's query** to bring back the original, then **Recover saved
+draft** when you want your edit again.
 
 ## Edit and run
 
-Open an **Optional: read or edit** section to see its code. Every quoted query has an
-**Edit and run** button. Your version runs under DuckDB in the
-page and draws its plan and its first rows, and the page's figures and panels computed for the
-book's query say so until you reset it. Some listings of the engine have the button too: your
-edit runs in place of the engine's own code, then the chapter's panel or the engine's tests run
-on it, so you can see what your change does to the counts, or which tests it breaks. The book's
-code is back as soon as the run ends, your edit stays in this browser, and **Reset to the book's
-code** starts again.
+Open an **Optional: read or edit** section and click **Edit and run** to open its editor.
+**Run the query** shows your SQL query's plan and first result rows. **Run the listing** runs
+your Python code and shows its output, counters or test results. A failed run leaves any
+previous result visible.
+
+Press Tab to move out of the editor or Ctrl+Enter to run from it. Your edit stays in this
+browser. Click **Reset to the book's code** to open the starter again. **Recover saved draft**
+brings back your edit, including after you reload.
 
 ## Timings
 
@@ -38,10 +44,10 @@ cases with each other. Nothing else on the page runs while the cases are timed.
 ## Problems
 
 Each chapter's understanding check needs no code. For coding practice, open
-**Optional: write code and run the practice tests** under Problems. Write your answers and press **Run the
-graders**: they are the book's own tests, run by pytest in your browser, and they report each
-check as it passed or failed. Your answers stay in this browser, and **Reset to the stubs**
-starts again.
+**Optional: write code and run the practice tests** under Problems. Write your answers and click
+**Run the graders**. The book runs the practice checks in your browser and reports which passed.
+**Reset to the stubs** brings back the starter code. **Recover saved draft** brings back your
+answers.
 
 ## The first run
 

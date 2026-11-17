@@ -57,8 +57,14 @@ try {
       const kept = await page.evaluate((c) => Object.keys(localStorage)
         .filter((k) => k.startsWith("problems:") && k.endsWith(`:${c}`)).map((k) => localStorage.getItem(k)), chapter);
       check(kept.length === 1 && kept[0] === wrong, "the answer was not kept in the browser's storage");
-      await (await wb.$("button:not(.lab-run)")).click();
+      await (await wb.$(".wb-reset")).click();
       check((await wb.$eval("textarea", (t) => t.value)) === stubs, "reset did not restore the stubs");
+      if (file === "the-plan-is-the-map.html") {
+        await page.reload();
+        const reloaded = await page.waitForSelector('.workbench[data-ready="true"]', { timeout: 30_000 });
+        await (await reloaded.$(".wb-recover")).click();
+        check((await reloaded.$eval("textarea", (t) => t.value)) === wrong, "reset draft did not survive a reload");
+      }
       console.log(`  ${chapter}: an edited answer is graded and kept, and reset restores the stubs`);
     } catch (error) {
       failures += 1;

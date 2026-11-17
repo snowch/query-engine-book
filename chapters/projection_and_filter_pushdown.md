@@ -192,7 +192,17 @@ The scan reads the columns it was asked for, and any column a filter tests. Its 
 above; what changes is how it decides, row group by row group, which rows to read. If the
 statistics rule the row group out, none, and no request is made for its columns. Otherwise all of
 them; the loop then tests every row against the filters and hands up only the rows that pass, in
-only the columns asked for:
+only the columns asked for.
+
+Open **Optional: read or edit the Python · operators.py** below. The listing starts with
+`def rows_to_read`.
+
+1. Click **Edit and run**, then **Run the listing** with the code unchanged. For
+   `orders-sorted.parquet`, note **Read**, **rows handed up** and **bytes read**.
+2. Replace `why = self.ruled_out(row_group, metadata, by_name)` with `why = None`.
+   Click **Run the listing** again.
+3. Compare the same counts with your notes. How much more work did the scan do to return the
+   same rows?
 
 ```{literalinclude} ../python/query_lab/operators.py
 :language: python
@@ -205,8 +215,8 @@ experiment: pruning
 query: early_march.sql
 ```
 
-Make the scan read every row group, whatever its statistics say, and run the panel's report on
-your edit. The rows handed up do not change; the row groups read, the bytes and the requests do.
+The edit makes the scan read every row group. The scan still tests the date filters on each
+row it reads.
 
 One filter that rules a row group out is enough: the predicates are joined by `AND`, so a row
 must pass them all.

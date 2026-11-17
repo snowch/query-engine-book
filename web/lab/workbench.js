@@ -5,10 +5,9 @@
 // reported, test by test, grouped by problem; it decides nothing itself. The reader's text is kept
 // in the browser's storage under a key named for this book, since other books share the origin.
 
+import { bindDraft, bookPath, store } from "./drafts.js";
 import { colour } from "./highlight.js";
 import { runProblems } from "./runner.js";
-
-const BOOK = location.pathname.replace(/[^/]*$/, "");
 
 function el(tag, className, text) {
   const e = document.createElement(tag);
@@ -16,12 +15,6 @@ function el(tag, className, text) {
   if (text !== undefined) e.textContent = text;
   return e;
 }
-
-const store = {
-  get(key) { try { return localStorage.getItem(key); } catch { return null; } },
-  set(key, value) { try { localStorage.setItem(key, value); } catch {} },
-  drop(key) { try { localStorage.removeItem(key); } catch {} },
-};
 
 /** Which problem a grader belongs to: test_problem_1_1_… is problem 1.1. */
 function problemOf(name) {
@@ -59,7 +52,7 @@ function results(root, report) {
 
 export async function mountWorkbench(root) {
   const chapter = root.dataset.chapter;
-  const key = `problems:${BOOK}:${chapter}`;
+  const key = `problems:${bookPath}:${chapter}`;
   const response = await fetch(new URL(`py/exercises/${chapter}.py`, import.meta.url));
   if (!response.ok) throw new Error(`could not fetch the problems: ${response.status}`);
   const stubs = await response.text();
@@ -76,52 +69,68 @@ export async function mountWorkbench(root) {
   const bar = el("div", "lab-foot");
   const run = el("button", "lab-run", "Run the graders");
   run.type = "button";
-  const reset = el("button", "", "Reset to the stubs");
+  const reset = el("button", "wb-reset", "Reset to the stubs");
   reset.type = "button";
-  const status = el("p", "lab-status", "Your answers stay in this browser. Ctrl+Enter runs the graders.");
+  const recover = el("button", "wb-recover", "Recover saved draft");
+  recover.type = "button";
+  const hint = el("span", "lab-hint", "Ctrl+Enter runs the graders. Your draft stays in this browser.");
+  const notice = el("p", "run-notice");
+  notice.setAttribute("role", "status");
+  const status = el("p", "lab-status");
   status.setAttribute("aria-live", "polite");
-  bar.append(run, reset, status);
+  bar.append(run, reset, recover, hint, notice, status);
   const out = el("div", "wb-results");
-  root.append(head, editor, bar, out);
+  const log = el("details", "wb-run-details");
+  const diagnostics = el("pre", "wb-output");
+  log.hidden = true;
+  log.append(el("summary", "", "Show grader output"), diagnostics);
+  root.append(head, editor, bar, log, out);
   const redraw = colour(editor, "python");
   root.dataset.ready = "true";
 
-  editor.addEventListener("input", () => {
-    if (editor.value === stubs) store.drop(key);
-    else store.set(key, editor.value);
-  });
+  const message = (text, error = false) => {
+    notice.textContent = text;
+    notice.classList.toggle("lab-error", error);
+  };
   editor.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run.click(); }
-    // A tab in the editor indents, as it would in any code editor, rather than leaving the box.
-    if (e.key === "Tab" && !e.shiftKey) {
-      e.preventDefault();
-      editor.setRangeText("    ", editor.selectionStart, editor.selectionEnd, "end");
-      editor.dispatchEvent(new Event("input"));
-    }
   });
-  reset.addEventListener("click", () => {
-    editor.value = stubs;
-    redraw();
-    store.drop(key);
-    out.replaceChildren();
-    status.textContent = "Reset to the stubs the book ships.";
+  bindDraft(editor, {
+    key, original: stubs, reset, recover, redraw, onMessage: message,
+    onChange(switched) {
+      if (!switched) return;
+      out.replaceChildren();
+      status.textContent = "";
+      log.hidden = true;
+      root.dataset.ready = "true";
+    },
   });
   run.addEventListener("click", async () => {
-    run.disabled = true;
+    run.disabled = reset.disabled = recover.disabled = true;
     root.dataset.ready = "running";
-    status.classList.remove("lab-error");
+    log.hidden = true;
+    message("Running the graders in your browser…");
+    const source = editor.value;
     try {
-      const report = JSON.parse(await runProblems(chapter, editor.value, (text) => { status.textContent = text; }));
+      const report = JSON.parse(await runProblems(chapter, source, message));
+      if (report.exit > 1) {
+        diagnostics.textContent = report.output;
+        log.open = false;
+        log.hidden = false;
+        throw new Error("See the grader output for details.");
+      }
       results(out, report);
       const passed = report.tests.filter((t) => t.outcome === "passed").length;
-      status.textContent = `${passed} of ${report.tests.length} checks pass.`;
+      status.textContent = `${passed} of ${report.tests.length} practice checks pass on ${source === stubs ? "the stubs" : "your draft"}.`;
+      message("");
       root.dataset.ready = "true";
     } catch (error) {
-      status.textContent = `The graders could not run: ${String(error.message || error).trim().split("\n").pop()}`;
-      status.classList.add("lab-error");
+      const detail = String(error.message || error).trim().split("\n").pop();
+      const previous = status.textContent ? " The previous checks are shown below." : "";
+      message(`The graders could not run. ${detail}${previous}`, true);
       root.dataset.ready = "error";
     } finally {
-      run.disabled = false;
+      run.disabled = reset.disabled = recover.disabled = false;
     }
   });
 }
