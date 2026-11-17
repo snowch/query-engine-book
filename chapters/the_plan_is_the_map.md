@@ -216,12 +216,13 @@ runs the plan, and prints the first rows and what each operator counted:
 script: python/query_lab/first_plan.py
 ```
 
-Press **Edit and run** to change it and run it in your browser, as you would a notebook cell: the
-page runs what you see, as Python would run the file, and shows what it prints. Skip the filter on
-the status, say, by handing the price filter `scan` in place of `returned`: more rows come back,
-and the price filter takes in every row of the file. Edit, run, look, and edit again. The book's
-own code comes back when you close the editor, and nothing you change moves a number the chapter
-prints.
+Open **Optional: read or edit the Python · first_plan.py** above. Click **Edit and run**, then
+**Run the listing** with the code unchanged. Note **rows in** and **rows out** for the price
+filter, the first `Filter` below `Project` in the output.
+
+In the listing, change the first argument of `pricey = Filter(...)` from `returned` to `scan`.
+Run again. Can you tell from the price filter's counters that it now receives every row from
+the scan? The worked output above comes from the book's original code.
 
 Called with no `filters`, as this plan calls it, the scan reads every row group and hands up
 every row. It tests no predicate, where DuckDB's did. That difference is the first thing the
