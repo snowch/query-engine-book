@@ -10,8 +10,6 @@ title: The plan is the map
 
 **What you will learn:** Distinguish a plan from a profile, and trace where rows are kept or discarded.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -58,8 +56,11 @@ the SQL every figure below ran.
 :language: sql
 ```
 
-Every query the book quotes can be changed and run in your browser: press **Edit and run** above
-it. Your version runs under DuckDB in the page, and draws its plan and its first rows.
+For an optional SQL run, open **Optional: read or edit the SQL · returned_orders.sql** above.
+Select **Edit and run**, then **Run the query**. DuckDB shows the plan and first result rows.
+In the editor, replace `'returned'` with `'shipped'` in the `WHERE` condition and run again.
+Compare **Actual rows out** at the scan and the total in the result preview's heading. The worked plan
+below uses the original query.
 
 Ask DuckDB how it will run a query, without running it, by putting `EXPLAIN` in front. What comes
 back is the physical plan, drawn as DuckDB draws it in a terminal:
@@ -94,7 +95,7 @@ which keeps the rows for which a predicate is true. The unit price is computed, 
 **projection** computes the columns the query returns from the columns it is given. The status
 test stayed in the scan.
 
-**Read a plan from the bottom up, the way the rows travel.** The scan at the bottom hands up the
+**Read the inputs before the operators that use them.** The scan at the bottom hands up the
 returned orders, the filter above it keeps the dear ones, and the projection at the top computes
 their unit price. The top of the plan is where the rows end up, not where the work starts.
 
@@ -357,10 +358,9 @@ answer: Use the profile for the work that actually happened. The estimate descri
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there: they are the book's own tests, and they run in your browser. Your answers stay in this
-browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: the_plan_is_the_map
@@ -368,16 +368,16 @@ chapter: the_plan_is_the_map
 
 **1.1 A plan of your own.** Write `customer_orders`, the plan for every order of one customer:
 `order_id`, `order_date` and `amount`, where `customer_id` equals the customer given. Build it
-from the book's operators, as the chapter built its plan. The graders compare its result with
+from the book's operators, as the chapter built its plan. The practice tests compare its result with
 DuckDB's for several customers, check its counters obey the rules, and check the scan reads no
 column the query does not use.
 
 **1.2 Work it out from the recipe.** Write `expected_rows`: from the orders' recipe above, the
-rows the chapter's query keeps, for any status and any price threshold. The graders compare your
+rows the chapter's query keeps, for any status and any price threshold. The practice tests compare your
 answer with DuckDB's count for several of each. It is the estimate the planner could not make,
 because nobody gave it the recipe.
 
-**1.3 Find where the filtering stopped happening early.** No test. A colleague finds the same
+**1.3 Find where the filtering stopped happening early.** Use the plan and counters. A colleague finds the same
 returned orders with this query:
 
 ```{literalinclude} ../queries/lower_status.sql

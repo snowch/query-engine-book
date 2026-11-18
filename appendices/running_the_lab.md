@@ -14,9 +14,9 @@ experiments and implementation route; there is nothing to install to use them in
 Open **Explore the saved plans** to switch between plans the book computed when it was built.
 Click **Run the book's query in your browser** to recompute the original query.
 
-For other panels, open **Optional: predict, change and run the experiment** beneath the worked
-result. **Run it in your browser** recomputes the original experiment. The panel says whether
-the new counts match the worked result.
+For other panels, open **Predict and reveal the experiment** below the worked result. Enter
+your predictions and select **Reveal the measurement**. **Run it in your browser** reruns the
+original experiment after the reveal. The panel says whether the counts match the worked result.
 
 If the panel offers **Edit the query**, change it there and click **Run your query in your
 browser**. Use **Reset to the book's query** to bring back the original, then **Recover saved
@@ -29,9 +29,10 @@ Open an **Optional: read or edit** section and click **Edit and run** to open it
 your Python code and shows its output, counters or test results. A failed run leaves any
 previous result visible.
 
-Press Tab to move out of the editor or Ctrl+Enter to run from it. Your edit stays in this
-browser. Click **Reset to the book's code** to open the starter again. **Recover saved draft**
-brings back your edit, including after you reload.
+Press Tab to move out of the editor, or Ctrl+Enter to run from it. **Reset to the book's code**
+opens the starter. **Recover saved draft** brings back the previous edit. The page saves drafts
+in this browser when storage is available. If saving fails, **Download editor text** keeps a
+copy of the exact text in the editor.
 
 ## Timings
 
@@ -45,20 +46,20 @@ cases with each other. Nothing else on the page runs while the cases are timed.
 
 Each chapter's understanding check needs no code. For coding practice, open
 **Optional: write code and run the practice tests** under Problems. Write your answers and click
-**Run the graders**. The book runs the practice checks in your browser and reports which passed.
-**Reset to the stubs** brings back the starter code. **Recover saved draft** brings back your
-answers.
+**Run the practice tests**. The checks report on the answers you submitted. Running the tests
+again checks any later edits. **Reset to the stubs** brings back the starter code. **Recover
+saved draft** brings back your answers.
 
 ## The first run
 
-The first run downloads Python, DuckDB and, for the problems, pyarrow and pytest. That is a large
-download, and your browser keeps it afterwards, so later runs start quickly. Each download
-happens only when something first needs it: reading the book does not download the Python runtime.
+The first run downloads the browser's Python runtime, called Pyodide. Each experiment also
+loads the libraries it needs, such as DuckDB or pyarrow. The first run can take longer than a
+later run in the same browser. Reading the book leaves those downloads until you select Run.
 
 ## Versions
 
-The book pins DuckDB and pyarrow to the versions the browser's Python ships, so a plan printed in
-the book is the plan your browser makes when you run it.
+The browser and build use the same pinned versions of DuckDB and pyarrow. An original rerun
+checks the displayed counters against the build's example. An edited run reports its own result.
 
 ## On your own machine
 

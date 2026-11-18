@@ -10,8 +10,6 @@ title: Batches in memory
 
 **What you will learn:** Explain why identical rows can cost different amounts of memory traffic.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -117,8 +115,8 @@ experiment: gather
 column: amount
 ```
 
-The panel draws what the book's engine counted when the book was built. Its button runs the same
-report again in your browser, under Pyodide, and says whether your browser counted the same.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 Compare the two gathers.
 
@@ -176,8 +174,10 @@ tests: test_memory.py
 select: bitmap or built_by_hand or no_nulls or offset
 ```
 
-Try counting from the other end of each byte, `1 << (7 - i % 8)`, and run the tests on your edit:
-the array still builds, and pyarrow reads the wrong rows as null.
+Open **Optional: read or edit the Python · memory.py** for `validity_bitmap`. Select **Edit and
+run**, then **Run the listing** with the code unchanged. Replace `1 << (i % 8)` with `1 << (7 - i
+% 8)`. Select **Run the listing** again. Compare the test results for mixed arrays. The changed
+version writes each bit in the opposite order to Arrow's reader.
 
 A fixed-width array packs each value at its row's place in one buffer, and a string array writes
 the offsets as it appends each string's bytes. `pa.Array.from_buffers` wraps the buffers as an
@@ -216,8 +216,11 @@ experiment: gather
 column: amount
 ```
 
-Edit the cache so it never pushes a line out, and run the gather again: the shuffled gather's
-misses fall to the column's size in lines, because the cache has become the whole of memory.
+Open **Optional: read or edit the Python · cache.py** for `read`. Select **Edit and run**, then
+**Run the listing** with the code unchanged. Remove `if len(self.held) > self.lines:` and the
+indented `self.held.popitem(last=False)` beneath it. Select **Run the listing** again. Find
+**misses** for the shuffled gather. Does it still fetch any line twice when there is no eviction
+in the model?
 
 The gather reads each row the positions ask for, through the cache, in the order they ask for
 them: the bit, then the value; for a string, its two offsets, then its bytes. It builds the
@@ -283,8 +286,8 @@ DuckDB's:
 
 ## What this means for your design
 
-- **Store data in the order you read it.** A file sorted on the column your queries order by,
-  join on or look up by turns every later gather into a read in storage order. The panel's two
+- **Store data in the order you read it.** A file sorted by date lets this query gather the amount column in storage order. Other
+  queries may request a different order. The panel's two
   gathers read the same rows, and the shuffled one fetched many times the lines.
 - **Narrow values move cheaper.** A line holds twice as many four-byte values as eight-byte ones,
   so a gather in storage order fetches half the lines. DuckDB narrows columns before it sorts for
@@ -292,8 +295,8 @@ DuckDB's:
 - **Ask only for the columns you need before a sort or a join.** Each column is gathered
   separately, and each pays its own lines. A wide string column pays for its offsets and its
   bytes.
-- **Order only matters once the data outgrows the cache.** A column that fits in the cache is
-  fetched once, whatever order you read it in. The cost of a random order grows with the share
+- **The model fetches each line once when the whole column fits.** Other data can compete for
+  cache space on a real machine. The cost of a random order grows with the share
   of the column the cache cannot hold.
 
 ## Key takeaways
@@ -320,9 +323,9 @@ answer: Memory arrives in cache lines. Nearby reads reuse a fetched line; scatte
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: batches_in_memory
@@ -331,19 +334,19 @@ chapter: batches_in_memory
 **2.1 Compact a slice.** Write `compact`: a copy of an `int64` array whose buffers start at its
 first row. A slice shares its parent's buffers, so its first row can sit in the middle of a byte
 of the bitmap. Your copy moves every bit to its new place, keeps no bitmap when there are no
-nulls, and leaves every bit past the last row clear. The graders slice arrays at every offset
+nulls, and leaves every bit past the last row clear. The practice tests slice arrays at every offset
 within a byte and beyond, and refuse pyarrow's and the book's builders: you move the bits
 yourself.
 
 **2.2 Read in order.** Write `gather_in_order`: the result of a gather, reading the input in the
 order its rows are stored, whatever order the positions ask for, and putting each value where
-the result needs it. The graders give it the date order of the shuffled file, a backwards order
+the result needs it. The practice tests give it the date order of the shuffled file, a backwards order
 and an order with repeats. They check the result, check that no read goes back to an earlier
 row, and check that the cache fetched each line once. Engines use the same idea when they look
 rows up in a large table: they sort or partition the positions first, and pay for that to save
 the lines.
 
-**2.3 Diagnose the slow query.** No test. A colleague's report runs the chapter's query to show
+**2.3 Diagnose the slow query.** Use the plan and counters. A colleague's report runs the chapter's query to show
 the orders of each day, and uses only `order_id` and `amount`. Your engine gathered every column
 of it into date order, from each file:
 

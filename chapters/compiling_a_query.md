@@ -10,8 +10,6 @@ title: Compiling a query
 
 **What you will learn:** Identify the temporary work removed by fusion, and the cost that compilation adds.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -20,7 +18,7 @@ What does an engine save by turning a query into code before it runs it, and wha
 
 [ch06](#expressions-and-vectorised-kernels) evaluated an expression tree two ways: a row at a time,
 visiting every node for every row, and a batch at a time, visiting every node once a batch and
-running a kernel over the whole batch at each. The second is how DuckDB runs. Some engines do
+running a kernel over the whole batch at each. DuckDB uses the second approach to evaluate expressions in its execution engine. Some engines do
 neither: before they read a row, they write code for the query, compile it, and run that. This
 chapter builds a compiler for a pipeline, and counts what it saves the interpreter and what it
 costs.
@@ -70,8 +68,8 @@ experiment: measure
 of: compiling
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same three
-ways again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **A row at a time writes only the result.** Each value passes from node to node in a variable.
   It pays in nodes visited: every node, for every row that reaches it.
@@ -137,9 +135,11 @@ experiment: measure
 of: compiling
 ```
 
-Stop it sharing, changing `uses[expr] > 1` to `False`, and run the panel's report on your
-edit: the compiled loop's instructions rise by a division for every order it returns, the second
-unit price DuckDB computed too.
+Open **Optional: read or edit the Python · compile.py** for `generate`. Select **Edit and run**,
+then **Run the listing** with the code unchanged. Replace `uses[expr] > 1` with `False` in the
+condition that assigns a shared expression. Select **Run the listing** again. Compare
+**instructions** and **Bytes written** for **Compiled into one loop**. The code repeats the
+division used by the filter and output. The counter comes from the teaching model.
 
 For ch01's query, it writes:
 
@@ -193,8 +193,8 @@ each; they check the generated code is one loop, and computes a shared value onc
   predicted as in ch06. The interpreter's filters can select rows without branching on them.
   The panel does not count either.
 - **What compiling to machine code would gain.** The generated loop runs under Python's
-  interpreter, which is why the timing above puts it behind pyarrow's kernels. The counts
-  describe what compiled machine code would do; the time describes this loop.
+  interpreter, which is why the timing above puts it behind pyarrow's kernels. The counters describe the teaching loop's model of intermediate arrays and instructions.
+  The elapsed time is for the generated Python loop.
 
 ## What this means for your design
 
@@ -231,9 +231,9 @@ answer: No. Compilation itself takes work. A short or rarely repeated query may 
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: compiling_a_query
@@ -241,17 +241,17 @@ chapter: compiling_a_query
 
 **19.1 Compile the totals.** Write `generate_totals`: the source of one loop that tests a
 pipeline's filters on each row and adds a value to its key's total, ch07's aggregate compiled into
-the pipeline. The graders compile your source, run it over the orders for several filters, keys
+the pipeline. The practice tests compile your source, run it over the orders for several filters, keys
 and values, and compare every total with DuckDB's `GROUP BY`; they check it is one loop, and calls
 no kernel.
 
 **19.2 One shape, many queries.** Write `parameterise`: a tree's shape, with each constant taken
 out and numbered, and the constants. Queries that differ only in their constants then share a
-shape, and one compiled function can serve them all. The graders take random trees apart and put
+shape, and one compiled function can serve them all. The practice tests take random trees apart and put
 them back together, and check that two of the chapter's queries share a shape exactly when they
 should.
 
-**19.3 Diagnose the slow dashboard.** No test. A team moved its dashboard to an engine that
+**19.3 Diagnose the slow dashboard.** Use the plan and counters. A team moved its dashboard to an engine that
 compiles every query. Each of its hundreds of queries reads a few rows of a small table, and the
 dashboard is slower than before. Here is ch01's pipeline over more and more of the orders:
 

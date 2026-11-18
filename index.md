@@ -9,31 +9,26 @@ title: Preface
 
 This book is for data engineers who run queries every day and want to know what a query costs.
 You learn it by following a small query engine, one operator at a time, and the work it counts.
-You can also build it in Python on Apache Arrow. By the end you can look at a design choice (a sort order, a
-partitioning scheme, a join, a memory limit) and predict how it changes the bytes read, the
-rows moved, the memory used and the data shuffled, in any engine.
+The examples help you predict how a design choice affects bytes read, rows moved, memory held
+and data sent between machines. The optional implementation uses Python and Apache Arrow, a
+format for holding columns in memory.
 
-**A query engine is a machine for moving and transforming data.** A plan says where the data will
-go; a profile says how much of it went. Every way an engine gets faster reads less, moves less,
-holds less, computes less or sends less between machines, and the book asks one question, six
-ways, one part each:
+A query engine reads, moves and transforms data. A plan lists the steps the engine will run.
+A profile records what those steps did during a run. The six parts use the work recorded in
+profiles to answer different design questions.
 
-- **[Part I, Seeing a query](#part-seeing-a-query):** what happened to the data?
-- **[Part II, Reading less](#part-reading-less):** could the engine have read less of it?
-- **[Part III, Computing](#part-computing):** once it is in memory, what does working on it cost?
-- **[Part IV, Planning](#part-planning):** how does an engine decide what to do, before it has read
-  a row?
-- **[Part V, Scaling out](#part-scaling-out):** what changes when one machine is not enough?
-- **[Part VI, Other ways to run a plan](#part-other-ways-to-run-a-plan):** once the plan is
-  chosen, what changes when the engine runs it another way?
+- [Part I, Seeing a query](#part-seeing-a-query). Follow the rows through a plan.
+- [Part II, Reading less](#part-reading-less). Find which data the engine can skip.
+- [Part III, Computing](#part-computing). Compare the cost of grouping, joining and ordering rows.
+- [Part IV, Planning](#part-planning). Follow the planner from SQL text to a plan.
+- [Part V, Scaling out](#part-scaling-out). Count the cost of sharing work between workers.
+- [Part VI, Other ways to run a plan](#part-other-ways-to-run-a-plan). Compare ways of running the same plan.
 
 You can read the whole argument without reading code, installing software or running an example.
 Plans, worked results and comparisons are already on the page, including when JavaScript is
-disabled. Reading Python is useful only for the optional implementation route. Experiments run
-in your browser; [Running the lab](#running-the-lab) also explains the optional local setup. The book is self-contained: each idea about hardware or file
-formats is introduced where it is first needed, with a deliberately small model. Two companion
-books go deeper and are optional: *Parquet, byte by byte*, whose Parquet reader this engine reads
-its files with, and a book on computer systems.
+disabled. The examples assume you already read and run SQL queries. The reading path introduces
+the hardware and file formats it uses. [Running the lab](#running-the-lab) explains browser tools
+and optional local setup. The companion Parquet and computer systems books offer more depth.
 
 ## Choose your route
 
@@ -82,5 +77,6 @@ together.
 
 ## Where this starts
 
-[ch01](#the-plan-is-the-map) runs one query in DuckDB, reads its plan and its profile, and asks
-you to predict what each operator will produce before you measure it.
+Start with [The plan is the map](#the-plan-is-the-map). The page prepares three runs in DuckDB.
+Predict where the rows will change, then check the worked plans. Later chapters ask for counts
+after introducing the information needed to estimate them.

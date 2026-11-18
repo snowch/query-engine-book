@@ -10,8 +10,6 @@ title: Projection and filter pushdown
 
 **What you will learn:** Separate choosing fewer columns from skipping rows, and explain how row order affects the bytes read.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -90,8 +88,8 @@ experiment: pruning
 query: early_march.sql
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same scan
-again in your browser, under Pyodide, and says whether your browser counted the same.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 Compare the two files.
 
@@ -163,9 +161,11 @@ how many batches flow; only the filter changes how many rows.
 script: python/query_lab/first_plan.py
 ```
 
-Run it, and the page runs ch01's script, `first_plan.py`, with your `Filter` and `Project` in place
-of the engine's, and shows what it prints. Make the filter hand up every batch unfiltered, say:
-every filter's rows out become its rows in, and the plan returns every order.
+Open **Optional: read or edit the Python · operators.py** for `Filter`. Select **Edit and run**,
+then **Run the listing** with the code unchanged. In `Filter.batches`, replace `yield
+self.emit(batch.filter(self.predicate(batch)))` with `yield self.emit(batch)`. Select **Run the
+listing** again. The page runs the first chapter's script with both changed filters. In the
+printed plan, compare **rows in** and **rows out** at each `Filter` and check **rows out** at `Project`.
 
 ### Filters in the scan
 
@@ -340,35 +340,35 @@ answer: Sorting puts nearby dates together, so a row group’s minimum and maxim
 
 ## Problems
 
-There are four problems. The first three are code with tests; the fourth is a slow query to
-diagnose, with no test. Write your answers to the first three in the workbench, and run the
-graders there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: projection_and_filter_pushdown
 ```
 
 **3.1 Could it match?** Write `could_match`: given a comparison and a row group's smallest and
-largest value, whether any value between them could satisfy it. The graders try every
+largest value, whether any value between them could satisfy it. The practice tests try every
 whole-number range in a small window and every constant around it, check the real files' row
 groups so that no row group holding a match is ruled out, and check that you rule out every row
 group the book's scan skips. Mind `!=`, which rules out only a row group whose every value is
 the constant.
 
 **3.2 Push the status test.** Write `returned_unit_price_pushed`: ch01's plan for the returned
-orders, with `status = 'returned'` tested inside the scan, as DuckDB tests it. The graders
+orders, with `status = 'returned'` tested inside the scan, as DuckDB tests it. The practice tests
 compare your rows with DuckDB's, check that your scan handed up exactly the rows DuckDB's scan
 did, and check that it hands up no `status` column and that the unit price is the only test left
 to a filter. Before you run it, predict how many row groups your scan will skip, from the status
 counts in the fixtures' recipe in [ch01](#the-plan-is-the-map).
 
 **3.3 A limit.** Write `Limit`: an operator that hands up the first `n` rows its child produces,
-and no more. It must stop asking its child for batches as soon as it has `n` rows. The graders
+and no more. It must stop asking its child for batches as soon as it has `n` rows. The practice tests
 compare its rows with DuckDB's `LIMIT`, and count the batches its child produced, with and without
 a filter between them. A limit that drains its child fails even when its rows are right. This is
 the pull model reading less: a limit at the top of a plan stops the scan at the bottom.
 
-**3.4 Diagnose the slow query.** No test. A colleague looks for the year's largest orders:
+**3.4 Diagnose the slow query.** Use the plan and counters. A colleague looks for the year's largest orders:
 
 ```{literalinclude} ../queries/largest_orders.sql
 :language: sql

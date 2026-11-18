@@ -10,8 +10,6 @@ title: Statistics, cost and join order
 
 **What you will learn:** Connect estimates to join order, and identify how a mistaken assumption can select an expensive plan.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -71,8 +69,8 @@ experiment: measure
 of: join_orders
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same plans
-again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **The written order makes many times the rows.** The first join pairs every order with its
   customer, all of them, and only the second join drops the orders outside Asia.
@@ -137,9 +135,12 @@ experiment: measure
 of: join_orders
 ```
 
-Change the join's estimate to divide by the larger bound, `max`, in place of `min`, and run the
-panel's report on your edit. The estimates for the customers and the countries collapse to a
-handful of rows: the strings' bound is the customers' thousand, not the countries' twelve.
+Open **Optional: read or edit the Python · cost.py** for `estimate`. Select **Edit and run**, then
+**Run the listing** with the code unchanged. In the `case Join` branch, replace
+`min(stats[left].bound, stats[right].bound)` with `max(stats[left].bound, stats[right].bound)`.
+Select **Run the listing** again. For **Customers with countries, then orders**, compare
+**The planner’s estimate** and **Rows the joins hand up**. This edit changes the estimate for the
+displayed plans.
 
 ### The order of joins
 
@@ -229,9 +230,9 @@ answer: It must also estimate which rows match and survive filters. Assumptions 
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: statistics_cost_and_join_order
@@ -239,15 +240,15 @@ chapter: statistics_cost_and_join_order
 
 **13.1 A histogram.** The chart showed the even-spread guess failing on the amounts. Write
 `histogram`, the bounds of an **equal-depth histogram** built from a sample of a column, and
-`fraction_above`, the fraction of values above `x` it estimates. The graders build one from a
+`fraction_above`, the fraction of values above `x` it estimates. The practice tests build one from a
 sample of the orders' amounts, and require your estimate to be close to the count for every
 amount they try.
 
 **13.2 The best order.** Write `best_order`: given each table's rows and each join's selectivity,
-the order of joins, one table at a time, whose joins hand up the fewest rows. The graders try
+the order of joins, one table at a time, whose joins hand up the fewest rows. The practice tests try
 every order of up to six tables to find the cheapest, and compare yours with it.
 
-**13.3 Diagnose the bad estimates.** No test. Five conditions on the orders, the rows your
+**13.3 Diagnose the bad estimates.** Use the plan and counters. Five conditions on the orders, the rows your
 planner and DuckDB estimate each keeps, and the rows it keeps:
 
 ```{include} _generated/misestimates.md

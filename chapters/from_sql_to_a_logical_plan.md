@@ -10,8 +10,6 @@ title: From SQL to a logical plan
 
 **What you will learn:** Separate parsing, binding and planning, and recognise a correct but expensive plan.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -78,8 +76,8 @@ experiment: measure
 of: planning
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same plans
-again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **The plain plan reads the whole file, whatever the query asks.** Every column of every row
   group, for the returned orders and for the fortnight alike: the query's text changes nothing
@@ -138,9 +136,11 @@ tests: test_planner.py
 select: precedence
 ```
 
-Swap `"or"` and `"and"` between `disjunction` and `conjunction`, in the test and in the call,
-so that `AND` is the looser, and run the engine's tests on your edit: `a = 1 OR b = 1 AND c = 1` now reads as `(a = 1 OR b = 1) AND c = 1`, and the
-precedence tests say so.
+Open **Optional: read or edit the Python · sql.py** for `disjunction`. Select **Edit and run**,
+then **Run the listing** with the code unchanged. Swap `"or"` and `"and"` in the `self.is_word`
+condition and the `Call` in each of `disjunction` and `conjunction`. Leave the method calls in
+place. Select **Run the listing** again. Find the precedence test results. The deliberate change
+groups `a = 1 OR b = 1 AND c = 1` as `(a = 1 OR b = 1) AND c = 1`.
 
 What comes out is the query's **syntax tree**: the text's parts, as the text wrote them, in
 ch06's expression trees and a `Query` that holds the rest. It says which tables and which
@@ -271,9 +271,9 @@ answer: No. Correctness checks the answer. The plain plan can read every column 
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: from_sql_to_a_logical_plan
@@ -281,15 +281,15 @@ chapter: from_sql_to_a_logical_plan
 
 **11.1 Two more comparisons.** Teach the parser `BETWEEN` and `IN`, with or without `NOT`, by
 writing its `comparison` method. Return a tree of the comparisons the engine already evaluates,
-so that nothing after the parser changes. The graders parse a range of conditions with your
+so that nothing after the parser changes. The practice tests parse a range of conditions with your
 parser, run them through the book's planner, and compare the rows with DuckDB's. They also check
 that `x BETWEEN a AND b AND c` leaves the last `AND` to the condition around it.
 
 **11.2 Numbers for names.** Write `resolve_ordinals`: bind `GROUP BY 1` and `ORDER BY 2 DESC`,
-which name items of the `SELECT` list by their place in it, to what they name. The graders plan
+which name items of the `SELECT` list by their place in it, to what they name. The practice tests plan
 queries that group and sort by position, and compare the rows with DuckDB's.
 
-**11.3 Diagnose the slow engine.** No test. A colleague's engine plans every query the plain way,
+**11.3 Diagnose the slow engine.** Use the plan and counters. A colleague's engine plans every query the plain way,
 and every answer it gives is right. Its dashboard runs five of the book's queries, which you have
 also seen planned by hand:
 

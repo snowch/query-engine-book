@@ -133,8 +133,8 @@ data buffer. [ch02](#batches-in-memory)
 **Open addressing.** Keeping a hash table's entries in its array of slots, rather than in lists
 hanging off them. [ch07](#hash-aggregation)
 
-**Operator.** One step of a plan: a job with one input and one output, such as a scan, a filter
-or a projection. [ch01](#the-plan-is-the-map)
+**Operator.** A step of a plan that produces rows. A scan reads storage. A filter receives one
+input. A join receives rows from two inputs. [ch01](#the-plan-is-the-map)
 
 **Optimiser.** The part of a planner that rewrites the logical plan by rules, and chooses between
 plans that give the same rows. [ch12](#optimiser-rules)

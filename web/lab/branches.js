@@ -38,11 +38,12 @@ function bar(label, value, max, kind, missing = "none") {
   return row;
 }
 
-function predictionBox(value, onInput) {
+function predictionBox(value, onInput, label) {
   const row = el("label", "plan-bar predicted plan-predict");
   row.append(el("span", "plan-bar-label", "You predict"));
   const input = el("input");
   input.type = "number";
+  input.setAttribute("aria-label", `Prediction for ${label}`);
   input.min = "0";
   input.step = "1";
   input.inputMode = "numeric";
@@ -64,13 +65,13 @@ function card(c, view, index) {
   const predicted = view.predictions[slot];
   if (view.asking) {
     bars.append(
-      predictionBox(predicted, (v) => view.predict(slot, v)),
+      predictionBox(predicted, (v) => view.predict(slot, v), c.label),
       bar("Values tested", c.rows, view.max, "estimated"),
       bar("Mispredicted", null, view.max, "measured hidden", "hidden"),
     );
   } else {
     bars.append(
-      bar("You predicted", predicted ?? null, view.max, "predicted", "no guess"),
+      ...(view.reportOnly || predicted === undefined ? [] : [bar("You predicted", predicted, view.max, "predicted")]),
       bar("Values tested", c.rows, view.max, "estimated"),
       bar("Mispredicted", c.mispredictions, view.max, "measured"),
     );
@@ -133,7 +134,15 @@ export function mountBranches(root, data, ctx) {
     try { return JSON.parse(ctx.store.get(`${ctx.key}:predict`) || "null"); } catch { return null; }
   })() || { predictions: {}, revealed: false };
   const save = () => ctx.store.set(`${ctx.key}:predict`, JSON.stringify(saved));
-  const redraw = () => { root.replaceChildren(); mountBranches(root, data, ctx); };
+  const redraw = () => {
+    root.replaceChildren();
+    mountBranches(root, data, ctx);
+    const focus = root.querySelector(saved.revealed ? ".lab-title" : ".plan-predict input");
+    if (focus) {
+      if (saved.revealed) focus.tabIndex = -1;
+      focus.focus();
+    }
+  };
 
   const asking = !saved.revealed;
   const guesses = Object.values(saved.predictions);
@@ -145,7 +154,7 @@ export function mountBranches(root, data, ctx) {
   head.append(el("span", "lab-title", asking
     ? "Testing every row: predict the mispredictions of each way"
     : "Testing every row, as it ran"));
-  if (!asking) {
+  if (!asking && !ctx.reportOnly) {
     const again = el("button", "plan-again", "Predict again");
     again.type = "button";
     again.addEventListener("click", () => {
@@ -165,7 +174,7 @@ export function mountBranches(root, data, ctx) {
   root.append(facts);
 
   const view = {
-    asking, max,
+    asking, max, reportOnly: ctx.reportOnly,
     predictions: saved.predictions,
     predict(slot, value) {
       if (value === undefined) delete saved.predictions[slot];

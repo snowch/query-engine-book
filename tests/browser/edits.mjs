@@ -42,6 +42,8 @@ async function run(page, figure) {
     operators: [...r.querySelectorAll(".plan-op")].map((op) => op.dataset.operator),
     // What a script printed, as the page shows it, and which script the block runs.
     output: r.querySelector("pre.cell-output")?.textContent ?? null,
+    predictionControls: !!r.querySelector(".plan-again, .plan-predict, .plan-bar.predicted"),
+    starterFacts: !!r.querySelector(".measure-facts"),
     script: (() => {
       const s = r.parentElement.nextElementSibling;
       return s && s.matches("script.run-then") ? JSON.parse(s.textContent).script || null : null;
@@ -130,12 +132,12 @@ try {
           check(JSON.stringify(got.operators) === JSON.stringify(want), `${label}: drew ${got.operators}, the desk ${want}`);
           // Every figure and panel computed for the book's query now says so, and reset clears it.
           const tagged = await page.$$eval(`#main [data-query="${name.slice("queries/".length)}"]`,
-            (els) => els.filter((e) => !e.matches("button")).map((e) => e.dataset.stale === "true" && !!e.querySelector(":scope > .stale-note")));
+            (els) => els.filter((e) => !e.matches("button, .lab")).map((e) => e.dataset.stale === "true" && !!e.querySelector(":scope > .stale-note")));
           check(tagged.every(Boolean), `${label}: ${tagged.filter((t) => !t).length} of the book's figures were not marked`);
           await editor.fill("SELECT nothing FROM nowhere");
           const broken = await run(page, figure);
           check(broken.ready === "error" && broken.notice.startsWith("DuckDB could not run your query"), `${label}, broken: ${broken.notice}`);
-          check(broken.status === got.status && JSON.stringify(broken.operators) === JSON.stringify(got.operators),
+          check(broken.status.startsWith(got.status) && broken.status.includes("editor has changed") && JSON.stringify(broken.operators) === JSON.stringify(got.operators),
             `${label}: the failed query replaced the successful result`);
           await (await figure.$(".edit-reset")).click();
           check(await page.$$eval("#main [data-stale]", (els) => els.length) === 0, `${label}: reset left figures marked`);
@@ -158,10 +160,12 @@ try {
             return r.output !== null && r.output === deskOutput(r.script);
           };
           check(right(shipped), `${label}: ${shipped.status}`);
+          check(!shipped.predictionControls && !shipped.starterFacts,
+            `${label}: the listing output repeated prediction controls or starter context`);
           await editor.fill(`${listing}\n(`);
           const broken = await run(page, figure);
-          check(broken.ready === "error" && /(Syntax|Indentation)Error: .*\(line \d+ of your edit\)$/.test(broken.notice), `${label}, broken: ${broken.notice}`);
-          check(broken.status === shipped.status && broken.output === shipped.output,
+          check(broken.ready === "error" && /(Syntax|Indentation)Error: .*\(line \d+ of your edit\)/.test(broken.notice), `${label}, broken: ${broken.notice}`);
+          check(broken.status.startsWith(shipped.status) && broken.status.includes("editor has changed") && broken.output === shipped.output,
             `${label}: the failed edit replaced the successful result`);
           // Kept, and reopened on a reload.
           figure = await open(page, file, index);

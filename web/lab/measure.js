@@ -37,11 +37,12 @@ function bar(label, value, max, kind, missing = "none") {
   return row;
 }
 
-function predictionBox(placeholder, value, onInput) {
+function predictionBox(placeholder, value, onInput, label) {
   const row = el("label", "plan-bar predicted plan-predict");
   row.append(el("span", "plan-bar-label", "You predict"));
   const input = el("input");
   input.type = "number";
+  input.setAttribute("aria-label", `Prediction for ${label}`);
   input.min = "0";
   input.step = "any";
   input.inputMode = "decimal";
@@ -63,13 +64,13 @@ function card(c, data, view, index) {
   const predicted = view.predictions[slot];
   if (view.asking) {
     bars.append(
-      predictionBox(data.predict.placeholder, predicted, (v) => view.predict(slot, v)),
+      predictionBox(data.predict.placeholder, predicted, (v) => view.predict(slot, v), c.label),
       bar(c.reference.label, c.reference.value, view.max, "estimated"),
       bar(data.predict.label, null, view.max, "measured hidden", "hidden"),
     );
   } else {
     bars.append(
-      bar("You predicted", predicted ?? null, view.max, "predicted", "no guess"),
+      ...(view.reportOnly || predicted === undefined ? [] : [bar("You predicted", predicted, view.max, "predicted")]),
       bar(c.reference.label, c.reference.value, view.max, "estimated"),
       bar(data.predict.label, c.measured, view.max, "measured"),
     );
@@ -136,7 +137,15 @@ export function mountMeasure(root, data, ctx) {
     try { return JSON.parse(ctx.store.get(`${ctx.key}:predict`) || "null"); } catch { return null; }
   })() || { predictions: {}, revealed: false };
   const save = () => ctx.store.set(`${ctx.key}:predict`, JSON.stringify(saved));
-  const redraw = () => { root.replaceChildren(); mountMeasure(root, data, ctx); };
+  const redraw = () => {
+    root.replaceChildren();
+    mountMeasure(root, data, ctx);
+    const focus = root.querySelector(saved.revealed ? ".lab-title" : ".plan-predict input");
+    if (focus) {
+      if (saved.revealed) focus.tabIndex = -1;
+      focus.focus();
+    }
+  };
 
   const asking = !saved.revealed;
   const guesses = Object.values(saved.predictions);
@@ -147,7 +156,7 @@ export function mountMeasure(root, data, ctx) {
 
   const head = el("div", "lab-head");
   head.append(el("span", "lab-title", asking ? `${data.title}: predict ${data.predict.ask}` : `${data.title}, as it ran`));
-  if (!asking) {
+  if (!asking && !ctx.reportOnly) {
     const again = el("button", "plan-again", "Predict again");
     again.type = "button";
     again.addEventListener("click", () => {
@@ -159,10 +168,10 @@ export function mountMeasure(root, data, ctx) {
     head.append(again);
   }
   root.append(head);
-  if (data.facts) root.append(el("p", "measure-facts", data.facts));
+  if (data.facts && !ctx.reportOnly) root.append(el("p", "measure-facts", data.facts));
 
   const view = {
-    asking, max,
+    asking, max, reportOnly: ctx.reportOnly,
     predictions: saved.predictions,
     predict(slot, value) {
       if (value === undefined) delete saved.predictions[slot];

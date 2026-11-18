@@ -55,7 +55,7 @@ function testResults(root, report) {
  * reader's edit of it is what ran last; `edited` false takes the notes away again.
  */
 function markTheBooks(query, edited) {
-  for (const node of document.querySelectorAll(`#main [data-query="${CSS.escape(query)}"]:not(button)`)) {
+  for (const node of document.querySelectorAll(`#main [data-query="${CSS.escape(query)}"]:not(button, .lab)`)) {
     node.querySelector(":scope > .stale-note")?.remove();
     delete node.dataset.stale;
     if (!edited) continue;
@@ -80,7 +80,9 @@ function mountEdit(figure, then) {
   bar.querySelector(".source-label").after(open);
 
   let editor = null;
+  let pageDraft = store.get(key);
   function close() {
+    pageDraft = editor.value;
     // The editor sits in a box with the layer that colours it: both go.
     editor.closest(".code-edit").remove();
     figure.querySelector(".edit-bar").remove();
@@ -92,14 +94,14 @@ function mountEdit(figure, then) {
     delete figure.dataset.editing;
   }
 
-  function start() {
+  function start(focus = false) {
     pre.hidden = true;
     editor = el("textarea", "code-area");
     editor.spellcheck = false;
     editor.setAttribute("autocapitalize", "off");
     editor.setAttribute("autocomplete", "off");
     editor.setAttribute("aria-label", query ? "The query" : `Your edit of ${file}`);
-    editor.value = store.get(key) ?? listing;
+    editor.value = pageDraft ?? listing;
     editor.rows = Math.min(30, editor.value.split("\n").length + 1);
     const tools = el("div", "edit-bar");
     const run = el("button", "lab-run", query ? "Run the query" : "Run the listing");
@@ -109,12 +111,12 @@ function mountEdit(figure, then) {
     const recover = el("button", "edit-recover", "Recover saved draft");
     recover.type = "button";
     const hint = el("span", "lab-hint", query
-      ? "Ctrl+Enter runs it under DuckDB in your browser. Your edit stays in this browser."
+      ? "DuckDB runs the SQL in this browser. Ctrl+Enter runs it from the editor."
       : then.script
         ? (then.script === figure.dataset.file
-          ? "Ctrl+Enter runs it as a script, and shows what it prints. Your edit stays in this browser."
-          : `Ctrl+Enter runs ${then.script.split("/").pop()} with your edit in place, and shows what it prints. Your edit stays in this browser.`)
-        : `Ctrl+Enter runs it in place of the engine's code, then ${then.tests ? "the engine's tests" : "the panel's report"}. Your edit stays in this browser.`);
+          ? "Ctrl+Enter runs the script and shows what it prints."
+          : `Ctrl+Enter runs ${then.script.split("/").pop()} with your edit and shows what it prints.`)
+        : `Ctrl+Enter runs ${then.tests ? "the engine's tests" : "the panel's report"} with your edit.`);
     tools.append(run, reset, recover, hint);
     pre.after(editor, tools);
     const redraw = colour(editor, query ? "sql" : "python");
@@ -134,13 +136,26 @@ function mountEdit(figure, then) {
     figure.append(result);
     figure.dataset.editing = "true";
     open.textContent = "Close the editor";
+    if (focus) editor.focus();
 
     editor.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run.click(); }
     });
     const queryName = query ? file.slice("queries/".length) : null;
+    let submitted;
+    let resultLabel = "";
+    const updateProvenance = () => {
+      const stale = submitted !== undefined && submitted !== editor.value;
+      const label = resultLabel + (stale ? " The editor has changed. Run again to use the current text." : "");
+      if (status.textContent !== label) status.textContent = label;
+    };
     const markDraft = (switched) => {
-      if (!switched) return;
+      if (!switched) {
+        updateProvenance();
+        return;
+      }
+      submitted = undefined;
+      resultLabel = "";
       body.replaceChildren();
       status.textContent = "";
       delete result.dataset.ready;
@@ -150,10 +165,10 @@ function mountEdit(figure, then) {
       if (queryName) markTheBooks(queryName, false);
     };
     bindDraft(editor, {
-      key, original: listing, reset, recover, redraw, onChange: markDraft, onMessage: message,
+      key, original: listing, reset, recover, redraw, onChange: markDraft, filename: file.split("/").pop(),
     });
     run.addEventListener("click", async () => {
-      run.disabled = reset.disabled = recover.disabled = true;
+      run.disabled = reset.disabled = recover.disabled = open.disabled = true;
       result.dataset.ready = "running";
       message("Running in your browser…");
       const text = editor.value;
@@ -164,7 +179,7 @@ function mountEdit(figure, then) {
         if (query) {
           const config = { experiment: "plan", query: queryName };
           const json = await runReport(edited ? { ...config, sql: text } : config, message);
-          EXPERIMENTS.plan(next, JSON.parse(json), { store: revealed, key });
+          EXPERIMENTS.plan(next, JSON.parse(json), { store: revealed, key, reportOnly: true });
           label = edited
             ? "Your query result from the last successful run in DuckDB."
             : "The book's query result from its last successful run in DuckDB.";
@@ -176,7 +191,7 @@ function mountEdit(figure, then) {
             next.append(el("pre", "cell-output", answer.output));
             label = edited ? "Output from your last successful run." : "Output from running the book's listing.";
           } else if (answer.report) {
-            EXPERIMENTS[then.report.experiment](next, answer.report, { store: revealed, key });
+            EXPERIMENTS[then.report.experiment](next, answer.report, { store: revealed, key, reportOnly: true });
             if (edited) {
               label = "Counts from your last successful run.";
               delete result.dataset.agrees;
@@ -197,7 +212,9 @@ function mountEdit(figure, then) {
         }
         body.replaceWith(next);
         body = next;
-        status.textContent = label;
+        submitted = text;
+        resultLabel = label;
+        updateProvenance();
         message("");
         result.dataset.ready = "true";
         // The output can land below the window, an expanded listing's above all: bring it into view.
@@ -206,17 +223,17 @@ function mountEdit(figure, then) {
         const failure = query
           ? `DuckDB could not run your query: ${lastLine(error)}`
           : `${edited ? "Your edit" : "The book's listing"} could not run: ${lastLine(error)}`;
-        message(failure, true);
+        message(failure + (submitted !== undefined ? " The result below is from the last successful run." : ""), true);
         result.dataset.ready = "error";
       } finally {
-        run.disabled = reset.disabled = recover.disabled = false;
+        run.disabled = reset.disabled = recover.disabled = open.disabled = false;
       }
     });
   }
 
-  open.addEventListener("click", () => (editor ? close() : start()));
+  open.addEventListener("click", () => (editor ? close() : start(true)));
   // Reopen an active edit. A recovery copy can be found by opening the editor.
-  if (store.get(key) !== null && store.get(key) !== listing) start();
+  if (pageDraft !== null && pageDraft !== listing) start();
 }
 
 /** Lines a listing shows before it folds: the rest sit behind a button, so a long listing does

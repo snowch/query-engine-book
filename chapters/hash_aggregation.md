@@ -10,8 +10,6 @@ title: Hash aggregation
 
 **What you will learn:** Explain why the number and range of groups change memory use and cache misses.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -68,7 +66,7 @@ by subtracting the smallest. DuckDB calls that a **perfect hash aggregate**.
 
 ## Predict, then measure
 
-Your engine's hash table works as DuckDB's does. Each slot takes sixteen bytes, eight for the key's
+The teaching engine uses the same general lookup method. The counts below come from its own hash table and cache model. Each slot takes sixteen bytes, eight for the key's
 hash and eight for its group's number, and the table doubles when three quarters of its slots are
 full, moving every group to a new, larger array. Every slot a lookup looks at is a read of the
 cache model from [ch02](#batches-in-memory).
@@ -83,8 +81,8 @@ experiment: measure
 of: aggregation
 ```
 
-The panel draws what your engine and the cache model counted when the book was built. Its button
-runs the same lookups again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **A handful of groups costs a handful of misses.** The status table is a few lines, fetched once
   and never pushed out.
@@ -123,9 +121,11 @@ experiment: measure
 of: aggregation
 ```
 
-Make the table double when half full instead, with `self.capacity // 2` in place of
-`self.capacity * LOAD`, and run the panel's report on your edit: the probes fall, and for the
-order ids the table doubles once more, to twice the bytes.
+Open **Optional: read or edit the Python · aggregate.py** for `find`. Select **Edit and run**,
+then **Run the listing** with the code unchanged. Replace `self.capacity * LOAD` with
+`self.capacity // 2`. Select **Run the listing** again. For **GROUP BY order_id**, compare
+**probes**, **resizes** and **table bytes**. What does the model's earlier resize trade for fewer
+probes?
 
 The hash itself is the book's own function, not Python's: Python's hash of a string changes from
 one run to the next, and the counts must be the same everywhere.
@@ -205,8 +205,8 @@ of: groups
 
 ## What this cannot tell you
 
-- **What a miss costs on another machine.** The cache model counts misses. A real one costs on
-  the order of a hundred cycles, a hit a few; the timing above shows what they add up to on yours.
+- **What a miss costs on another machine.** The cache model counts misses. The cost of fetching a line depends on where it is found. The timing above compares complete
+  cases in your browser.
 - **What a real table holds.** DuckDB's slots point into a separate area that holds each group's
   key and aggregates, so a lookup reads a second place; a string's bytes live in a third. The
   model reads one slot and nothing else.
@@ -218,8 +218,7 @@ of: groups
 
 ## What this means for your design
 
-- **Group by what the question needs, and no more.** Every column added to a `GROUP BY`
-  multiplies the groups, and the table grows with them. Problem 7.3 measures it.
+- **Group by what the question needs, and no more.** Adding a column to `GROUP BY` can create more groups. The table grows when it needs more slots. Problem 7.3 measures it.
 - **Keep keys compact.** A whole-number id from a dense, small range lets an engine use a perfect
   table, and statistics tell it the range. A sparse or random id, or a string, needs a hash table.
 - **Aggregate early, and combine.** Aggregates like counts and sums can be computed on parts of
@@ -250,24 +249,24 @@ answer: More groups require a larger table. Lookups probe that table, and a tabl
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: hash_aggregation
 ```
 
 **7.1 How many probes?** Write `probes`: the slots linear probing looks at to insert keys with
-given hashes into an empty table that never grows. The graders compare your count with the book's
+given hashes into an empty table that never grows. The practice tests compare your count with the book's
 table on many random tables, and on runs of keys that all hash to the same slot.
 
 **7.2 Combine the parts.** Write `combine`: given **partial aggregates**, each group's count, sum,
 minimum and maximum over one part of the rows, the final aggregates over all of them, with the
-average. The graders cut the orders into parts, aggregate each part with DuckDB, and compare what
+average. The practice tests cut the orders into parts, aggregate each part with DuckDB, and compare what
 you combine with DuckDB's aggregates over the whole file.
 
-**7.3 Diagnose the slow query.** No test. A colleague's report groups the orders by customer, and
+**7.3 Diagnose the slow query.** Use the plan and counters. A colleague's report groups the orders by customer, and
 was quick. They add a second column to the `GROUP BY`, and it slows down far more than the extra
 column's bytes explain:
 

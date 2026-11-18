@@ -149,7 +149,7 @@ def _lab(node: dict) -> str:
     summary = (
         "Explore the saved plans"
         if config["experiment"] == "plan" and config.get("variants")
-        else ("Optional: predict, change and run the experiment")
+        else "Predict and reveal the experiment"
     )
     return (
         worked_result(data)
@@ -504,9 +504,10 @@ def render_page(mdast: dict) -> str:
                 "<p>The unmodified example prints these rows and operator counters.</p>"
                 f"<pre>{html.escape(saved['stdout'])}</pre></section>"
             )
+        action = "read or edit" if label == "SQL" or marker else "read"
         return (
             result
-            + f'<details class="optional code-disclosure"><summary>Optional: read or edit the {label} · {html.escape(Path(path).name)}</summary>'
+            + f'<details class="optional code-disclosure"><summary>Optional: {action} the {label} · {html.escape(Path(path).name)}</summary>'
             + listing
             + "</details>"
         )

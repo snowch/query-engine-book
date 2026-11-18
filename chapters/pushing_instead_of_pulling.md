@@ -10,8 +10,6 @@ title: Pushing instead of pulling
 
 **What you will learn:** Explain how reversing control changes stopping and sharing without changing the query’s answer.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -93,8 +91,8 @@ experiment: measure
 of: pushing
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same
-pipelines again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **A source that listens stops after the first row group with a returned order.** It read the
   footer and one row group's statuses. The one that never listens reads every row group, and its
@@ -144,10 +142,11 @@ experiment: measure
 of: pushing
 ```
 
-Make the source deaf, changing `if listen and not wants_more:` to `if False:`, and run the panel's
-report on your edit: the first case reads to the end, as the second always did. In a pulled plan,
-stopping is free, since a scan nobody asks reads nothing more. In a pushed one, it is a message
-the source must be written to hear.
+Open **Optional: read or edit the Python · push.py** for `drive`. Select **Edit and run**, then
+**Run the listing** with the code unchanged. Replace `if listen and not wants_more:` with `if
+False:`. Select **Run the listing** again. Compare **Bytes read** and **row groups read** for the
+two **Is there a returned order?** cases. Under the edit, which source still stops when it finds a
+match?
 
 ### Steps and sinks
 
@@ -276,26 +275,26 @@ answer: The sink must signal that it is done, and the signal must reach a source
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: pushing_instead_of_pulling
 ```
 
 **18.1 Push a hash join.** Write `Build` and `Probe`: the build side of ch08's hash join as a sink,
-which ends its pipeline, and the probe side as a step in the next. The graders build the customers,
+which ends its pipeline, and the probe side as a step in the next. The practice tests build the customers,
 push the orders through your probe, and compare the rows with DuckDB's join; they check the probe
 refuses to start before the build side is ready, and passes on a sink's answer when it has enough.
 
 **18.2 Gather the crumbs.** A selective filter pushes on batches of a few rows each, and every
 batch costs every step above it a call. Write `Coalesce`: a step that gathers small batches until
-they hold a given number of rows, then pushes them on as one. The graders push random batches
+they hold a given number of rows, then pushes them on as one. The practice tests push random batches
 through it and after the returned orders' filter, and check no row is lost or reordered, no batch
 goes on early or late, and a sink's answer comes back through it.
 
-**18.3 Diagnose the limit that read everything.** No test. A colleague asks for any ten orders,
+**18.3 Diagnose the limit that read everything.** Use the plan and counters. A colleague asks for any ten orders,
 and then for the ten earliest:
 
 ```{literalinclude} ../queries/earliest_orders.sql

@@ -67,13 +67,13 @@ export async function mountWorkbench(root) {
   editor.value = store.get(key) ?? stubs;
   editor.rows = 24;
   const bar = el("div", "lab-foot");
-  const run = el("button", "lab-run", "Run the graders");
+  const run = el("button", "lab-run", "Run the practice tests");
   run.type = "button";
   const reset = el("button", "wb-reset", "Reset to the stubs");
   reset.type = "button";
   const recover = el("button", "wb-recover", "Recover saved draft");
   recover.type = "button";
-  const hint = el("span", "lab-hint", "Ctrl+Enter runs the graders. Your draft stays in this browser.");
+  const hint = el("span", "lab-hint", "Ctrl+Enter runs the tests from the editor.");
   const notice = el("p", "run-notice");
   notice.setAttribute("role", "status");
   const status = el("p", "lab-status");
@@ -83,10 +83,17 @@ export async function mountWorkbench(root) {
   const log = el("details", "wb-run-details");
   const diagnostics = el("pre", "wb-output");
   log.hidden = true;
-  log.append(el("summary", "", "Show grader output"), diagnostics);
+  log.append(el("summary", "", "Read the test runner output"), diagnostics);
   root.append(head, editor, bar, log, out);
   const redraw = colour(editor, "python");
   root.dataset.ready = "true";
+  let submitted;
+  let resultLabel = "";
+  const updateProvenance = () => {
+    const stale = submitted !== undefined && submitted !== editor.value;
+    const label = resultLabel + (stale ? " The editor has changed. Run the tests again to check the current answers." : "");
+    if (status.textContent !== label) status.textContent = label;
+  };
 
   const message = (text, error = false) => {
     notice.textContent = text;
@@ -96,9 +103,14 @@ export async function mountWorkbench(root) {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run.click(); }
   });
   bindDraft(editor, {
-    key, original: stubs, reset, recover, redraw, onMessage: message,
+    key, original: stubs, reset, recover, redraw, filename: `${chapter}.py`,
     onChange(switched) {
-      if (!switched) return;
+      if (!switched) {
+        updateProvenance();
+        return;
+      }
+      submitted = undefined;
+      resultLabel = "";
       out.replaceChildren();
       status.textContent = "";
       log.hidden = true;
@@ -109,7 +121,7 @@ export async function mountWorkbench(root) {
     run.disabled = reset.disabled = recover.disabled = true;
     root.dataset.ready = "running";
     log.hidden = true;
-    message("Running the graders in your browser…");
+    message("Running the practice tests in your browser…");
     const source = editor.value;
     try {
       const report = JSON.parse(await runProblems(chapter, source, message));
@@ -117,17 +129,19 @@ export async function mountWorkbench(root) {
         diagnostics.textContent = report.output;
         log.open = false;
         log.hidden = false;
-        throw new Error("See the grader output for details.");
+        throw new Error("Read the test runner output for details.");
       }
       results(out, report);
       const passed = report.tests.filter((t) => t.outcome === "passed").length;
-      status.textContent = `${passed} of ${report.tests.length} practice checks pass on ${source === stubs ? "the stubs" : "your draft"}.`;
+      submitted = source;
+      resultLabel = `${passed} of ${report.tests.length} practice checks pass on ${source === stubs ? "the starter code" : "the submitted answers"}.`;
+      updateProvenance();
       message("");
       root.dataset.ready = "true";
     } catch (error) {
       const detail = String(error.message || error).trim().split("\n").pop();
       const previous = status.textContent ? " The previous checks are shown below." : "";
-      message(`The graders could not run. ${detail}${previous}`, true);
+      message(`The practice tests could not run. ${detail}${previous}`, true);
       root.dataset.ready = "error";
     } finally {
       run.disabled = reset.disabled = recover.disabled = false;
