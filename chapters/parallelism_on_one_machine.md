@@ -10,8 +10,6 @@ title: Parallelism on one machine
 
 **What you will learn:** Distinguish total work from the work on the path that determines completion.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -61,8 +59,8 @@ experiment: measure
 of: parallelism
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same
-workers again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **Ten morsels do not divide by four.** Two workers take three morsels and two take two, so the
   query finishes after three morsels' work, not two and a half. The chart's first line climbs in
@@ -109,8 +107,11 @@ experiment: measure
 of: parallelism
 ```
 
-Give each morsel to the busiest worker instead, `max` in place of `min`, and run the panel's
-report on your edit: one worker does everything, and no query is faster than on one.
+Open **Optional: read or edit the Python · parallel.py** for `assign`. Select **Edit and run**,
+then **Run the listing** with the code unchanged. Replace `min(loads)` with `max(loads)` in `i =
+loads.index(min(loads))`. Select **Run the listing** again. Compare **Work until done** and
+**busiest worker's work** with the one-worker comparison. Does choosing the busiest worker share
+the work in this model?
 
 ### A run
 
@@ -151,8 +152,8 @@ simulation says what the four threads did with it:
 
 ## What this means for your design
 
-- **Write files with many row groups.** A reader splits a file by row group; one large row group
-  is one core's work. Many small files split the same way.
+- **Write files with many row groups.** In this model each row group supplies a separate piece of work. One row group leaves one
+  worker with the scan. Check how your reader splits files before choosing a size.
 - **Aim for more morsels than cores.** With few morsels the last ones leave cores idle. Several
   per core keeps them busy to the end.
 - **Mind what cannot be shared.** Combining partial results, a final sort's merge, the last
@@ -182,25 +183,25 @@ answer: No. Completion depends on the busiest worker and any serial part of the 
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: parallelism_on_one_machine
 ```
 
 **14.1 Split the row group.** Write `split`: cut each row group into morsels of at most a given
-number of rows, so that one large row group keeps several workers busy. The graders check every
+number of rows, so that one large row group keeps several workers busy. The practice tests check every
 row is covered once, and that the paged orders' one row group, split, gives four workers nearly
 four times the speed.
 
 **14.2 A top-k on every worker.** Write `local_top` and `merge_tops`: each worker keeps the largest
-orders of its own morsels, and one merge finds the largest of all. The graders run your workers on
+orders of its own morsels, and one merge finds the largest of all. The practice tests run your workers on
 the shuffled orders, check none holds more than it should, and compare the merged rows with
 DuckDB's `ORDER BY ... LIMIT`.
 
-**14.3 Diagnose the idle machine.** No test. A team moved its orders to a sixteen-core machine,
+**14.3 Diagnose the idle machine.** Use the plan and counters. A team moved its orders to a sixteen-core machine,
 and the report on them runs no faster. Their file is ch04's paged orders. Using the panel's chart
 and the row groups in the figure above, explain why. What would you change about the file, and
 what about the report's aggregate, to use the cores? A good answer names the single row group,

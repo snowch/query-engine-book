@@ -10,8 +10,6 @@ title: Optimiser rules
 
 **What you will learn:** Explain when moving a filter or dropping a column preserves the answer and reduces work.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -68,8 +66,8 @@ experiment: measure
 of: rules
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same plans
-again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **Moving the filters saves no bytes.** The customers' file is one row group, so testing the
   segment in the scan skips nothing, and the orders' condition is an expression the scan cannot
@@ -119,12 +117,15 @@ experiment: measure
 of: rules
 ```
 
-Delete the `case Join():` branch and the lines under it, so that no condition passes a join,
-and run the panel's report on your edit: every row of both tables reaches the join again, and the
-panel says your edit changed the answer.
+Open **Optional: read or edit the Python · rules.py** for `push_filters`. Select **Edit and run**,
+then **Run the listing** with the code unchanged. In `_push`, remove `case Join():` and its entire
+indented body. Keep the `case Get()` branch at its original indentation. Select **Run the
+listing** again. For **Push the filters down**, compare **rows from the scans**, **rows into the
+join** and **Bytes read**. Does applying the same conditions after the join change the work?
 
-A conjunct whose columns are all on one side of a join goes to that side. One that reads both
-sides, such as a condition on a customer's segment or an order's amount, stays above the join.
+This rule can move a conjunct that reads one input before the join. For example,
+`c.segment = 'enterprise' OR o.amount > 200` uses columns from both inputs. Neither input can
+evaluate the whole condition, so it stays above the join.
 
 ### Into the scan
 
@@ -228,26 +229,26 @@ answer: No. The column is still required to decide which rows survive. A safe re
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: optimiser_rules
 ```
 
 **12.1 Move the constants.** Write `move_constants`: rewrite `quantity + 1 > 3` as `quantity > 2`,
-so that the scan can test it. The graders put your rewrite before the book's rules and check that
+so that the scan can test it. The practice tests put your rewrite before the book's rules and check that
 every condition they give it reaches the scan, with DuckDB's rows. They also check your rewrite
 against the original on every order, for many random conditions, and that it leaves alone what it
 cannot move.
 
 **12.2 Across the join.** Write `across_the_join`: a rule that copies a condition on one side's
-join key to the other side's key, since the two are equal in every joined row. The graders run it
+join key to the other side's key, since the two are equal in every joined row. The practice tests run it
 before `push_filters`, and check that both tables' scans test the key, that the orders' scan hands
 up fewer rows, and that the rows are DuckDB's.
 
-**12.3 Diagnose the slow report.** No test. A report wants the orders of enterprise customers, and
+**12.3 Diagnose the slow report.** Use the plan and counters. A report wants the orders of enterprise customers, and
 every large order whoever placed it, in one query:
 
 ```{literalinclude} ../queries/enterprise_or_large.sql

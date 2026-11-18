@@ -6,6 +6,8 @@
 .lab-fallback, .lab-status, .run-notice { margin: 0; color: var(--muted); }
 .lab-fallback { padding: 1rem; }
 .lab-error { color: var(--stop); }
+.draft-status { flex: 1 1 100%; font: 13px/1.5 var(--chrome); }
+.draft-status:empty { display: none; }
 .lab-head { display: flex; flex-wrap: wrap; gap: .4rem 1rem; align-items: baseline; padding: .6rem 1rem;
             border-bottom: 1px solid var(--edge); background: var(--panel); }
 .lab-title { font-weight: 650; }
@@ -273,3 +275,5 @@ figure.quoted[data-editing="true"] > .fold-toggle { display: none; }
 .timed-op-name { font-family: var(--mono); font-size: 12px; }
 .timed-op-share { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
 .timed-caveat { margin: 0; padding: .5rem 1rem .7rem; font-size: 12.5px; color: var(--faint); background: var(--panel); }
+
+.lab:has(> .lab-body[data-asking="true"]) > :is(.lab-editor, .lab-foot) { display: none; }

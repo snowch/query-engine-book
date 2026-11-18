@@ -5,10 +5,9 @@ title: The machine in one page
 (the-machine-in-one-page)=
 # The machine in one page
 
-A query's cost is paid to a machine: to its processor, its memory, its storage and its network.
-The book never times the machine. It counts on a model of it, the same on every computer and in
-the page, and each chapter that builds a part of the model says what that part leaves out. This
-page gathers them.
+A query uses the processor, memory, storage and network. The book models some of that work with
+counters. Those counters are repeatable across machines. Optional timing panels measure selected
+examples in your browser and report elapsed times for that run. This page summarises the models.
 
 ## From near to far
 

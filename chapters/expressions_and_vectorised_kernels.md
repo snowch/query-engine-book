@@ -10,8 +10,6 @@ title: Expressions and vectorised kernels
 
 **What you will learn:** Relate branch predictability and temporary buffers to the work an expression performs.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -217,8 +215,12 @@ experiment: branches
 column: amount
 ```
 
-Give the kernel without a branch an `if` of its own, and run the panel's report on your edit: its
-mispredictions come back.
+Open **Optional: read or edit the Python · cpu.py** for `select_without_branch`. Select **Edit and
+run**, then **Run the listing** with the code unchanged. Replace `n += int(test(value))` with `if
+predictor.branch("the test", test(value)): n += 1` at the same indentation. Select **Run the
+listing** again. Compare **Rows kept** and **Mispredictions** for the random values case without a
+branch on the data. The case name describes the original kernel. What did the added branch change
+in the predictor model?
 
 ### The plan
 
@@ -259,11 +261,10 @@ Your plan beside DuckDB's:
 ## What this cannot tell you
 
 - **What a misprediction costs on another processor.** The model counts wrong guesses, not the
-  cycles each one wastes, which depend on the processor. A modern processor loses on the order of
-  a dozen or more cycles to each. The timing above shows what they cost on yours.
+  cycles each one wastes, which depend on the processor. The model assigns no time cost to each miss. The timing above shows what they cost on yours.
 - **How a real predictor guesses.** Real predictors remember the history of many branches
   together and would learn some patterns the two-bit counter cannot, such as a branch that
-  alternates. Random data fools them all.
+  alternates. Randomly ordered test results can be hard to predict.
 - **Whether a compiler used vector instructions.** The vector unit assumes every kernel fills its
   lanes. A real kernel does only if the compiler, or its author, made it so; the model gives
   every value eight bytes, where narrower types would fit more to a register.
@@ -310,24 +311,24 @@ answer: No. A long run of the same outcome is easier for the model to predict th
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: expressions_and_vectorised_kernels
 ```
 
 **6.1 Fold the constants.** Write `fold`: the same tree with every part that depends on no column
-computed once and replaced by a constant, as DuckDB did to `50 * 2`. The graders fold the
+computed once and replaced by a constant, as DuckDB did to `50 * 2`. The practice tests fold the
 chapter's trees and many random ones, then evaluate both over the orders and require the same
 values, and require that no part without a column is left, and that every column stays.
 
 **6.2 Always wrong.** Write `always_wrong`: a run of outcomes of one branch that the two-bit
-predictor gets wrong every time, from whichever of its four states it starts in. The graders run
+predictor gets wrong every time, from whichever of its four states it starts in. The practice tests run
 the book's predictor on your outcomes, from each state, for many lengths.
 
-**6.3 Diagnose the slow filter.** No test. A colleague finds that the chapter's random test,
+**6.3 Diagnose the slow filter.** Use the plan and counters. A colleague finds that the chapter's random test,
 `amount` over its middle value, filters much faster once the orders are sorted by amount, though
 it keeps the same rows and compares the same values:
 

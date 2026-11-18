@@ -10,8 +10,6 @@ title: Statistics and pruning
 
 **What you will learn:** Choose the level at which statistics can skip data, and weigh fewer bytes against more requests.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -76,8 +74,8 @@ query: early_march_paged.sql
 fixtures: orders-sorted.parquet, orders-paged.parquet
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same scans
-again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **Pages cut the year finer than row groups.** A page of the paged file holds a few weeks of
   orders, where a row group of the sorted file held about five. The fortnight falls inside one or
@@ -124,8 +122,12 @@ query: early_march_paged.sql
 fixtures: orders-sorted.parquet, orders-paged.parquet
 ```
 
-Keep every page, and run the panel's report on your edit: the paged file now costs a little more
-than DuckDB paid, because the scan still reads the page index, and uses none of it.
+Open **Optional: read or edit the Python · operators.py** for `pages_kept`. Select **Edit and
+run**, then **Run the listing** with the code unchanged. Delete the `if not f.against_page(leaf,
+metadata, bounds, i, rows[1] - rows[0]).skip` line inside the `might` list comprehension. Select
+**Run the listing** again. Compare **Read**, **rows handed up** and **bytes read** for
+`orders-paged.parquet`. The scan fetches both indexes and keeps every page, while its row filters
+still apply.
 
 ### Only those pages
 
@@ -238,25 +240,25 @@ answer: Yes. Finer statistics let the scan fetch smaller pieces, but those piece
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: statistics_and_pruning
 ```
 
 **4.1 Which pages?** Write `pages_for`: given the rows a scan kept and one column's pages, the
-pages that hold any kept row. The graders try many random cuts of rows and pages, and every
+pages that hold any kept row. The practice tests try many random cuts of rows and pages, and every
 column of the paged file with the chapter's fortnight.
 
 **4.2 Kept rows.** Write `kept_rows`: given one column's page bounds and several comparisons on
 it, the rows worth reading. Keep a page only if a single value in its range could pass every
 comparison at once, which is tighter than the book's scan: that keeps a page if each comparison
-alone could pass. The graders try every whole number in small ranges, and check the paged file's
+alone could pass. The practice tests try every whole number in small ranges, and check the paged file's
 dates so that no page holding a match is dropped.
 
-**4.3 Diagnose the slow query.** No test. A colleague writes the paged file with the writer's
+**4.3 Diagnose the slow query.** Use the plan and counters. A colleague writes the paged file with the writer's
 default settings, which give every column a dictionary, and runs the chapter's query by page on
 both copies:
 

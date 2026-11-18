@@ -10,8 +10,6 @@ title: Where work happens
 
 **What you will learn:** Explain how table metadata moves a skipping decision before a file is opened.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -84,8 +82,8 @@ query: early_march_table.sql
 scans: by its metadata, by its files
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same scans
-again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **By its metadata, the scan opens one file.** The bounds of every other month rule it out, and
   the scan never fetches a byte of it.
@@ -134,8 +132,11 @@ query: early_march_table.sql
 scans: by its metadata, by its files
 ```
 
-Make `ruled_out` rule out nothing, and run the panel's report: the scan by the metadata now opens
-every file, and pays for the metadata as well.
+Open **Optional: read or edit the Python · operators.py** for `TableScan`. Select **Edit and
+run**, then **Run the listing** with the code unchanged. Replace `why = self.ruled_out(entry) if
+self.metadata else None` with `why = None`. Select **Run the listing** again. For **by its
+metadata**, compare **Read** and **bytes read** with the first result. Can the model still skip
+files before opening them?
 
 ### The plan
 
@@ -226,9 +227,8 @@ Your table scans beside DuckDB's, on the same table:
 - **Beware many small files.** Each file a scan opens costs requests for its footer before it
   yields a row, and the bounds of a small file are often as wide as a large one's.
 - **Filter in the storage when the network is the constraint.** Storage that tests rows sends
-  the result instead of the data, which helps most when the predicate is selective. It does not
-  help the storage's own disks: a badly laid out file still costs a full read, only somewhere
-  else.
+  the result instead of the data, which helps most when the predicate is selective. Storage still reads the columns and rows needed to test the condition. The experiment
+  moves that work to the simulated storage side.
 
 ## Key takeaways
 
@@ -253,9 +253,9 @@ answer: No. It already paid to open the file and learn its statistics. Table met
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: where_work_happens
@@ -263,15 +263,15 @@ chapter: where_work_happens
 
 **5.1 Which files?** Write `files_to_open`: given the table metadata and some comparisons, the
 files that might hold a row passing all of them. Decode the bounds yourself, from the bytes the
-metadata stores. The graders check, for many predicates on every column, that you open every file
+metadata stores. The practice tests check, for many predicates on every column, that you open every file
 holding a match, and that you open no file whose bounds rule it out.
 
 **5.2 Which directories?** Write `months_to_read`: given the paths of a table in Hive's layout and
 a range of dates, the files whose month holds a day in the range, decided from the paths alone.
-The graders try many ranges, including ones that end on the first of a month and ones that hold
+The practice tests try many ranges, including ones that end on the first of a month and ones that hold
 no day at all.
 
-**5.3 Diagnose the slow query.** No test. A colleague asks the table for one customer's orders,
+**5.3 Diagnose the slow query.** Use the plan and counters. A colleague asks the table for one customer's orders,
 `customer_id = 17`, and finds it no faster than reading the whole table. Your table scan, by its
 metadata:
 

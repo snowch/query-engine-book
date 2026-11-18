@@ -32,11 +32,12 @@ function bar(label, value, max, kind, missing = "none") {
   return row;
 }
 
-function predictionBox(value, onInput) {
+function predictionBox(value, onInput, label) {
   const row = el("label", "plan-bar predicted plan-predict");
   row.append(el("span", "plan-bar-label", "You predict"));
   const input = el("input");
   input.type = "number";
+  input.setAttribute("aria-label", `Prediction for ${label}`);
   input.min = "0";
   input.step = "1";
   input.inputMode = "numeric";
@@ -81,13 +82,13 @@ function run(g, data, view, index) {
   const predicted = view.predictions[slot];
   if (view.asking) {
     bars.append(
-      predictionBox(predicted, (v) => view.predict(slot, v)),
+      predictionBox(predicted, (v) => view.predict(slot, v), g.fixture),
       bar("Column's lines", data.column_lines, view.max, "estimated"),
       bar("Lines fetched", null, view.max, "measured hidden", "hidden"),
     );
   } else {
     bars.append(
-      bar("You predicted", predicted ?? null, view.max, "predicted", "no guess"),
+      ...(view.reportOnly || predicted === undefined ? [] : [bar("You predicted", predicted, view.max, "predicted")]),
       bar("Column's lines", data.column_lines, view.max, "estimated"),
       bar("Lines fetched", g.misses, view.max, "measured"),
     );
@@ -114,7 +115,15 @@ export function mountGather(root, data, ctx) {
     try { return JSON.parse(ctx.store.get(`${ctx.key}:predict`) || "null"); } catch { return null; }
   })() || { predictions: {}, revealed: false };
   const save = () => ctx.store.set(`${ctx.key}:predict`, JSON.stringify(saved));
-  const redraw = () => { root.replaceChildren(); mountGather(root, data, ctx); };
+  const redraw = () => {
+    root.replaceChildren();
+    mountGather(root, data, ctx);
+    const focus = root.querySelector(saved.revealed ? ".lab-title" : ".plan-predict input");
+    if (focus) {
+      if (saved.revealed) focus.tabIndex = -1;
+      focus.focus();
+    }
+  };
 
   const asking = !saved.revealed;
   const guesses = Object.values(saved.predictions);
@@ -128,7 +137,7 @@ export function mountGather(root, data, ctx) {
     ? " into date order: predict the lines each gather fetches"
     : " into date order, as it ran");
   head.append(title);
-  if (!asking) {
+  if (!asking && !ctx.reportOnly) {
     const again = el("button", "plan-again", "Predict again");
     again.type = "button";
     again.addEventListener("click", () => {
@@ -143,7 +152,7 @@ export function mountGather(root, data, ctx) {
 
   const facts = el("p", "gather-facts");
   facts.innerHTML = `<b data-field="rows"></b> rows of <code></code>, <b data-field="width"></b> bytes each:
-    <b data-field="column_lines"></b> lines of <b data-field="line_bytes"></b> bytes. The cache holds
+    <b data-field="column_lines"></b> lines of <b data-field="line_bytes"></b> bytes. Configured cache limit
     <b data-field="lines"></b> lines.`;
   const put = (field, value) => { facts.querySelector(`[data-field="${field}"]`).textContent = fmt(value); };
   facts.querySelector("code").textContent = data.type;
@@ -155,7 +164,7 @@ export function mountGather(root, data, ctx) {
   root.append(facts);
 
   const view = {
-    asking, max,
+    asking, max, reportOnly: ctx.reportOnly,
     predictions: saved.predictions,
     predict(slot, value) {
       if (value === undefined) delete saved.predictions[slot];

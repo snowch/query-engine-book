@@ -10,8 +10,6 @@ title: Joins
 
 **What you will learn:** Identify which side a join holds and predict how that choice changes memory use.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -73,8 +71,8 @@ experiment: measure
 of: joins
 ```
 
-The panel draws what your engine and the cache model counted when the book was built. Its button
-runs the same joins again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **Building on the small side keeps most of it in the cache.** The customers' rows and their
   table together are a little larger than the cache, so most probes find their lines there.
@@ -113,9 +111,10 @@ experiment: measure
 of: joins
 ```
 
-Give each held row a cache line of its own, with `row * 64` in place of `row * self.row_bytes`
-where the probe reads it, and run the panel's report on your edit: building on the customers now
-misses about three times as often, because their rows no longer fit in the cache together.
+Open **Optional: read or edit the Python · join.py** for `batches`. Select **Edit and run**, then
+**Run the listing** with the code unchanged. Replace `row * self.row_bytes` with `row * 64` in the
+probe's cache read. Select **Run the listing** again. For **Build on the customers**, compare
+**Cache misses** and **build rows**. The edit changes the simulated address of each held row.
 
 The lookup is ch07's, with one difference: a probe never inserts. A key the build side lacks
 stops at the first empty slot, and the row is dropped.
@@ -183,8 +182,8 @@ of: build_sides
 
 ## What this means for your design
 
-- **Let the build side be small, and make it smaller.** Filter the table you join to before the
-  join, not after: a filter on the build side shrinks what is held.
+- **Let the build side be small, and make it smaller.** A filter on the build input can shrink what the join holds. Check the plan to see whether
+  the engine can apply it there.
 - **Select only the columns you need from the build side.** Every column of every held row is
   held until the join ends.
 - **Check which side your engine holds.** A planner chooses from its estimates, and a bad
@@ -214,16 +213,16 @@ answer: No. A hash join holds its build side before it can probe for matches. Fe
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: joins
 ```
 
 **8.1 Merge the two sides.** Write `merge_join`: a join of two inputs already sorted by their key,
-that walks both from the front, as a **merge join** does, with no table at all. The graders join
+that walks both from the front, as a **merge join** does, with no table at all. The practice tests join
 many random inputs, and the orders with their customers, and compare your rows with DuckDB's, in
 order.
 
@@ -231,11 +230,11 @@ order.
 [ch04](#statistics-and-pruning) met stored in a file, here built from the build side's keys, a
 set of bits the probe side's scan can test to drop rows that cannot match before the join sees
 them. It may let a key through that is not there, but never
-stops one that is. The graders build it from the enterprise customers, check that no enterprise
+stops one that is. The practice tests build it from the enterprise customers, check that no enterprise
 customer is ever stopped, and check that other keys get through about as often as the filter's
 arithmetic says they should.
 
-**8.3 Diagnose the slow query.** No test. A colleague pairs each order with the same customer's
+**8.3 Diagnose the slow query.** Use the plan and counters. A colleague pairs each order with the same customer's
 other orders, joining the orders to themselves on the customer, and the query never seems to
 finish:
 

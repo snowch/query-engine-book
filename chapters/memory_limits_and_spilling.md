@@ -10,8 +10,6 @@ title: Memory limits and spilling
 
 **What you will learn:** Explain how a memory limit turns held rows into temporary reads and writes.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -70,8 +68,8 @@ experiment: measure
 of: spilling
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same sorts
-again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **Memory for every row spills nothing.** It is ch09's sort.
 - **Memory for half spills every row once.** Two runs, each written once and read back once, and
@@ -107,10 +105,11 @@ experiment: measure
 of: spilling
 ```
 
-Hold rows up to twice the limit before spilling, `2 * self.memory_limit` in the test that cuts a
-run, and run the panel's report on your edit: the sort within half the rows' bytes spills nothing
-at all, and the one within a tenth makes half as many runs and one pass fewer. It does so by
-holding twice the memory it was allowed.
+Open **Optional: read or edit the Python · spill.py** for `batches`. Select **Edit and run**, then
+**Run the listing** with the code unchanged. In `if held and held_bytes + size >
+self.memory_limit:`, replace `self.memory_limit` with `2 * self.memory_limit`. Select **Run the
+listing** again. Compare **Bytes spilled**, **runs written** and **merge passes** for the two
+cases with less memory. The edit lets the teaching sort use more memory before it spills.
 
 ### A run, written and read
 
@@ -192,23 +191,23 @@ answer: A smaller limit creates more runs. If they cannot all be merged together
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: memory_limits_and_spilling
 ```
 
 **10.1 Cut the runs.** Write `runs_for`: given the sizes of the batches a sort reads and its memory
-limit, how many batches each sorted run holds. The graders run the book's external sort on
+limit, how many batches each sorted run holds. The practice tests run the book's external sort on
 batches of those sizes and compare its runs with yours.
 
 **10.2 Plan the merges.** Write `merge_plan`: given the runs and the fan-in, the merge passes the
-sort makes and the runs those passes write. The graders run the book's sort on as many runs, for
+sort makes and the runs those passes write. The practice tests run the book's sort on as many runs, for
 several fan-ins.
 
-**10.3 Diagnose the slow sort.** No test. A colleague's sort runs within a tenth of the memory its
+**10.3 Diagnose the slow sort.** Use the plan and counters. A colleague's sort runs within a tenth of the memory its
 rows need. They try several fan-ins:
 
 ```{include} _generated/fan-in.md

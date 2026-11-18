@@ -34,6 +34,16 @@ function mount(el) {
   // Named for this book: other books share the origin, and its storage.
   const settings = Object.keys(config).filter((k) => k !== "experiment").sort().map((k) => config[k]);
   const key = `lab:${bookPath}:${config.experiment}:${settings.join(":")}`;
+  // Keep this panel's predictions through redraws, even when browser storage is unavailable.
+  const predictionKey = `${key}:predict`;
+  let prediction = store.get(predictionKey);
+  const predictions = {
+    get() { return prediction; },
+    set(_key, value) {
+      prediction = value;
+      store.set(predictionKey, value);
+    },
+  };
 
   let body = document.createElement("div");
   body.className = "lab-body";
@@ -57,6 +67,14 @@ function mount(el) {
   el.querySelector(".lab-fallback")?.remove();
   el.append(body);
 
+  let submitted = build.source;
+  let resultLabel = "";
+  const updateProvenance = () => {
+    const stale = editor && editor.value !== submitted;
+    const label = resultLabel + (stale ? " The editor has changed. Run again to use the current query." : "");
+    if (status.textContent !== label) status.textContent = label;
+  };
+
   // The editor, for a panel whose report ran a query: the query as the build ran it, or the
   // reader's last edit of it.
   let editor = null;
@@ -69,7 +87,7 @@ function mount(el) {
       <textarea class="code-area" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="The query"></textarea>
       <div class="lab-editor-bar"><button type="button" class="lab-reset">Reset to the book's query</button>
       <button type="button" class="lab-recover">Recover saved draft</button>
-      <span class="lab-hint">Ctrl+Enter runs it. Your edit stays in this browser.</span></div>`;
+      <span class="lab-hint">Ctrl+Enter runs the current query.</span></div>`;
     editor = details.querySelector("textarea");
     reset = details.querySelector(".lab-reset");
     recover = details.querySelector(".lab-recover");
@@ -90,8 +108,9 @@ function mount(el) {
         show(build, "build");
         el.dataset.ready = "true";
       }
+      updateProvenance();
     };
-    bindDraft(editor, { key, original: build.source, reset, recover, redraw, onChange: markDraft, onMessage: message });
+    bindDraft(editor, { key, original: build.source, reset, recover, redraw, onChange: markDraft, filename: config.query });
     markDraft(false);
   }
   el.append(foot);
@@ -99,14 +118,16 @@ function mount(el) {
   function show(data, source) {
     const next = document.createElement("div");
     next.className = "lab-body";
-    draw(next, data, { store, key });
+    draw(next, data, { store: predictions, key });
     body.replaceWith(next);
     body = next;
     el.dataset.source = source;
     delete el.dataset.agrees;
-    status.textContent = source === "build"
-      ? `Computed by ${data.engine} when the book was built.`
-      : "";
+    if (source === "build") {
+      submitted = build.source;
+      resultLabel = `Computed by ${data.engine} when the book was built.`;
+      updateProvenance();
+    }
   }
   show(build, "build");
   el.dataset.ready = "true";
@@ -123,16 +144,18 @@ function mount(el) {
       const data = JSON.parse(json);
       show(data, "browser");
       if (edited) {
-        status.textContent = `Your query, run in your browser by ${data.engine} under Pyodide.`;
+        resultLabel = `Your query from the last successful browser run by ${data.engine}.`;
       } else {
         // Compared as parsed and re-serialised, so escaping inside the page's script element
         // cannot make two equal answers look different.
         const same = JSON.stringify(data) === JSON.stringify(build);
         el.dataset.agrees = String(same);
-        status.textContent = same
-          ? `Recomputed in your browser by ${data.engine} under Pyodide. The counts match the worked result.`
-          : "Recomputed in your browser. The counts differ from the worked result. Please report the difference.";
+        resultLabel = same
+          ? `Recomputed in this browser by ${data.engine}. The original counts match the worked result.`
+          : "Recomputed in this browser. The original counts differ from the worked result.";
       }
+      submitted = sql;
+      updateProvenance();
       message("");
       el.dataset.ready = "true";
     } catch (error) {

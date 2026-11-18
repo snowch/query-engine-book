@@ -10,8 +10,6 @@ title: Partitioning and shuffle
 
 **What you will learn:** Choose between moving both inputs by key and copying a small input to each node.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -64,8 +62,8 @@ experiment: measure
 of: shuffle
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same nodes
-again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **Shuffling every order sends most of them.** Three quarters of the orders are on a node that
   does not own their customer, and go.
@@ -111,9 +109,10 @@ tests: test_distributed.py
 select: shuffle
 ```
 
-Change `if there != here:` to `if True:`, so that a row kept on its own node is counted as sent,
-and run the engine's tests on your edit: a cluster of one node now sends bytes to itself, and the
-test that says it sends nothing fails.
+Open **Optional: read or edit the Python · distributed.py** for `shuffle`. Select **Edit and
+run**, then **Run the listing** with the code unchanged. Replace `if there != here:` with `if
+True:`. Select **Run the listing** again. Find the test for a single node. It fails because the
+changed counter charges for bytes that stayed on the same node.
 
 ### Two phases
 
@@ -161,8 +160,8 @@ same way, for the same reason.
 - **Aggregate before you move.** Two-phase aggregation sends a row per group per node, not a row
   per input row. Engines do this for you when the groups are few; problem 15.3 shows when it does
   not pay.
-- **Broadcast the small side.** A dimension table joined to a large fact table is cheapest copied
-  to every node. Distributed engines choose it below a size you can usually set.
+- **Broadcast the small side.** Copying a small dimension table can transfer fewer bytes than shuffling both sides. The
+  comparison depends on the sizes of the inputs and the number of nodes.
 - **Partition tables by the keys you join and group on.** Data already on the node that owns its
   key need not move. Problem 15.1 checks for it.
 - **Mind the skew.** A hash spreads keys evenly, not rows. A popular key sends all its rows to one
@@ -187,24 +186,24 @@ answer: Each node needs a copy. The total bytes sent therefore grow with the num
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: partitioning_and_shuffle
 ```
 
 **15.1 Already in place.** Write `already_placed`: whether every row of a partitioned table is on
-the node that owns its key, so a shuffle on that key would send nothing. The graders check your
+the node that owns its key, so a shuffle on that key would send nothing. The practice tests check your
 answer against what a shuffle sends, on tables placed by row group and tables already shuffled.
 
 **15.2 Broadcast or shuffle?** Write `choose_join`: from the two sides' bytes and the number of
-nodes, which join sends less. The graders run both joins on the simulated nodes, with all the
+nodes, which join sends less. The practice tests run both joins on the simulated nodes, with all the
 customers and with only the enterprise ones, and check your choice was not the dearer by more than
 a quarter.
 
-**15.3 Diagnose the dear aggregate.** No test. A colleague made every aggregate run in two
+**15.3 Diagnose the dear aggregate.** Use the plan and counters. A colleague made every aggregate run in two
 phases, and one report got slower:
 
 ```{include} _generated/unique-keys.md

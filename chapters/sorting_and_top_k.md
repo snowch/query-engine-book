@@ -10,8 +10,6 @@ title: Sorting and top-k
 
 **What you will learn:** Distinguish ordering every row from retaining only the best rows.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -73,8 +71,8 @@ experiment: measure
 of: sorting
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same sorts
-again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **A sort of shuffled rows compares each row many times.** For rows in no order, a sort makes
   on the order of the rows times the base-two logarithm of the rows, a little under that for this
@@ -112,9 +110,12 @@ experiment: measure
 of: sorting
 ```
 
-Replace the `elif` and the line under it with an `else:` that pushes every row onto the heap and
-then pops the worst, and run the panel's report on your edit. The ten rows are the same, and the
-comparisons several times as many: every row now climbs into the heap before most are thrown out.
+Open **Optional: read or edit the Python · sort.py** for `TopK`. Select **Edit and run**, then
+**Run the listing** with the code unchanged. Replace the `elif self.comparisons.compare(key,
+heap[0].key) < 0:` branch with `else:` and replace its indented body with two lines. Put
+`heapq.heappush(heap, _Worst(key, row, self.comparisons))` first and `heapq.heappop(heap)` second.
+Select **Run the listing** again. For **The ten largest by amount**, compare **Comparisons** and
+**rows handed up**. Does pushing each candidate onto the heap increase work for the same limit?
 
 ### The sort
 
@@ -182,8 +183,8 @@ of: top_k
 
 ## What this means for your design
 
-- **Say how many rows you want.** A `LIMIT` turns a sort into a top-k, and saves nearly all of
-  its work and memory. Fetching every row and keeping ten in the application pays for the sort
+- **Say how many rows you want.** A small `LIMIT` lets DuckDB choose a top-k. The teaching example counts fewer comparisons
+  and fewer rows held for its top-k. Fetching every row and keeping ten in the application pays for the sort
   anyway, as problem 9.3 shows.
 - **Store the rows in the order you read them in.** Rows already in order cost one comparison
   each to sort, and a file sorted by the key also lets its statistics skip rows.
@@ -212,9 +213,9 @@ answer: No. A later row could belong in the answer. A top-k can retain fewer can
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: sorting_and_top_k
@@ -222,15 +223,15 @@ chapter: sorting_and_top_k
 
 **9.1 Merge the runs.** Write `merge_runs`: yield the values of several sorted runs as one sorted
 sequence, holding one value from each run at a time. It is the last step of a sort too large for
-memory, which the next chapter needs. The graders merge many random runs,
+memory, which the next chapter needs. The practice tests merge many random runs,
 check the result is sorted, and watch each run to make sure you never take a value before you
 need it.
 
 **9.2 The top of each customer.** Write `top_per_customer`: each customer's k largest orders. The
-graders compare yours with DuckDB's, which numbers each customer's orders by amount and keeps the
+practice tests compare yours with DuckDB's, which numbers each customer's orders by amount and keeps the
 first k, for several k.
 
-**9.3 Diagnose the slow page.** No test. A dashboard shows the ten largest orders. Its query has
+**9.3 Diagnose the slow page.** Use the plan and counters. A dashboard shows the ten largest orders. Its query has
 no `LIMIT`: the application reads the rows the query returns, and keeps the first ten:
 
 ```{include} _generated/sort-or-top.md

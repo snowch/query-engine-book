@@ -10,8 +10,6 @@ title: Stages and distributed execution
 
 **What you will learn:** Relate where intermediate rows are kept to the work repeated after a failure.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -68,8 +66,8 @@ experiment: measure
 of: stages
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same stages
-again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **Kept nowhere, the query starts again.** Nothing the first two stages made survives, so every
   task so far runs again. This is the cheapest way to run when nothing fails.
@@ -119,9 +117,11 @@ experiment: measure
 of: stages
 ```
 
-Suppose the node's disk survives it, as with a shuffle service that keeps its files, and change
-the second case to return `1`, and run the panel's report on your edit: keeping rows on the node
-becomes as safe as shared storage, as long as the disk outlives the node.
+Open **Optional: read or edit the Python · stages.py** for `rerun`. Select **Edit and run**, then
+**Run the listing** with the code unchanged. Under `case "on the node":`, replace `return failed +
+1` with `return 1`. Select **Run the listing** again. Compare **Tasks run again** for **Kept on
+the node** and **Kept in shared storage**. The edit assumes the lost worker's saved output remains
+accessible. The model counts reruns under that assumption.
 
 (compare-stages-and-distributed-execution)=
 ## Compare
@@ -151,8 +151,8 @@ The book's tests check that the stages give DuckDB's rows on one node, four and 
 
 ## What this means for your design
 
-- **Count the shuffles in your plan.** Each join, aggregate and sort on a key the data is not
-  partitioned by is a stage boundary, and every row crossing it moves.
+- **Count the shuffles in your plan.** A join, aggregate or sort can need a stage boundary when rows must change partition. The
+  model counts bytes sent to another node.
 - **Aggregate early.** ch15's two phases shrink what crosses the boundary between the join and the
   aggregate from a row per order to a row per country per node.
 - **Match fault tolerance to the job.** Short interactive queries are cheaper to rerun than to
@@ -180,24 +180,24 @@ answer: Keeping intermediate rows can limit recovery to the failed task or stage
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: stages_and_distributed_execution
 ```
 
 **17.1 Cut the stages.** Write `cut_stages`: given a plan with its exchanges marked, the stages it
-runs as, each after the stages it reads. The graders cut the chapter's plan and many random ones,
+runs as, each after the stages it reads. The practice tests cut the chapter's plan and many random ones,
 and check every operator is in one stage, no stage crosses an exchange, and the order is one an
 engine could run.
 
 **17.2 Stages at once.** Write `finish_time`: given each stage's steps and the stages it reads,
-when the last finishes, if every stage starts as soon as its inputs are ready. The graders step a
+when the last finishes, if every stage starts as soon as its inputs are ready. The practice tests step a
 simulated clock through the chapter's stages and many random ones, and compare.
 
-**17.3 Diagnose the lost hour.** No test. A nightly report runs for an hour on a hundred machines,
+**17.3 Diagnose the lost hour.** Use the plan and counters. A nightly report runs for an hour on a hundred machines,
 in an engine that passes rows straight on between stages. Once a week a machine fails near the
 end, and the report runs again from the start. Using the panel's chart, explain what each failure
 costs, and what keeping the rows on the node or in shared storage would cost every night instead.

@@ -34,11 +34,12 @@ function bar(label, value, max, kind, missing = "none") {
   return row;
 }
 
-function predictionBox(value, onInput) {
+function predictionBox(value, onInput, label) {
   const row = el("label", "plan-bar predicted plan-predict");
   row.append(el("span", "plan-bar-label", "You predict"));
   const input = el("input");
   input.type = "number";
+  input.setAttribute("aria-label", `Prediction for ${label}`);
   input.min = "0";
   input.step = "1";
   input.inputMode = "numeric";
@@ -120,13 +121,13 @@ function fileCard(file, data, view, index) {
   const total = file.units.length;
   if (view.asking) {
     bars.append(
-      predictionBox(predicted, (v) => view.predict(slot, v)),
+      predictionBox(predicted, (v) => view.predict(slot, v), file.label || file.fixture),
       bar(plural(file.unit), total, total, "estimated"),
       bar("Read", null, total, "measured hidden", "hidden"),
     );
   } else {
     bars.append(
-      bar("You predicted", predicted ?? null, Math.max(total, predicted ?? 0), "predicted", "no guess"),
+      ...(view.reportOnly || predicted === undefined ? [] : [bar("You predicted", predicted, Math.max(total, predicted ?? 0), "predicted")]),
       bar(plural(file.unit), total, Math.max(total, predicted ?? 0), "estimated"),
       bar("Read", file.units_read, Math.max(total, predicted ?? 0), "measured"),
     );
@@ -153,7 +154,15 @@ export function mountPruning(root, data, ctx) {
     try { return JSON.parse(ctx.store.get(`${ctx.key}:predict`) || "null"); } catch { return null; }
   })() || { predictions: {}, revealed: false };
   const save = () => ctx.store.set(`${ctx.key}:predict`, JSON.stringify(saved));
-  const redraw = () => { root.replaceChildren(); mountPruning(root, data, ctx); };
+  const redraw = () => {
+    root.replaceChildren();
+    mountPruning(root, data, ctx);
+    const focus = root.querySelector(saved.revealed ? ".lab-title" : ".plan-predict input");
+    if (focus) {
+      if (saved.revealed) focus.tabIndex = -1;
+      focus.focus();
+    }
+  };
   const asking = !saved.revealed;
   root.dataset.asking = String(asking);
 
@@ -164,7 +173,7 @@ export function mountPruning(root, data, ctx) {
   const note = el("span", "lab-note");
   note.append(el("code", "", `queries/${data.query}`));
   head.append(note);
-  if (!asking) {
+  if (!asking && !ctx.reportOnly) {
     const again = el("button", "plan-again", "Predict again");
     again.type = "button";
     again.addEventListener("click", () => {
@@ -184,7 +193,7 @@ export function mountPruning(root, data, ctx) {
   root.append(facts);
 
   const view = {
-    asking,
+    asking, reportOnly: ctx.reportOnly,
     predictions: saved.predictions,
     predict(slot, value) {
       if (value === undefined) delete saved.predictions[slot];

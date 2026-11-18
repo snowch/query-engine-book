@@ -275,6 +275,7 @@ async function checkPanel(page, file, index) {
     // 1. Asking.
     same(`${label}, asking`, await read(el), panel.asking(data));
     if (await el.$(".plan-preview")) throw new Error(`${label}: the result shows before the reveal`);
+    if (await (await el.$(".lab-run")).isVisible()) throw new Error(`${label}: Run competes with the prediction reveal`);
 
     // 2. Predict, reveal, reload.
     const inputs = await el.$$(".plan-predict input");
@@ -282,7 +283,9 @@ async function checkPanel(page, file, index) {
     if (inputs.length !== count) throw new Error(`${label}: ${inputs.length} prediction boxes for ${count} predictions`);
     guesses = [...Array(count).keys()].map((i) => 1000 + 111 * i);
     for (const [i, input] of inputs.entries()) await input.fill(String(guesses[i]));
-    await (await el.$(".plan-reveal")).click();
+    await (await el.$(".plan-reveal")).press("Enter");
+    const revealFocus = await el.$eval(".lab-title", (title) => document.activeElement === title);
+    if (!revealFocus) throw new Error(`${label}: revealing the result lost keyboard focus`);
     same(`${label}, revealed`, await read(el), panel.revealed(data, guesses));
     await page.reload();
     await ready(page);
@@ -343,7 +346,8 @@ async function checkPanel(page, file, index) {
       throw new Error(`${label}, broken query: ${broken}`);
     }
     same(`${label}, after the failed query`, await drawn(el), shown(expected(theirs.root)));
-    same(`${label}, previous result label`, await el.$eval(".lab-status", (s) => s.textContent), edited);
+    same(`${label}, previous result label`, await el.$eval(".lab-status", (s) => s.textContent),
+      `${edited} The editor has changed. Run again to use the current query.`);
     await (await el.$(".lab-reset")).click();
     same(`${label}, after reset`, await read(el), panel.revealed(data, guesses));
     if (await editor.inputValue() !== data.source) throw new Error(`${label}: reset did not restore the query`);

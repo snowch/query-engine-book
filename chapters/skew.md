@@ -10,8 +10,6 @@ title: Skew
 
 **What you will learn:** Diagnose a heavy key and explain the extra work needed to spread it.
 
-**Read:** follow the explanations, worked results and comparisons. No code or setup is required.
-**Explore:** open an optional experiment to test a prediction. **Build:** open the code and practice exercises.
 :::
 
 ## The question
@@ -57,8 +55,8 @@ experiment: measure
 of: skew
 ```
 
-The panel draws what your engine counted when the book was built. Its button runs the same nodes
-again in your browser.
+Open **Predict and reveal the experiment** to enter predictions. Select **Reveal the measurement** and
+compare your predictions with the labelled counts. The first reveal shows the book's saved results.
 
 - **Shuffled by customer, one node joins several times its share.** Customer 1's orders all land
   there, with those of the other customers the node owns.
@@ -109,9 +107,11 @@ experiment: measure
 of: skew
 ```
 
-Salt every customer, not only the heavy ones, by changing `if k in heavy` to `if True` in both
-functions, and run the panel's report on your edit. The busiest node falls a little further, and
-every customer's row is now copied to every node: the bytes shuffled climb.
+Open **Optional: read or edit the Python · skew.py** for the first function, `salted`. Select
+**Edit and run**, then **Run the listing** with the code unchanged. In both `salted` and
+`copied`, replace `if k in heavy` with `if True`. Select **Run the listing** again. For **The
+heaviest customers salted**, compare **Rows on the busiest node**, **bytes shuffled** and **rows
+out**. The case name still describes the starter. What extra traffic buys the change in balance?
 
 The copies are the price. A heavy customer's row must be on every node its orders went to, or
 they would find no match there, so the other side's row for each heavy key is sent to all of
@@ -150,8 +150,8 @@ that salting lightens the busiest node when there are many.
   in the same lopsided way. Check the heaviest keys before you partition by one.
 - **Aggregate before you shuffle.** ch15's two phases reduce a heavy customer's orders to one row
   per node before anything moves: skew in an aggregate mostly vanishes.
-- **Broadcast when one side is small.** A broadcast join moves no rows of the large side, so its
-  skew never matters.
+- **Broadcast when one side is small.** A broadcast join leaves the large input where it was read. This avoids skew introduced
+  by shuffling that input. Uneven input placement can still leave one node more work.
 - **Mind skew in time as well as in keys.** Partitioning by date sends a report on one month to one
   node. Problem 16.3 shows it.
 
@@ -174,9 +174,9 @@ answer: A hash spreads distinct keys. All rows with the same key still go to the
 
 ## Problems
 
-There are three problems. The first two are code with tests; the third is a slow query to
-diagnose, with no test. Write your answers to the first two in the workbench, and run the graders
-there. Your answers stay in this browser, and **Reset to the stubs** starts again.
+Read the prompts below. To work on a coding problem, open **Optional: write code and run the
+practice tests**. The editor loads the starter code. Make your change and select **Run the
+practice tests** to check the answer you submitted. Use the evidence below for the diagnosis.
 
 ```problems
 chapter: skew
@@ -184,14 +184,14 @@ chapter: skew
 
 **16.1 Heavy hitters in little memory.** Write `heavy_hitters`, the Misra-Gries summary: one pass
 over the keys, holding at most k counters, that is certain to keep every key with more than a
-share of one in k + 1. The graders run it over the orders' customers and over random streams, and
+share of one in k + 1. The practice tests run it over the orders' customers and over random streams, and
 check no heavy key is missed and no count is too high.
 
 **16.2 How far to spread.** Write `fanouts`: for each heavy key, the fewest nodes to spread its
-rows over so that none holds more than an even share of them. The graders check each choice is
+rows over so that none holds more than an even share of them. The practice tests check each choice is
 the smallest that works, and that on many nodes the busiest node is lighter for it.
 
-**16.3 Diagnose the busy month.** No test. A team partitioned the orders by month over twelve
+**16.3 Diagnose the busy month.** Use the plan and counters. A team partitioned the orders by month over twelve
 nodes, so that a report on one month reads only one node's rows. Their March report is no faster
 than it was on one machine:
 
